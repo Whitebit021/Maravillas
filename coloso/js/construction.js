@@ -902,7 +902,252 @@
       WIMS.forEach(function (im) { im.instanceMatrix.needsUpdate = true; });
     }
 
-    // ----- PARTE 5 FIN: siguiente sección (vertido, grúas, camellos, update) -----
+    // =====================================================================
+    // 7. VERTIDO de bronce fundido (s.pour): crisoles en la cima del terraplén,
+    //    chorro brillante hacia la estatua a la altura de la construcción, chispas y moldes.
+    // =====================================================================
+    const pourG = new THREE.Group();
+    root.add(pourG);
+    const NCR = 3;
+    const crucibleIM = mkIM(new THREE.CylinderGeometry(1.1, 0.8, 1.3, 10, 1, true), MAT.iron, NCR, true);
+    const crucGlowIM = mkIM(new THREE.CircleGeometry(1.0, 10).rotateX(-Math.PI / 2), MAT.glow, NCR, false);
+    const NSTR = 12;
+    const streamIM = mkIM(new THREE.CylinderGeometry(0.16, 0.12, 1, 6), MAT.molten, NSTR, false);
+    const moldIM = mkIM(new THREE.BoxGeometry(1.6, 0.9, 1.0), MAT.clay, 6, true);
+    const moltenRing = new THREE.Mesh(new THREE.RingGeometry(0.4, 3.2, 24).rotateX(-Math.PI / 2), MAT.glow);
+    moltenRing.frustumCulled = false;
+    const NSP = 140, sparkPos = new Float32Array(NSP * 3), sparkA = [], sparkB = [];
+    for (let i = 0; i < NSP; i++) { sparkA.push(hash(i + 2000)); sparkB.push(hash(i + 2100)); }
+    const sparkGeo = new THREE.BufferGeometry();
+    sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+    const sparks = new THREE.Points(sparkGeo, MAT.spark);
+    sparks.frustumCulled = false;
+    pourG.add(crucibleIM, crucGlowIM, streamIM, moldIM, moltenRing, sparks);
+    const _pt = new THREE.Vector3(), _ps = new THREE.Vector3();
+    function updatePour(s) {
+      const p = clamp(s.pour, 0, 1), W = s.wall, m = clamp(s.mound, 0, 1);
+      pourG.visible = p > 0.002 && MD.ytop > 0;
+      if (!pourG.visible) return;
+      const yt = MD.ytop;
+      const Rc = innerR(yt) + 2.2;
+      // altura de la construcción (sobre la estatua): y mundo = 15 + build*33
+      const yp = 15 + clamp(s.build, 0, 1) * COL.height;
+      const yl = Math.max(0.5, yp - COL.baseY);
+      const rT = COL.halfWidthAt(Math.min(yl, COL.height - 0.5)) * 0.7;
+      const ang = [0.55, 0.85, 1.15];
+      for (let k = 0; k < NCR; k++) {
+        const a = ang[k];
+        const cx = Math.cos(a) * Rc, cz = Math.sin(a) * Rc;
+        const tilt = (k === 0 ? p : 0.6 * p) * 0.9 * (0.9 + 0.1 * Math.sin(W * 4 + k));
+        _p3.set(cx, yt + 0.7, cz);
+        // se inclinan hacia el centro (vuelcan el metal dentro del hueco)
+        _q4.setFromEuler(_e3.set(0, -a + Math.PI / 2, tilt, 'YXZ'));
+        _m4.compose(_p3, _q4, _s3.set(1, 1, 1));
+        crucibleIM.setMatrixAt(k, _m4);
+        _p3.set(cx, yt + 1.36, cz);
+        _m4.compose(_p3, _q4, _s3.set(1, 1, 1));
+        crucGlowIM.setMatrixAt(k, _m4);
+      }
+      crucibleIM.instanceMatrix.needsUpdate = true;
+      crucGlowIM.instanceMatrix.needsUpdate = true;
+      // chorro: segmentos desde el labio del crisol (k=0) hasta la estatua
+      const sx = Math.cos(ang[0]) * Rc, sy = yt + 1.5, sz = Math.sin(ang[0]) * Rc;
+      const tx = Math.cos(ang[0]) * rT, ty = yp, tz = Math.sin(ang[0]) * rT;
+      for (let j = 0; j < NSTR; j++) {
+        const f0 = j / NSTR, f1 = (j + 1) / NSTR;
+        const x0 = sx + (tx - sx) * f0, y0 = sy + (ty - sy) * f0 - 2.5 * f0 * (1 - f0), z0 = sz + (tz - sz) * f0;
+        const x1 = sx + (tx - sx) * f1, y1 = sy + (ty - sy) * f1 - 2.5 * f1 * (1 - f1), z1 = sz + (tz - sz) * f1;
+        _ps.set(x0, y0, z0); _pt.set(x1, y1, z1);
+        const len = _ps.distanceTo(_pt) + 0.05;
+        _p3.copy(_ps).add(_pt).multiplyScalar(0.5);
+        _m4.lookAt(_ps, _pt, new THREE.Vector3(0, 1, 0));
+        _m4.setPosition(_p3);
+        _sc4.makeScale(p, p * len, p);
+        _lm.copy(_m4).multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2)).multiply(_sc4);
+        streamIM.setMatrixAt(j, _lm);
+      }
+      streamIM.instanceMatrix.needsUpdate = true;
+      // anillo incandescente en el borde de la construcción (la superficie fundida)
+      moltenRing.position.set(0, yp + 0.05, 0);
+      moltenRing.scale.set(COL.halfWidthAt(Math.min(yl, COL.height - 0.5)) / 3.2, 1, COL.halfWidthAt(Math.min(yl, COL.height - 0.5)) / 3.2);
+      MAT.glow.opacity = 0.5 + 0.4 * p * (0.9 + 0.1 * Math.sin(W * 6));
+      // moldes de arcilla en la cima, fuera del hueco
+      for (let k = 0; k < 6; k++) {
+        const a = k / 6 * TAU + 0.3;
+        _p3.set(Math.cos(a) * (Rc + 1), yt + 0.45, Math.sin(a) * (Rc + 1));
+        _q4.setFromEuler(_e3.set(0, a, 0, 'XYZ'));
+        _m4.compose(_p3, _q4, _s3.set(p, p, p));
+        moldIM.setMatrixAt(k, _m4);
+      }
+      moldIM.instanceMatrix.needsUpdate = true;
+      // chispas: parten del punto de impacto y caen
+      for (let i = 0; i < NSP; i++) {
+        const age = frac(W * 1.6 + sparkA[i]);
+        const ang2 = sparkB[i] * TAU;
+        const rr = (sparkA[i] - 0.5) * 3 * age;
+        sparkPos[i * 3] = tx + Math.cos(ang2) * rr;
+        sparkPos[i * 3 + 1] = ty + age * 4.0 - 6.0 * age * age;
+        sparkPos[i * 3 + 2] = tz + Math.sin(ang2) * rr;
+      }
+      sparkGeo.attributes.position.needsUpdate = true;
+      sparks.visible = p > 0.05;
+      MAT.spark.opacity = 0.9 * p;
+    }
+
+    // =====================================================================
+    // 8. GRÚAS / POLIPASTOS de madera: 2 en la cima del terraplén, 2 junto al pedestal
+    //    (izan sillares de mármol mientras s.pedestal sube)
+    // =====================================================================
+    const CRANE_H = 18;
+    const craneMB = MB();
+    const cW = new THREE.Color(0x6e4a2a);
+    mbBox(craneMB, 0, CRANE_H / 2, 0, 0.45, CRANE_H, 0.45, cW);             // mástil
+    mbBox(craneMB, 0, CRANE_H * 0.55, 0.9, 0.12, 0.12, 0.12, cW);            // travesaños del mástil
+    mbBox(craneMB, 0, CRANE_H * 0.36, 0.9, 0.12, 0.12, 0.12, cW);
+    mbBox(craneMB, 4.6, CRANE_H - 0.6, 0, 9.5, 0.3, 0.3, cW);               // pluma (jib)
+    mbBox(craneMB, -1.8, CRANE_H - 1.6, 0, 3.8, 0.25, 0.25, cW, 0, 0, -0.5); // contrapeso brazo
+    mbBox(craneMB, -3.6, CRANE_H - 2.0, 0, 1.2, 1.0, 1.0, new THREE.Color(0x3a2a1a)); // contrapeso
+    mbBox(craneMB, 0, CRANE_H - 0.3, 0, 1.0, 0.6, 0.9, cW);                 // cabeza del mástil
+    const craneIM = mkIM(mbGeo(craneMB), MAT.wood, 4, true);
+    const ropeIM = mkIM(new THREE.BoxGeometry(0.06, 1, 0.06), MAT.rope, 4, false);
+    const sillarIM = mkIM(new THREE.BoxGeometry(2.4, 1.2, 1.2), MAT.stone, 2, true);
+    const plateIM2 = mkIM(new THREE.BoxGeometry(1.4, 0.2, 1.4), MAT.bronze, 2, false);
+    const cranesG = new THREE.Group();
+    root.add(cranesG);
+    cranesG.add(craneIM, ropeIM, sillarIM, plateIM2);
+    // posiciones: 0-1 pedestal (suelo), 2-3 cima del terraplén
+    const CR = [
+      { kind: 'ped', a: 0.9, r: 17, yaw: 0.9 + Math.PI * 0.5 },
+      { kind: 'ped', a: 3.9, r: 17, yaw: 3.9 + Math.PI * 0.5 },
+      { kind: 'top', a: 2.0, r: 0, yaw: 0 },
+      { kind: 'top', a: 5.0, r: 0, yaw: 0 }
+    ];
+    const _cr = new THREE.Matrix4(), _crq = new THREE.Quaternion();
+    function updateCranes(s) {
+      const W = s.wall, pd = clamp(s.pedestal, 0, 1), m = clamp(s.mound, 0, 1);
+      const pedOn = s.pedestal > 0.002 && s.pedestal < 1.0001;
+      cranesG.visible = pedOn || (m > 0.3 && MD.ytop > 0);
+      if (!cranesG.visible) return;
+      for (let k = 0; k < 4; k++) {
+        const C = CR[k];
+        const isTop = C.kind === 'top';
+        const on = isTop ? (m > 0.3 && MD.ytop > 0) : pedOn;
+        // base: suelo (pedestal) o cima del terraplén
+        const baseY = isTop ? (MD.ytop || 15) : 0;
+        const rr = isTop ? innerR(MD.ytop || 15) + 4 : C.r;
+        const bx = Math.cos(C.a) * rr, bz = Math.sin(C.a) * rr;
+        const yaw = C.yaw + 0.25 * Math.sin(W * 0.3 + k);
+        const sy = isTop ? 0.7 : 1.0;
+        _p3.set(on ? bx : 0, on ? baseY : -60, on ? bz : 0);
+        _q4.setFromEuler(_e3.set(0, -yaw, 0, 'XYZ'));
+        _cr.compose(_p3, _q4, _s3.set(1, sy, 1));
+        craneIM.setMatrixAt(k, _cr);
+        // punta de la pluma en mundo
+        const tipX = bx + Math.cos(-yaw) * 9.4 * 1.0, tipZ = bz + Math.sin(-yaw) * 9.4;
+        const jibY = baseY + (CRANE_H - 0.6) * sy;
+        // bloque (pedestal) o placa (cima) colgado de la pluma
+        const hookY = isTop ? baseY + 4.5 : Math.max(baseY + 3, 2 + pd * 14 + 0.6);
+        const ropeLen = Math.max(0.2, jibY - hookY);
+        _p3.set(tipX, (jibY + hookY) / 2, tipZ);
+        _q4.setFromEuler(_e3.set(0, -yaw, 0, 'XYZ'));
+        _cr.compose(_p3, _q4, _s3.set(1, ropeLen, 1));
+        ropeIM.setMatrixAt(k, _cr);
+        if (!isTop) {
+          const idx = k;
+          _p3.set(tipX, hookY, tipZ);
+          _cr.compose(_p3, _q4, _s3.set(on ? 1 : 0, on ? 1 : 0, on ? 1 : 0));
+          sillarIM.setMatrixAt(idx, _cr);
+        } else {
+          _p3.set(tipX, hookY, tipZ);
+          _cr.compose(_p3, _q4, _s3.set(on ? 1 : 0, on ? 1 : 0, on ? 1 : 0));
+          plateIM2.setMatrixAt(k - 2, _cr);
+        }
+      }
+      craneIM.instanceMatrix.needsUpdate = true;
+      ropeIM.instanceMatrix.needsUpdate = true;
+      sillarIM.instanceMatrix.needsUpdate = true;
+      plateIM2.instanceMatrix.needsUpdate = true;
+    }
+
+    // =====================================================================
+    // 9. CARAVANA DE CAMELLOS (654 d.C.) por SITE.caravan. 60 camellos = 900 (representación).
+    //    Posición a lo largo de la ruta en función de s.t (no acumulativa).
+    // =====================================================================
+    const NCM = 60;
+    const camelRoute = new THREE.CatmullRomCurve3(SITE.caravan.map(function (p) { return new THREE.Vector3(p[0], 0, p[1]); }), false, 'catmullrom');
+    camelRoute.arcLengthDivisions = 300;
+    const camelBodyMB = MB();
+    const cCam = new THREE.Color(0xc6a06a), cCamD = new THREE.Color(0x8a6440);
+    mbBox(camelBodyMB, 0, 1.6, 0, 1.0, 1.1, 2.2, cCam);
+    mbBox(camelBodyMB, 0, 2.3, 0.2, 0.8, 0.6, 0.8, cCam);                  // joroba
+    mbBox(camelBodyMB, 0, 2.1, 1.1, 0.35, 1.0, 0.35, cCam, 0, 0.5);       // cuello
+    mbBox(camelBodyMB, 0, 2.6, 1.6, 0.4, 0.4, 0.6, cCamD);                // cabeza
+    const camelBodyIM = mkIM(mbGeo(camelBodyMB), MAT.camel, NCM, true);
+    const camelLegIM = mkIM(new THREE.BoxGeometry(0.25, 1.2, 0.25), MAT.camelD, NCM * 4, true);
+    const camelLoadIM = mkIM(new THREE.BoxGeometry(0.7, 0.5, 0.6), MAT.bronze, NCM * 2, false);
+    const camelsG = new THREE.Group();
+    root.add(camelsG);
+    camelsG.add(camelBodyIM, camelLegIM, camelLoadIM);
+    const CAM = [];
+    for (let i = 0; i < NCM; i++) CAM.push({ off: i * 0.0055 + hash(i + 900) * 0.002, ph: hash(i + 910) });
+    const _cmM = new THREE.Matrix4();
+    const _cdir = new THREE.Vector3(), _cpos = new THREE.Vector3();
+    function updateCamels(s) {
+      const A = clamp(s.camels, 0, 1);
+      camelsG.visible = A > 0.002;
+      if (!camelsG.visible) return;
+      for (let i = 0; i < NCM; i++) {
+        const C = CAM[i];
+        // progreso a lo largo de la ruta: entra por la base y sale por la cima de la ruta
+        const q = clamp((s.t - 223) / 14 - C.off, 0, 1);
+        camelRoute.getPointAt(q, _cpos);
+        camelRoute.getTangentAt(q, _cdir);
+        const hd = Math.atan2(_cdir.x, _cdir.z);
+        const sc = A * (q > 0.001 && q < 0.999 ? 1 : 0);
+        const step = Math.sin(s.wall * 3.2 + C.ph * TAU);
+        // cuerpo y cabeza con el mismo rumbo
+        _cmM.compose(_cpos.clone().setY(0), _q4.setFromEuler(_e3.set(0, hd, 0, 'YXZ')), _s3.set(sc, sc, sc));
+        camelBodyIM.setMatrixAt(i, _cmM);
+        for (let L = 0; L < 4; L++) {
+          const lx = (L % 2 ? 0.35 : -0.35), lz = (L < 2 ? 0.8 : -0.8);
+          const sw = (L % 3 === 0 ? 1 : -1) * 0.35 * step;
+          _t4.makeTranslation(lx, 0.6, lz);
+          _wE.set(sw, 0, 0, 'XYZ'); _sc4.makeRotationFromEuler(_wE);
+          _lm.copy(_cmM).multiply(_t4).multiply(_sc4);
+          camelLegIM.setMatrixAt(i * 4 + L, _lm);
+        }
+        for (let L = 0; L < 2; L++) {
+          _t4.makeTranslation(L ? 0.2 : -0.2, 3.1, -0.4 + L * 0.2);
+          _lm.copy(_cmM).multiply(_t4).multiply(new THREE.Matrix4().makeScale(sc, sc, sc));
+          camelLoadIM.setMatrixAt(i * 2 + L, _lm);
+        }
+      }
+      camelBodyIM.instanceMatrix.needsUpdate = true;
+      camelLegIM.instanceMatrix.needsUpdate = true;
+      camelLoadIM.instanceMatrix.needsUpdate = true;
+    }
+
+    // =====================================================================
+    // Bucle por frame
+    // =====================================================================
+    function update(s) {
+      const a = clamp(s.siege, 0, 1);
+      heleG.visible = a > 0.002;
+      fleetG.visible = a > 0.002;
+      if (a > 0.002) updateFleet(s);
+      updatePile(s);
+      updateFoundry(s);
+      updateBoats(s);
+      updateMound(s);
+      updatePour(s);
+      updateCranes(s);
+      updateWorkers(s);
+      updateCamels(s);
+    }
+
+    return { update: update, group: root };
+  };
+})();
 
     function update(s) {
       const a = s.siege;

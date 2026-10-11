@@ -573,8 +573,8 @@
     const rayG = new THREE.Group();
     rayG.position.set(HX, HY - pNeck[1], HZ);
     headRec.rig.add(rayG);
-    const RAYS = 12, RAY_LEN = 2.2, RAY_R = 2.3;
-    const coneGeo = new THREE.ConeGeometry(0.16, 1, 6, 1);
+    const RAYS = 12, RAY_LEN = 2.4, RAY_R = 2.3;
+    const coneGeo = new THREE.ConeGeometry(0.34, 1, 6, 1);
     coneGeo.translate(0, 0.5, 0);
     const rays = new THREE.InstancedMesh(coneGeo, goldMat, RAYS);
     rays.frustumCulled = false;
