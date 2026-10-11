@@ -635,7 +635,7 @@
       const fill = smooth(clamp01(s.oil || 0));
       oilMesh.visible = fill > 0.01;
       oilMesh.position.set(pCX, pY + 0.08 + 0.1 * fill, 0);
-      M.oil.opacity = 0.85 * fill;
+      M.oil.opacity = 0.85 * Math.sqrt(clamp01(s.oil || 0));
       wallU.value = wall;
 
       // núcleo de madera: se oculta si la piel está completa (sin rayos X) o si la estatua se ha consumido

@@ -69,7 +69,7 @@
           const pw = w * (0.12 + r() * 0.12);
           g.fillStyle = 'rgba(' + (246 - (r() * 10 | 0)) + ',' + (240 - (r() * 12 | 0)) + ',' + (226 - (r() * 14 | 0)) + ',1)';
           g.fillRect(x + 1.5, y + 1.5, pw - 3, ph - 3);
-          g.strokeStyle = 'rgba(150,122,90,0.22)'; g.lineWidth = 1.5; g.strokeRect(x, y, pw, ph);
+          g.strokeStyle = 'rgba(150,122,90,0.1)'; g.lineWidth = 1; g.strokeRect(x, y, pw, ph);
           x += pw;
         }
       }
@@ -83,7 +83,7 @@
       const r = rng(12);
       g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
       const lily = function (x, y, s) {
-        g.fillStyle = 'rgba(170,120,40,0.4)';
+        g.fillStyle = 'rgba(170,120,40,0.22)';
         for (let k = 0; k < 6; k++) {
           const a = k * Math.PI / 3;
           g.beginPath(); g.ellipse(x + Math.cos(a) * s * 0.5, y + Math.sin(a) * s * 0.5, s * 0.52, s * 0.2, a, 0, Math.PI * 2); g.fill();
@@ -205,7 +205,7 @@
       const o = { color: 0xd4a63c, metalness: 1.0, roughness: 0.24, envMap: envTex, envMapIntensity: 1.0,
         side: THREE.DoubleSide, transparent: true };
       if (map) o.map = map;
-      if (bump) { o.bumpMap = bump; o.bumpScale = 0.9; }
+      if (bump) { o.bumpMap = bump; o.bumpScale = 0.3; }
       if (plane) { o.clippingPlanes = [plane]; o.clipShadows = true; }
       const m = new THREE.MeshStandardMaterial(o);
       if (glow) glowShader(m, plane, 'vec3(1.0, 0.6, 0.25)', '0.25');
@@ -485,7 +485,9 @@
     [-1, 1].forEach(function (sg) {
       ell(ivA, hd(sg * 1.95, -0.1, 0.1), [0.1, 0.22, 0.13]);                               // orejas
       ell(ivA, hd(sg * 0.72, 0.28, -2.12), [0.07, 0.055, 0.13], DARK_EYE);                  // ojos (oscuros, serenos)
+      ell(ivA, hd(sg * 0.7, 0.58, -1.98), [0.06, 0.03, 0.15], DARK_EYE);                    // cejas
     });
+    ell(ivA, hd(0, -1.0, -2.0), [0.05, 0.03, 0.16], [0.6, 0.45, 0.4]);                      // labios
     TUBE(ivA, [[-1.0, 9.9, 0], [-0.95, 10.5, 0], [-0.9, 10.9, 0]], [0.72, 0.6, 0.66], 16, 20);   // cuello
 
     const TORSO_ROWS = [[5.6, -0.6, 1.2, 1.85], [6.6, -0.6, 1.15, 1.7], [7.6, -0.65, 1.3, 1.85],
@@ -518,22 +520,44 @@
       TUBE(ivA, [[2.9, 0.9, s * 1.4], [3.7, 0.85, s * 1.4]], [0.42, 0.32], 8, 14, 1);     // pie
     });
 
-    // ---------- manto de oro: lap, pliegues en las piernas y banda sobre el hombro izquierdo ----------
+    // ---------- manto de oro: UNA lamina desde la cintura, sobre los muslos, por delante de las rodillas hasta
+    // los tobillos, con pliegues verticales de varias frecuencias; se recoge sobre el hombro izquierdo ----------
     const manA = new Acc();
-    const LAP_ROWS = [[4.5, -0.25, 1.75, 2.55], [5.6, -0.25, 1.85, 2.65], [6.6, -0.4, 1.5, 2.15]];
-    manA.add(loft(LAP_ROWS, 4.5, 6.6, 14, 48, null, 2.5, 3.2), IDM);
-    TUBE(manA, ellRing(-0.4, 6.6, 1.55, 2.2, 28), [0.2], 60, 10, 1, 0, 3.2);             // ribete de cintura
-    [-1, 1].forEach(function (s) {
-      TUBE(manA, [[-0.5, 5.2, s * 1.4], [2.6, 5.4, s * 1.5], [2.8, 3.0, s * 1.45], [2.9, 0.8, s * 1.4]],
-        [1.25, 1.2, 1.0, 0.8], 40, 32, 2.5, 0.09, 3.2);                                    // manto sobre cada pierna (pliegues)
-    });
+    const DRAPE_PATH = [[-1.9, 6.75], [-0.6, 6.7], [0.8, 6.45], [2.0, 6.2], [3.0, 5.9], [3.75, 4.9], [4.0, 3.2], [3.85, 1.6], [3.7, 0.7]];
+    const drapeCurve = new THREE.CatmullRomCurve3(DRAPE_PATH.map(function (p) { return new THREE.Vector3(p[0], p[1], 0); }));
+    function drapeGeo() {
+      const NU = 64, NV = 90, pos = [], uv = [];
+      const T = new THREE.Vector3(), Pp = new THREE.Vector3();
+      const arc = []; let L = 0, prev = null;
+      for (let j = 0; j <= NV; j++) {
+        drapeCurve.getPoint(j / NV, Pp);
+        if (prev) L += Pp.distanceTo(prev);
+        arc.push(L); prev = Pp.clone();
+      }
+      for (let j = 0; j <= NV; j++) {
+        const v = j / NV;
+        drapeCurve.getPoint(v, Pp); drapeCurve.getTangent(v, T);
+        const nx = -T.y, ny = T.x;                                    // normal hacia fuera (arriba / delante)
+        const W = 2.75 * (0.92 + 0.08 * Math.sin(v * Math.PI));
+        const amp = 0.1 + 0.3 * smooth(v);                            // pliegues mas hondos hacia el borde
+        for (let i = 0; i <= NU; i++) {
+          const u = i / NU, z = (u * 2 - 1) * W;
+          const fold = 0.55 * Math.sin(z * 4.1 + 0.5) + 0.3 * Math.sin(z * 9.7 + v * 1.5) + 0.15 * Math.sin(z * 17.3 + v * 4.0);
+          const d = 0.22 + amp * fold;
+          pos.push(Pp.x + nx * d, Pp.y + ny * d, z);
+          uv.push(u * 12, arc[j] * 2.2);                             // lirios finos (repeticion fina)
+        }
+      }
+      return buildGeo(pos, uv, gridIdx(NV + 1, NU + 1, false));
+    }
+    manA.add(drapeGeo(), IDM);
     TUBE(manA, [[-2.6, 8.8, -2.0], [-1.4, 10.6, -2.3], [-0.2, 10.1, -2.9], [0.1, 8.6, -3.0], [-0.2, 7.4, -2.8]],
-      [0.5, 0.55, 0.55, 0.5, 0.45], 36, 20, 1.5, 0.06, 3.2);                                // sobre el hombro izquierdo
+      [0.42, 0.46, 0.46, 0.42, 0.38], 36, 20, 1.5, 0.06, 3.2);                              // sobre el hombro izquierdo
 
     // ---------- oro del cuerpo: pelo, barba, corona de olivo, sandalias ----------
     const goA = new Acc();
     goA.add(sphereGrid(44, 56, function (a, b, c) { const p = hairRel(a, b, c); return hd(p[0], p[1], p[2]); }, null, 3, 2), IDM);
-    goA.add(sphereGrid(40, 48, function (a, b, c) { const p = beardRel(a, b, c); return hd(p[0], p[1], p[2]); }, null, 2, 2), IDM);
+    goA.add(superGeo([HX + 0.3, HY - 1.05, HZ], [0.36, 0.72, 0.5], 0.5, 16, 24), IDM);       // base de la barba (cuna)
     // corona de olivo: aro sobre el pelo y hojas
     const crownM = new THREE.Matrix4().compose(P.set(HX, HY + 0.5, HZ), Q.setFromAxisAngle(XAX, Math.PI / 2), S.set(1, 1, 1));
     const crownGeo = new THREE.TorusGeometry(0.84, 0.05, 8, 40);
@@ -562,7 +586,6 @@
         const ux = r * Math.cos(ph), uy = y, uz = r * Math.sin(ph);
         let rel = null, sz = 0;
         if (uy > 0.3 && hairVis(uy, uz) >= 0.85 && nh < MAXH) { rel = hairRel(ux, uy, uz); sz = 0.085; nh++; }
-        else if (beardMask(uy, uz) > 0.6 && nb < MAXB) { rel = beardRel(ux, uy, uz); sz = 0.075; nb++; }
         if (!rel) continue;
         const cx = HX - rel[2] * HK, cy = HY + rel[1] * HK, cz = HZ + rel[0] * HK;
         const nx = -rel[2] * HK, ny = rel[1] * HK, nz = rel[0] * HK;
@@ -571,6 +594,16 @@
         curlNrm.push([nx / nl, ny / nl, nz / nl]);
         curlSz.push(sz * (0.85 + 0.3 * rnd()));
       }
+    }
+    // rizos de la barba: en la cuna que cae bajo la mandibula, mas largos hacia abajo
+    for (let k = 0; k < 150; k++) {
+      const t = rnd(), a = rnd() * 2 * Math.PI;
+      const ax = 0.36 * (1 - 0.35 * t), az = 0.5 * (1 - 0.45 * t);
+      const cx = HX + 0.3 + ax * Math.cos(a), cy = HY - 0.45 - 1.25 * t, cz = HZ + az * Math.sin(a);
+      const n = new THREE.Vector3(Math.cos(a) / ax, -0.2, Math.sin(a) / az).normalize();
+      curlPos.push([cx + n.x * 0.04, cy + n.y * 0.04, cz + n.z * 0.04]);
+      curlNrm.push([n.x, n.y, n.z]);
+      curlSz.push(0.075 * (1 - 0.3 * t) * (0.85 + 0.3 * rnd()));
     }
     const curlCount = curlPos.length;
     const curlMesh = new THREE.InstancedMesh(new THREE.TorusGeometry(1, 0.3, 4, 6), goldStat, Math.max(1, curlCount));
@@ -636,8 +669,8 @@
     TUBE(nkI, [[0, 1.24, -0.14], [0.03, 1.0, -0.2], [0.08, 0.88, -0.18]], [0.05, 0.04, 0.035], 12, 12, 1);
     const wreathM = new THREE.Matrix4().compose(P.set(0.3, 1.22, 0.2), Q.setFromAxisAngle(UP, Math.PI / 2), S.set(1, 1, 1));
     nkG.add(new THREE.TorusGeometry(0.1, 0.015, 6, 20), wreathM);
-    nkG.add(wingGeo([-0.04, 1.3, 0.12], [-0.1, 0.3, 1.0], 1.05, 0.5, [-0.55, 0.85, 0], 16, 10), IDM);
-    nkG.add(wingGeo([-0.04, 1.3, -0.12], [-0.1, 0.3, -1.0], 1.05, 0.5, [-0.55, 0.85, 0], 16, 10), IDM);
+    nkG.add(wingGeo([-0.04, 1.3, 0.12], [-0.5, 0.8, 0.55], 1.05, 0.5, [0.6, 0, 0.45], 16, 10), IDM);
+    nkG.add(wingGeo([-0.04, 1.3, -0.12], [-0.5, 0.8, -0.55], 1.05, 0.5, [0.6, 0, -0.45], 16, 10), IDM);
 
     // cetro (ZEUS.scepter): asta con nudos, capitel y aguila de alas abiertas
     const SC = Z.scepter;

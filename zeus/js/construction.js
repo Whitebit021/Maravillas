@@ -72,7 +72,7 @@
       track: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }),
       cup: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.2, metalness: 0.05, envMap: envTex, envMapIntensity: 0.7 }),
       gold: new THREE.MeshStandardMaterial({ color: 0xd4a63c, metalness: 1, roughness: 0.28, envMap: envTex, envMapIntensity: 1.1 }),
-      marble: new THREE.MeshStandardMaterial({ color: 0xefe6d6, roughness: 0.7 }),
+      marble: new THREE.MeshStandardMaterial({ color: 0xe7dcc4, roughness: 0.7 }),
       woodP: new THREE.MeshStandardMaterial({ color: 0x7a5230, roughness: 0.9 }),
       ivory: new THREE.MeshStandardMaterial({ color: 0xf0e6cf, roughness: 0.5 }),
       bronze: new THREE.MeshStandardMaterial({ color: 0x9a7a3a, metalness: 0.6, roughness: 0.4, envMap: envTex, envMapIntensity: 0.8 }),
@@ -677,15 +677,15 @@
         mbBox(mb, -16.5, y, -3.9, 7, 0.14, 0.14, cW);       // largueros de los lados (solo hasta x=-13)
         mbBox(mb, -16.5, y, 3.9, 7, 0.14, 0.14, cW);
         mbBox(mb, -18.6, y - 0.05, 0, 2.8, 0.1, 7.8, cW);   // tablón del fondo
-        mbBox(mb, -16.5, y - 0.05, -3.6, 7, 0.1, 0.9, cW);  // plataforma norte
-        mbBox(mb, -16.5, y - 0.05, 3.6, 7, 0.1, 0.9, cW);   // plataforma sur
+        mbBox(mb, -16.5, y - 0.05, -3.95, 7, 0.1, 0.7, cW);  // plataforma norte (|z|>3.6: fuera de la línea de visión)
+        mbBox(mb, -16.5, y - 0.05, 3.95, 7, 0.1, 0.7, cW);   // plataforma sur
       });
       // escaleras de mano apoyadas en el fondo
       ladder(mb, -22.6, 1.5, -2.6, -20.2, 8.6, cW);
       ladder(mb, -22.6, 1.5, 2.6, -20.2, 8.6, cW);
       // placas de marfil apiladas junto a los artesanos
       for (let k = 0; k < 4; k++) mbBox(mb, -19.4, 8.54 + k * 0.08, 0.6, 0.8, 0.05, 0.6, cI, 0.05 * k);
-      for (let k = 0; k < 3; k++) mbBox(mb, -15.2, 12.54 + k * 0.08, -3.6, 0.8, 0.05, 0.6, cI);
+      for (let k = 0; k < 3; k++) mbBox(mb, -15.2, 12.54 + k * 0.08, -3.95, 0.8, 0.05, 0.6, cI);
       scaffoldG.add(staticMesh(mb, M.wood, true));
     })();
     function ladder(mb, bx, by, bz, tx, ty, c) {
@@ -700,7 +700,7 @@
       }
     }
     // obreros colocando placas en la altura de la obra (índices 27..30)
-    const SCAF_W = [[-18.6, 8.5, 0, Math.PI / 2], [-15.5, 4.5, -3.6, 0], [-16.5, 12.5, 3.6, Math.PI], [-18.6, 12.5, -1.2, Math.PI / 2]];
+    const SCAF_W = [[-18.6, 8.5, 0, Math.PI / 2], [-15.5, 4.5, -3.95, 0], [-16.5, 12.5, 3.95, Math.PI], [-18.6, 12.5, -1.2, Math.PI / 2]];
     function updScaffold(W, scf) {
       for (let j = 0; j < SCAF_W.length; j++) {
         const Q = SCAF_W[j], sw = Math.sin(W * 3 + j * 1.7);
@@ -715,15 +715,15 @@
     const pilG = new THREE.Group(); root.add(pilG);
     // [x, z, giro, altura del suelo]: la cella está sobre el estilóbato (y=1.5); el frente del templo, en el suelo
     const PIL = [
-      [3.0, -2.4, -Math.PI / 2, 1.5], [4.6, 0.3, -Math.PI / 2, 1.5], [6.6, -3.2, -Math.PI / 2, 1.5], [2.4, 2.6, -Math.PI / 2, 1.5],
-      [7.4, 2.0, -Math.PI / 2, 1.5], [-2.0, 5.8, -Math.PI / 2, 1.5], [-2.6, -5.6, -Math.PI / 2, 1.5],
+      [-6.6, 5.6, -Math.PI / 2, 1.5], [-2.4, 5.6, -Math.PI / 2, 1.5], [1.7, 5.6, -Math.PI / 2, 1.5], [5.9, 5.6, -Math.PI / 2, 1.5],
+      [-6.6, -5.6, -Math.PI / 2, 1.5], [-2.4, -5.6, -Math.PI / 2, 1.5], [1.7, -5.6, -Math.PI / 2, 1.5], [5.9, -5.6, -Math.PI / 2, 1.5],
       [46, -9, -Math.PI / 2, 0], [44, -5.5, -Math.PI / 2, 0], [47, -2, -Math.PI / 2, 0], [45, 2.5, -Math.PI / 2, 0], [44, 6, -Math.PI / 2, 0], [46, 9.5, -Math.PI / 2, 0]
     ];
     const NPIL = PIL.length;
     const pRobe = mkIM(new THREE.CylinderGeometry(0.2, 0.42, 1.7, 8, 1), M.cloth, NPIL, true);
     const pHead = mkIM(new THREE.SphereGeometry(0.15, 8, 6), M.skin, NPIL, false);
     const pBowl = mkIM(new THREE.CylinderGeometry(0.08, 0.05, 0.06, 8), M.bronze, NPIL, false);
-    const STANDS = [[6, -6.2], [6, 6.2], [-6, -6.2], [-6, 6.2]];   // lámparas de pie en la cella (suelo y=1.5)
+    const STANDS = [[-12.8, -6.6], [-12.8, 6.6], [-4.5, -6.6], [-4.5, 6.6]];   // lámparas de pie en la cella (suelo y=1.5)
     const pFlame = mkIM(new THREE.ConeGeometry(0.09, 0.26, 6), M.flame, NPIL + STANDS.length, false);
     const standMesh = (function () {
       const mb = MB(), cB = new THREE.Color(0x9a7a3a);
