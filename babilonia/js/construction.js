@@ -53,17 +53,17 @@
     }
     // sello del rey: campo de signos cuneiformes con marco; el resto del ladrillo muestrea una franja lisa
     const sealTex = canvasTex(512, 512, function (g, W, H) {
-      g.fillStyle = '#c99a62'; g.fillRect(0, 0, W, H);
-      g.strokeStyle = '#5a3418'; g.lineWidth = 9; g.strokeRect(78, 78, W - 156, H - 156);
-      g.lineWidth = 4; g.strokeRect(98, 98, W - 196, H - 196);
-      g.fillStyle = '#3b2412';
+      g.fillStyle = '#d6a66c'; g.fillRect(0, 0, W, H);
+      g.strokeStyle = '#4a2a12'; g.lineWidth = 14; g.strokeRect(78, 78, W - 156, H - 156);
+      g.lineWidth = 6; g.strokeRect(98, 98, W - 196, H - 196);
+      g.fillStyle = '#2a160a';
       const angs = [0, Math.PI / 2, Math.PI / 4, -Math.PI / 5, Math.PI];
       for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) {
         const cx = 150 + c * 70, cy = 160 + r * 84, seed = r * 11 + c * 5 + 1;
         const nw = 2 + Math.floor(hash(seed) * 3);
         for (let k = 0; k < nw; k++) {
           const ang = angs[Math.floor(hash(seed + k * 3 + 7) * angs.length)];
-          wedge(g, cx - 22 + hash(seed + k + 20) * 16, cy - 26 + k * 17 + hash(seed + k + 40) * 4, ang, 30 + hash(seed + k + 50) * 8, 6);
+          wedge(g, cx - 22 + hash(seed + k + 20) * 16, cy - 26 + k * 17 + hash(seed + k + 40) * 4, ang, 36 + hash(seed + k + 50) * 8, 7.5);
         }
       }
     });
@@ -108,8 +108,8 @@
       flame:  new THREE.MeshBasicMaterial({ color: 0xe0701f, transparent: true, opacity: 0.85 }),
       glow:   new THREE.PointsMaterial({ map: glowTex, color: 0xffa460, size: 7, sizeAttenuation: true, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }),
       glowB:  new THREE.PointsMaterial({ map: glowTex, color: 0xff8a40, size: 4, sizeAttenuation: true, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }),
-      smoke:  new THREE.PointsMaterial({ map: softTex, color: 0xd6cfc2, size: 9, sizeAttenuation: true, transparent: true, opacity: 0.38, depthWrite: false }),
-      smokeD: new THREE.PointsMaterial({ map: softTex, color: 0x2a2520, size: 8, sizeAttenuation: true, transparent: true, opacity: 0.5, depthWrite: false })
+      smoke:  new THREE.PointsMaterial({ map: softTex, color: 0xd6cfc2, size: 5, sizeAttenuation: true, transparent: true, opacity: 0.32, depthWrite: false }),
+      smokeD: new THREE.PointsMaterial({ map: softTex, color: 0x2a2520, size: 3.2, sizeAttenuation: true, transparent: true, opacity: 0.4, depthWrite: false })
     };
 
     // ---------- geometría fusionada con colores de vértice ----------
@@ -311,14 +311,14 @@
     yardG.add(brickIM);
 
     // ladrillo grande en primer plano con el sello cuneiforme del rey (solo la cara superior lleva el sello)
-    const sealGeo = new THREE.BoxGeometry(0.8, 0.2, 0.8);
+    const sealGeo = new THREE.BoxGeometry(1.3, 0.28, 1.3);
     {
       const uv = sealGeo.attributes.uv, nrm = sealGeo.attributes.normal;
       for (let i = 0; i < uv.count; i++) if (nrm.getY(i) < 0.5) uv.setXY(i, 0.03, 0.03);
       uv.needsUpdate = true;
     }
     const sealBrick = new THREE.Mesh(sealGeo, MAT.seal);
-    sealBrick.position.set(BX + 14, 0.1, BZ - 11); sealBrick.rotation.y = 0.2;
+    sealBrick.position.set(BX + 12, 0.14, BZ - 10); sealBrick.rotation.y = 0.2;
     sealBrick.castShadow = true; sealBrick.receiveShadow = true; sealBrick.frustumCulled = false;
     yardG.add(sealBrick);
 
