@@ -74,7 +74,7 @@
     beam:       [[154, 0], [158, 1], [166, 1], [169, 0]],              // haz reflejado barriendo el mar
     burn:       [[172, 0], [176, 1], [184, 1], [188, 0]],              // rayo del espejo incendiando un barco (mito)
     mythCross:  [[182, 0], [184, 1], [187, 1], [188, 0]],              // "¿MITO?" sobre el rayo
-    plaster:    [[190, 0], [199, 1], [208, 1], [210, 0]],              // el yeso cae y aparece Sóstrato
+    plaster:    [[190, 0], [199, 1], [240, 1]],              // el yeso cae y aparece Sóstrato
     measure:    [[200, 0], [202, 1], [208, 1], [210, 0]],              // regla de 124 m y radio de 50 km
     quake1:     [[212, 0], [213, 1], [216, 1], [217, 0]],              // terremoto de 1303
     quake2:     [[221, 0], [222, 1], [224, 1], [225, 0]],              // terremoto de 1323
