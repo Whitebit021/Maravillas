@@ -711,7 +711,9 @@
     root.add(ghostG);
 
     // ---------- borde de obra: anillo luminoso en la altura construida ----------
-    const buildEdge = new THREE.Mesh(prismGeo(32, 0, -0.15, 0.15, 1, 1),
+    // una geometría por cuerpo para que el borde siga la planta (cuadrada, octogonal, circular)
+    const edgeGeos = [prismGeo(4, SQ_ROT, -0.15, 0.15, 1, 1), prismGeo(8, -Math.PI / 8, -0.15, 0.15, 1, 1), prismGeo(32, 0, -0.15, 0.15, 1, 1)];
+    const buildEdge = new THREE.Mesh(edgeGeos[0],
       new THREE.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
     buildEdge.visible = false;
     root.add(buildEdge);
@@ -852,9 +854,10 @@
       const edgeOn = bld > 0.001 && bld < 0.999;
       buildEdge.visible = edgeOn;
       if (edgeOn) {
-        const R = hB <= 66 ? halfT1(Math.max(6.01, hB)) * SQ2 : (hB <= 96 ? 9 : 4.6);
+        const R = hB <= 66 ? (halfT1(Math.max(6.01, hB)) + 0.3) * SQ2 : (hB <= 96 ? 9.4 : 5.0);
+        buildEdge.geometry = edgeGeos[hB <= 66 ? 0 : (hB <= 96 ? 1 : 2)];
         buildEdge.position.set(0, hB, 0);
-        buildEdge.scale.set(R + 0.4, 1, R + 0.4);
+        buildEdge.scale.set(R, 1, R);
       }
 
       // fantasma
