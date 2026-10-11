@@ -208,6 +208,21 @@
       mat.customProgramCacheKey = function () { return 'wind'; };
       return mat;
     }
+    // secado: mezcla el color difuso hacia marrón según el atributo por instancia aDry (0..1)
+    function dryify(mat) {
+      const prev = mat.onBeforeCompile;
+      mat.onBeforeCompile = function (sh) {
+        prev(sh);
+        sh.vertexShader = sh.vertexShader
+          .replace('#include <common>', '#include <common>\nattribute float aDry;\nvarying float vDry;')
+          .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDry = aDry;');
+        sh.fragmentShader = sh.fragmentShader
+          .replace('#include <common>', '#include <common>\nvarying float vDry;')
+          .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.45, 0.31, 0.14), vDry);');
+      };
+      mat.customProgramCacheKey = function () { return 'wind-dry'; };
+      return mat;
+    }
     function setInstCut(attr, idxs, v) {
       const a = attr.array; let ch = false;
       for (let k = 0; k < idxs.length; k++) { const j = idxs[k]; if (a[j] !== v) { a[j] = v; ch = true; } }
@@ -234,6 +249,8 @@
     const vineMat = windify(new THREE.MeshStandardMaterial({
       map: leafTex, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.85
     }), 3.0);
+
+    [palmMat, cypMat, pomMat, shrMat, wilMat, vineMat].forEach(dryify);
 
     // ---------- terrazas: bloques de ladrillo (altura construida = s.terraces * 25 m) ----------
     const T = TIERS.map(function (t, i) {
@@ -519,6 +536,12 @@
     const shrMesh = new THREE.InstancedMesh(shrGeo, shrMat, cnt.shr);
     const vineGeo = new THREE.PlaneGeometry(3.4, 1, 2, 8).translate(0, -0.5, 0);
     const vineMesh = new THREE.InstancedMesh(vineGeo, vineMat, cnt.vine);
+    const DRYG = { palm: palmGeo, cyp: cypGeo, pom: pomGeo, shr: shrGeo, wil: wilGeo, vine: vineGeo };
+    const DRYATTR = {};
+    Object.keys(DRYG).forEach(function (k) {
+      DRYATTR[k] = new THREE.InstancedBufferAttribute(new Float32Array(cnt[k]), 1);
+      DRYG[k].setAttribute('aDry', DRYATTR[k]);
+    });
     const PM = { palm: palmMesh, cyp: cypMesh, pom: pomMesh, wil: wilMesh, shr: shrMesh, vine: vineMesh };
     palmMesh.castShadow = true; cypMesh.castShadow = true;
     Object.keys(PM).forEach(function (k) {
@@ -619,16 +642,18 @@
         _e.set(it.lean * dK * 1.5, it.yaw, 0, 'YXZ');
         _q.setFromEuler(_e);
         put(inst, it.idx, it.x, it.y, it.z, _q, sc, sy, sc);
-        if (colored && DRY[it.sp]) {
+        if (colored && DRYATTR[it.sp]) {
           const c = Math.min(1, it.col);
-          tmpC.setRGB(c, c, c).lerp(DRY[it.sp], dryK);
+          tmpC.setRGB(c, c, c);
           inst.setColorAt(it.idx, tmpC);
+          DRYATTR[it.sp].array[it.idx] = clamp01(dryK * (0.8 + 0.4 * (it.col - 0.86) / 0.28));
         }
       }
       Object.keys(meshes).forEach(function (k) {
         const inst = meshes[k];
         inst.instanceMatrix.needsUpdate = true;
         if (colored && inst.instanceColor) inst.instanceColor.needsUpdate = true;
+        if (colored && DRYATTR[k]) DRYATTR[k].needsUpdate = true;
       });
     }
     const ALL_BUILT = []; for (let i = 0; i < NT; i++) ALL_BUILT.push(1);
