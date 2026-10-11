@@ -526,7 +526,7 @@
     root.add(beam);
     const tableGlow = glowSprite('127,227,240', 4.2, [CUP.x, CUP.y + 0.06, CUP.z]);
     root.add(tableGlow);
-    const cupLab = label('«Pertenezco a Fidias»', { lh: 0.9, color: '#9ff3ff', pos: [CUP.x - 2.4, 2.0, CUP.z - 2.4] });
+    const cupLab = label('«Pertenezco a Fidias»', { lh: 0.55, color: '#9ff3ff', pos: [CUP.x - 1.0, 1.9, CUP.z - 1.2] });
     root.add(cupLab.sprite);
 
     // ================= 2. standup: Zeus de pie atravesando el techo del templo =================
