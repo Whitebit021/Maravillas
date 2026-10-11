@@ -81,7 +81,7 @@
   // altura de la isla (tierra): llanura plana alrededor del origen, colinas al sur, lomas al SO
   function landE(x, z) {
     const dO = Math.sqrt(x * x + z * z);
-    const flat = sstep(62, 160, dO);
+    const flat = sstep(108, 175, dO);                 // explanada del terraplén (radio 110 m)
     const rise = 26 * sstep(150, 1400, z);
     const nz = 9 * fbm(x / 230, z / 230, 4, 3) - 3.5;
     const e = (rise + nz) * flat;
@@ -121,6 +121,10 @@
     return Math.sqrt(dx * dx + dz * dz);
   }
   function inlandAt(x, z) { return Math.min(z - coastZ(x), eastX(z) - x); }
+  // zonas sin casas ni árboles: explanada del origen (r 110 m) y del montón de armas (r 35 m)
+  function inPlaza(x, z) {
+    return Math.hypot(x, z) < 110 || Math.hypot(x - SITE.weapons.x, z - SITE.weapons.z) < 35;
+  }
 
   // ---------- GLSL ----------
   const COMMON_GLSL = 'vec3 toSRGB(vec3 c) { return pow(max(c, vec3(0.0)), vec3(1.0 / 2.2)); }';
@@ -447,14 +451,15 @@
     const tmpC = col();
     const cSand = col('#d2b07a'), cPale = col('#e6d3a0'), cGreen = col('#7f8a4c');
     const cRock = col('#8f8a80'), cWet = col('#9a8160'), cStreet = col('#9c8056');
-    const cLot = col('#dcc39b'), cBeach = col('#ead9ae');
+    const cLot = col('#dcc39b'), cBeach = col('#ead9ae'), cPlaza = col('#c7a878');
     function groundColor(x, z, h, slope, out) {
       out.copy(cSand).lerp(cPale, vnoise(x / 60, z / 60, 21));
       out.lerp(cGreen, sstep(5, 20, h) * (1 - sstep(0.2, 0.4, slope)) * 0.7);   // colinas con maleza
       out.lerp(cRock, sstep(0.2, 0.42, slope));                                  // laderas rocosas
       out.lerp(cBeach, sstep(-2.5, -0.5, h) * (1 - sstep(0.6, 2.0, h)));         // playa
       if (h < -1.5) out.lerp(cWet, 0.8);                                         // fondo marino
-      if (x > CITY.xMin && x < CITY.xMax && z > CITY.zMin && z < CITY.zMax && h < 40) {
+      if (inPlaza(x, z)) out.lerp(cPlaza, 0.9);                                  // tierra apisonada
+      else if (x > CITY.xMin && x < CITY.xMax && z > CITY.zMin && z < CITY.zMax && h < 40) {
         const ux = ((x - CITY.xMin) % 52 + 52) % 52, uz = ((z - CITY.zMin) % 52 + 52) % 52;
         const street = (ux > 40 || uz > 40);
         out.lerp(street ? cStreet : cLot, 0.85);                                 // manzanas y calles
@@ -680,7 +685,7 @@
     const HOUSE_COLS = ['#f4efe6', '#f1ead9', '#ece6da', '#f7f2e8', '#e8dcc4', '#d9a35a', '#c98a55', '#d6b98a'].map(col);
     const ROOF_COLS = ['#b5573a', '#a64d32', '#c0603f', '#9c4a30', '#8a4a36'].map(col);
     function buildable(x, z) {
-      if (inlandAt(x, z) < 12) return false;
+      if (inlandAt(x, z) < 12 || inPlaza(x, z)) return false;
       for (const T of TEMPLES) {
         if (Math.abs(x - T.x) < T.L / 2 + 12 && Math.abs(z - T.z) < T.W / 2 + 12) return false;
       }
@@ -786,7 +791,7 @@
     while (nCyp < CYP && tries < CYP * 40) {
       tries++;
       const x = -900 + rnd() * 1200, z = 0 + rnd() * 900;
-      if (inlandAt(x, z) < 25 || groundH(x, z) > 30 || slopeAt(x, z) > 0.35) continue;
+      if (inlandAt(x, z) < 25 || inPlaza(x, z) || groundH(x, z) > 30 || slopeAt(x, z) > 0.35) continue;
       const sc1 = 0.8 + rnd() * 0.6;
       cypMesh.setMatrixAt(nCyp, xf(x, groundH(x, z) - 0.3, z, sc1, sc1 * (0.9 + rnd() * 0.4), sc1, rnd() * TAU));
       nCyp++;
@@ -796,7 +801,7 @@
     while (nBush < BUSH && tries < BUSH * 40) {
       tries++;
       const x = -900 + rnd() * 1300, z = rnd() * 1100;
-      if (inlandAt(x, z) < 25 || groundH(x, z) > 60 || slopeAt(x, z) > 0.45) continue;
+      if (inlandAt(x, z) < 25 || inPlaza(x, z) || groundH(x, z) > 60 || slopeAt(x, z) > 0.45) continue;
       const sc1 = 1.2 + rnd() * 1.2;
       bushMesh.setMatrixAt(nBush, xf(x, groundH(x, z) - 0.2, z, sc1, sc1 * 0.7, sc1, rnd() * TAU));
       _c.set(['#6f7f4a', '#7d8c52', '#5e7044'][Math.floor(rnd() * 3)]);
@@ -817,7 +822,7 @@
         t++;
         const x = -900 + rnd() * 1300, z = rnd() * 1100;
         const h = groundH(x, z), sl = slopeAt(x, z);
-        if (inlandAt(x, z) < 25 || h < hMin || h > hMax || sl < slMin || sl > slMax) continue;
+        if (inlandAt(x, z) < 25 || inPlaza(x, z) || h < hMin || h > hMax || sl < slMin || sl > slMax) continue;
         if (x > CITY.xMin && x < CITY.xMax && z > CITY.zMin && z < CITY.zMax) continue;
         fn(n, x, h, z); n++;
       }
