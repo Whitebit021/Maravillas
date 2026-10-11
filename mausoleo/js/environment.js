@@ -71,8 +71,8 @@
     const d = Math.max(0, -z - 260);
     const span = 0.7 + 0.3 * (1 - sstep(300, 1200, Math.abs(x)));
     const hill = 150 * (1 - Math.exp(-d / 380)) * span;
-    const lump = 40 * (fbm(x / 260, z / 260, 4, 7) - 0.45) * sstep(0, 200, d);
-    const ridge = 30 * ridged(x / 420, z / 420, 3, 19) * sstep(60, 400, d);
+    const lump = 70 * (fbm(x / 260, z / 260, 4, 7) - 0.45) * sstep(0, 200, d);
+    const ridge = 45 * ridged(x / 420, z / 420, 3, 19) * sstep(60, 400, d);
     const low = 0.8 + 3 * fbm(x / 180, z / 180, 3, 3);
     let h = low + hill + lump + ridge;
     const tw = 1 - sstep(0, 40, Math.max(Math.abs(x) - TW_X, Math.abs(z) - TW_Z));
@@ -299,15 +299,26 @@
 
   // ---------- texturas dibujadas por código ----------
   function makeEarthTexture(THREE) {
-    const S = 256;
+    // manchas de tierra, caliza, hierba seca y matorral verde mediterráneo (tile de 16 m)
+    const S = 512;
     const cv = document.createElement('canvas'); cv.width = cv.height = S;
     const g = cv.getContext('2d');
-    const img = g.createImageData(S, S), d = img.data;
-    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
-      const i = (y * S + x) * 4;
-      const blot = 0.5 + 0.5 * Math.sin(TAU * x / S * 2 + 1.3 * Math.sin(TAU * y / S * 3));
-      const v = 172 + 40 * (rnd() - 0.5) + 10 * (blot - 0.5);
-      d[i] = v; d[i + 1] = v * 0.92; d[i + 2] = v * 0.74; d[i + 3] = 255;
+    g.fillStyle = '#a08a62'; g.fillRect(0, 0, S, S);
+    const cols = ['#c9b48a', '#d8c79b', '#8f9a58', '#7f8a4e', '#8c6d4c', '#6a7d45', '#b8a078', '#9aa266'];
+    for (let k = 0; k < 900; k++) {
+      const x = rnd() * S, y = rnd() * S, r = 4 + rnd() * 26;
+      g.globalAlpha = 0.35 + 0.4 * rnd();
+      g.fillStyle = cols[Math.floor(rnd() * cols.length)];
+      g.beginPath(); g.ellipse(x, y, r, r * (0.5 + 0.5 * rnd()), rnd() * 3, 0, TAU); g.fill();
+      // repetición en los bordes para que el tile no tenga costuras
+      if (x < 30) { g.beginPath(); g.ellipse(x + S, y, r, r * 0.7, 0, 0, TAU); g.fill(); }
+      if (y < 30) { g.beginPath(); g.ellipse(x, y + S, r, r * 0.7, 0, 0, TAU); g.fill(); }
+    }
+    g.globalAlpha = 1;
+    const img = g.getImageData(0, 0, S, S), d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const n = (rnd() - 0.5) * 26;
+      d[i] += n; d[i + 1] += n; d[i + 2] += n * 0.8;
     }
     g.putImageData(img, 0, 0);
     const tex = new THREE.CanvasTexture(cv);
@@ -426,6 +437,7 @@
     const cDry = new THREE.Color('#8f9064'), cYel = new THREE.Color('#b59a68');
     const cRock = new THREE.Color('#7b6d5b'), cSea = new THREE.Color('#4f6058');
     const cStone = new THREE.Color('#d9cdb0'), tc = new THREE.Color();
+    const cGreen = new THREE.Color('#7d8c4a'), cPale = new THREE.Color('#c9b98f');
     for (let j = 0; j < NZ; j++) {
       for (let i = 0; i < NX; i++) {
         const x = xs[i], z = zs[j], idx = j * NX + i;
@@ -433,6 +445,9 @@
         P[idx * 3] = x; P[idx * 3 + 1] = h; P[idx * 3 + 2] = z;
         U[idx * 2] = x / 16; U[idx * 2 + 1] = z / 16;
         tc.copy(cDry).lerp(cYel, clamp01(fbm(x / 60, z / 60, 3, 91) * 1.4 - 0.2));
+        tc.lerp(cGreen, sstep(0.55, 0.8, fbm(x / 90, z / 90, 3, 61)) * sstep(60, 20, h) * 0.75);
+        // terrazas de cultivo en las laderas: bandas claras cada ~2.4 m de altura
+        tc.lerp(cPale, sstep(0.12, 0.22, sl) * (1 - sstep(0.4, 0.5, sl)) * (fract(h / 2.4) < 0.45 ? 1 : 0) * 0.5);
         tc.lerp(cRock, Math.max(sstep(0.35, 0.75, sl), sstep(60, 110, h) * 0.7));
         if (h < 0) tc.lerp(cSea, clamp01(-h / 6));
         if (Math.abs(x) < PER_HX && Math.abs(z) < PER_HZ) tc.copy(cStone);
@@ -522,18 +537,19 @@
     const MOON_COL = col('#6f8fe0');
     const DEEP_DAY = col('#2f5f5a'), DEEP_NIGHT = col('#081018');
     const FOG_DAY = col('#d9c4a0'), DUST_FOG = col('#a68660');
+    const NIGHT_ZEN = col('#02040c'), NIGHT_HOR = col('#0b1426');
     const HEM_GROUND_DAY = col('#8a6a44'), HEM_GROUND_NIGHT = col('#2a3050');
     const KEYS = [
       [0.00, '#02040c', '#0b1426', '#6f8fe0', 0.0, '#1a2550'],
       [0.18, '#02040c', '#0b1426', '#6f8fe0', 0.0, '#1d2a58'],
-      [0.235, '#2b3c7a', '#ff8a7a', '#ffa070', 1.1, '#7a6a9a'],
-      [0.30, '#4f86c4', '#f4cfa6', '#ffd2a0', 1.9, '#b8c4d8'],
-      [0.38, '#3d7fc4', '#d9dcd8', '#fff0d6', 2.3, '#c9d8ea'],
-      [0.50, '#3d7fc4', '#cfd9df', '#fff2dc', 2.5, '#d0dde8'],
-      [0.62, '#3f7dc2', '#d6d6cc', '#ffe6b8', 2.3, '#c9d8ea'],
-      [0.72, '#34509a', '#ffb070', '#ffb050', 1.6, '#f0b880'],
-      [0.765, '#3a3a7a', '#ff9a2a', '#ffa040', 0.9, '#c07a6a'],
-      [0.80, '#1c2050', '#c0583a', '#ff7a3a', 0.15, '#6a4a5a'],
+      [0.235, '#2b3c7a', '#ff8a7a', '#ffa070', 1.43, '#7a6a9a'],
+      [0.30, '#4f86c4', '#f4cfa6', '#ffd2a0', 2.47, '#b8c4d8'],
+      [0.38, '#2a6fd6', '#d9dcd8', '#fff0d6', 2.99, '#c9d8ea'],
+      [0.50, '#2a6fd6', '#bcd8ee', '#fff2dc', 3.25, '#d0dde8'],
+      [0.62, '#3f7dc2', '#d6d6cc', '#ffe6b8', 2.99, '#c9d8ea'],
+      [0.72, '#34509a', '#ffb070', '#ffb050', 2.08, '#f0b880'],
+      [0.765, '#3a3a7a', '#ff9a2a', '#ffa040', 1.17, '#c07a6a'],
+      [0.80, '#1c2050', '#c0583a', '#ff7a3a', 0.195, '#6a4a5a'],
       [0.86, '#02040c', '#0b1426', '#6f8fe0', 0.0, '#1f2a55'],
       [1.00, '#02040c', '#0b1426', '#6f8fe0', 0.0, '#1a2550']
     ].map(function (k) {
@@ -587,7 +603,7 @@
     sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.15;
     sun.target.position.set(0, 0, 0);
     root.add(sun); root.add(sun.target);
-    const hemi = new THREE.HemisphereLight(0xd6e6ff, 0x8a6a44, 0.6);
+    const hemi = new THREE.HemisphereLight(0xc4dcff, 0x7a6244, 0.4);
     root.add(hemi);
 
     // mapa de entorno (cielo degradado) para el mármol pulido
@@ -805,80 +821,133 @@
     }
     for (const group of streetLines) for (const run of group) ribbon(RD, run, 1.8, C_ROAD);
 
-    // ---------- casas en terrazas (dos barrios antiguos + barrio moderno sobre la zona B) ----------
+    // ---------- casas en manzanas (encaladas y ocres con tejado de teja); barrio moderno en la zona B ----------
+    const NS_X = [], EW_Z = [-225, -265, -305, -400, -450, -500, -550, 170, 205];
+    for (let x = -800; x <= 800; x += 80) NS_X.push(x);
+    const nearLine = function (v, arr) { for (let i = 0; i < arr.length; i++) if (Math.abs(v - arr[i]) < 4.5) return true; return false; };
+    const inAgora = function (x, z) { return Math.abs(x - 160) < 40 && Math.abs(z + 150) < 28; };
     const occ = {};
+    const occKey = function (x, z) { return Math.floor(x / 12) + ',' + Math.floor(z / 12); };
+    const PITCH = 12;
     const houses = [];
-    for (let gz = CITY.zMin; gz < CITY.zMax; gz += 14) {
-      for (let gx = CITY.xMin; gx < CITY.xMax; gx += 14) {
-        const x = gx + (rnd() - 0.5) * 10, z = gz + (rnd() - 0.5) * 10;
-        if (rnd() > 0.16) continue;
-        if (houseExcluded(x, z)) continue;
+    for (let gz = CITY.zMin; gz < CITY.zMax; gz += PITCH) {
+      for (let gx = CITY.xMin; gx < CITY.xMax; gx += PITCH) {
+        const x = gx + PITCH / 2, z = gz + PITCH / 2;
+        if (nearLine(x, NS_X) || nearLine(z, EW_Z)) continue;     // calles entre manzanas
+        if (rnd() > 0.85) continue;
+        if (houseExcluded(x, z) || inAgora(x, z)) continue;
         const h0 = H(x, z);
-        if (h0 < 1.2) continue;
-        if (slopeAt(x, z) > 0.3) continue;
-        const w = 4.5 + rnd() * 3, d = 4.5 + rnd() * 2.5, hh = 2.8 + rnd() * 3.2;
-        const zoneB = inZoneB(x, z);
-        houses.push({ x: x, z: z, y: h0 - 0.6, w: w, d: d, h: hh, ry: Math.floor(rnd() * 2) * Math.PI / 2, zoneB: zoneB,
-          c: rnd() });
-        occ[Math.floor(x / 14) + ',' + Math.floor(z / 14)] = true;
+        if (h0 < 1.2 || slopeAt(x, z) > 0.4) continue;
+        houses.push({ x: x, z: z, y: h0 - 0.8, w: 6.8 + rnd() * 1.2, d: 6.8 + rnd() * 1.2, h: 3 + rnd() * 3.2,
+          zoneB: inZoneB(x, z), c: rnd() });
+        occ[occKey(x, z)] = true;
       }
     }
-    const ANC_COLS = ['#b89672', '#a98660', '#c4a47c', '#9a7a58', '#d2b48c', '#c9b38f'].map(col);
-    const itemsA = [], itemsB = [], itemsM = [];
+    const ANC_COLS = ['#f2ebdc', '#ece4d0', '#e8dcc0', '#d2a777', '#c28f5e', '#e4cfa6'].map(col);
+    const ROOF_COLS = ['#a8694a', '#9a5b40', '#b07050', '#8c5a44'].map(col);
+    const itemsA = [], itemsB = [], roofA = [], roofB = [], itemsM = [];
     const nightA = [], nightB = [], nightM = [];
     for (let i = 0; i < houses.length; i++) {
       const hs = houses[i];
-      const cc = ANC_COLS[Math.floor(hs.c * ANC_COLS.length) % ANC_COLS.length];
-      const item = { x: hs.x, y: hs.y, z: hs.z, w: hs.w, h: hs.h + 0.6, d: hs.d, ry: hs.ry, col: cc };
-      if (hs.zoneB) itemsB.push(item); else itemsA.push(item);
-      if (rnd() < 0.45) (hs.zoneB ? nightB : nightA).push(hs.x, hs.y + hs.h + 0.8, hs.z);
-      if (hs.zoneB) {
-        // mismo solar: casa cúbica blanca del pueblo moderno (Bodrum)
-        const mh = 3 + rnd() * 3;
-        const mc = col(rnd() < 0.8 ? '#f6f5ef' : '#eef3f7');
-        itemsM.push({ x: hs.x, y: hs.y, z: hs.z, w: hs.w + 0.4, h: mh, d: hs.d + 0.4, ry: hs.ry, col: mc });
-        if (rnd() < 0.45) nightM.push(hs.x, hs.y + mh + 0.8, hs.z);
+      const yTop = hs.y + hs.h + 0.8;
+      const item = { x: hs.x, y: hs.y, z: hs.z, w: hs.w, h: hs.h + 0.8, d: hs.d, ry: 0, col: ANC_COLS[Math.floor(hs.c * ANC_COLS.length)] };
+      const roof = { x: hs.x, y: yTop - 0.2, z: hs.z, w: hs.w + 0.5, h: 0.9, d: hs.d + 0.5, ry: 0,
+        col: ROOF_COLS[Math.floor(fract(hs.c * 7.3) * ROOF_COLS.length)] };
+      (hs.zoneB ? itemsB : itemsA).push(item);
+      (hs.zoneB ? roofB : roofA).push(roof);
+      if (rnd() < 0.4) (hs.zoneB ? nightB : nightA).push(hs.x, yTop + 0.6, hs.z);
+    }
+    // barrio moderno: cubos blancos apiñados sobre la zona B
+    for (let gz = ZONE_B.z0; gz < ZONE_B.z1; gz += PITCH) {
+      for (let gx = ZONE_B.x0; gx < ZONE_B.x1; gx += PITCH) {
+        const x = gx + PITCH / 2, z = gz + PITCH / 2;
+        if (rnd() > 0.8) continue;
+        if (houseExcluded(x, z) || inAgora(x, z)) continue;
+        const h0 = H(x, z);
+        if (h0 < 1.2 || slopeAt(x, z) > 0.45) continue;
+        const mh = 3 + rnd() * 3.5;
+        itemsM.push({ x: x, y: h0 - 0.8, z: z, w: 7.2, h: mh + 0.8, d: 7.2, ry: 0, col: col(rnd() < 0.85 ? '#f6f5ef' : '#eef3f7') });
+        if (rnd() < 0.4) nightM.push(x, h0 + mh + 0.8, z);
       }
     }
-    // unas pocas casas modernas más, al pie de la bahía del barrio B
-    for (let k = 0; k < 40; k++) {
-      const x = ZONE_B.x0 + rnd() * (ZONE_B.x1 - ZONE_B.x0), z = ZONE_B.z0 + rnd() * (ZONE_B.z1 - ZONE_B.z0);
-      if (houseExcluded(x, z) || H(x, z) < 1.2 || slopeAt(x, z) > 0.3) continue;
-      const mh = 3 + rnd() * 3, h0 = H(x, z);
-      itemsM.push({ x: x, y: h0 - 0.6, z: z, w: 6 + rnd() * 3, h: mh + 0.6, d: 5 + rnd() * 3, ry: Math.floor(rnd() * 2) * Math.PI / 2, col: col('#f6f5ef') });
-      if (rnd() < 0.45) nightM.push(x, h0 + mh + 0.8, z);
-    }
     const houseGeo = new THREE.BoxGeometry(1, 1, 1); houseGeo.translate(0, 0.5, 0);
+    const matRoof = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 });
     const houseA = instMesh(THREE, houseGeo, matHouse, itemsA, root);
     const houseB = instMesh(THREE, houseGeo, matHouse, itemsB, root);
+    const roofAm = instMesh(THREE, houseGeo, matRoof, roofA, root);
+    const roofBm = instMesh(THREE, houseGeo, matRoof, roofB, root);
     const modern = instMesh(THREE, houseGeo, matModern, itemsM, root);
     houseA.receiveShadow = true; houseB.receiveShadow = true; modern.receiveShadow = true;
+    roofAm.receiveShadow = true; roofBm.receiveShadow = true;
 
-    // ---------- olivos y cipreses ----------
+    // ---------- vegetación densa: olivos, cipreses, pinos y matorral ----------
     const TG = treeGeoms(THREE);
-    const oliveItems = [];
-    for (let k = 0; k < 4000 && oliveItems.length < 300; k++) {
-      const x = CITY.xMin + rnd() * (CITY.xMax - CITY.xMin), z = CITY.zMin + rnd() * (CITY.zMax - CITY.zMin);
-      if (houseExcluded(x, z) || inZoneB(x, z)) continue;
-      if (occ[Math.floor(x / 14) + ',' + Math.floor(z / 14)]) continue;
+    const pineGeo = new THREE.ConeGeometry(2.6, 9, 7); pineGeo.translate(0, 8.5, 0);
+    const pineTrunk = new THREE.CylinderGeometry(0.22, 0.3, 7, 6); pineTrunk.translate(0, 3.5, 0);
+    const bushGeo = new THREE.IcosahedronGeometry(1, 0); bushGeo.translate(0, 0.5, 0);
+    const matBush = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true });
+    const matPine = new THREE.MeshStandardMaterial({ color: col('#3d5a2f'), roughness: 0.9, flatShading: true });
+    const oliveCols = ['#6f7f4c', '#7a8a58', '#637349'].map(col);
+    const bushCols = ['#5f7a3c', '#6d8a45', '#4f6b35', '#8a8f55', '#7a8a4a'].map(col);
+    const freeAt = function (x, z) {
+      return !houseExcluded(x, z) && !inAgora(x, z) && !occ[occKey(x, z)] && !(Math.abs(x) < 62 && Math.abs(z) < 126);
+    };
+    const oliveItems = [], oliveCanopy = [], pineItems = [], pineCanopy = [], cypItems = [], bushItems = [];
+    for (let k = 0; k < 6000 && oliveItems.length < 420; k++) {
+      const x = -1000 + rnd() * 2000, z = -1200 + rnd() * 1450;
+      if (z > coastZ(x) - 6 || !freeAt(x, z)) continue;
       const h0 = H(x, z);
-      if (h0 < 1.5 || slopeAt(x, z) > 0.45) continue;
-      const s = 0.8 + rnd() * 0.5;
-      oliveItems.push({ x: x, y: h0 - 0.2, z: z, w: s, h: s, d: s, ry: rnd() * TAU });
+      if (h0 < 1.5 || slopeAt(x, z) > 0.5) continue;
+      const s = 0.8 + rnd() * 0.5, ry = rnd() * TAU;
+      oliveItems.push({ x: x, y: h0 - 0.2, z: z, w: s, h: s, d: s, ry: ry });
+      oliveCanopy.push({ x: x, y: h0 - 0.2, z: z, w: s, h: s, d: s, ry: ry, col: oliveCols[Math.floor(rnd() * oliveCols.length)] });
     }
-    const oliveTrunk = instMesh(THREE, TG.trunk, matTrunk, oliveItems, root);
-    const oliveCanopy = instMesh(THREE, TG.canopy, matTree, oliveItems, root);
-    const cypItems = [];
-    for (let k = 0; k < 4000 && cypItems.length < 90; k++) {
-      let x, z;
-      if (rnd() < 0.5) { x = (rnd() < 0.5 ? -1 : 1) * (56 + rnd() * 14); z = (rnd() * 2 - 1) * 140; }
-      else { z = (rnd() < 0.5 ? -1 : 1) * (126 + rnd() * 14); x = (rnd() * 2 - 1) * 74; }
+    for (let k = 0; k < 6000 && pineItems.length < 240; k++) {
+      const x = -1000 + rnd() * 2000, z = -1300 + rnd() * 1100;
+      if (!freeAt(x, z)) continue;
       const h0 = H(x, z);
-      if (h0 < 0.5) continue;
+      if (h0 < 10 || slopeAt(x, z) > 0.9) continue;
+      const s = 0.9 + rnd() * 0.6;
+      pineItems.push({ x: x, y: h0 - 0.3, z: z, w: s, h: s, d: s, ry: rnd() * TAU });
+      pineCanopy.push({ x: x, y: h0 - 0.3, z: z, w: s, h: s, d: s, ry: 0, col: col('#3d5a2f') });
+    }
+    for (let k = 0; k < 6000 && cypItems.length < 150; k++) {
+      let x, z;
+      if (k % 2 === 0) { x = (rnd() < 0.5 ? -1 : 1) * (56 + rnd() * 14); z = (rnd() * 2 - 1) * 140; }
+      else { x = -900 + rnd() * 1800; z = -700 + rnd() * 900; }
+      if (k % 2 === 1 && !freeAt(x, z)) continue;
+      const h0 = H(x, z);
+      if (h0 < 0.5 || slopeAt(x, z) > 0.8) continue;
       const s = 0.8 + rnd() * 0.5;
       cypItems.push({ x: x, y: h0 - 0.2, z: z, w: s, h: s, d: s, ry: 0 });
     }
-    const cypress = instMesh(THREE, TG.cyp, matCypress, cypItems, root);
+    for (let k = 0; k < 9000 && bushItems.length < 900; k++) {
+      const x = -1100 + rnd() * 2200, z = -1250 + rnd() * 1500;
+      if (z > coastZ(x) - 4 || !freeAt(x, z)) continue;
+      const h0 = H(x, z);
+      if (h0 < 0.8 || slopeAt(x, z) > 0.7) continue;
+      const s = 1.2 + rnd() * 1.8;
+      bushItems.push({ x: x, y: h0 - 0.3, z: z, w: s, h: s * 0.8, d: s, ry: rnd() * TAU, col: bushCols[Math.floor(rnd() * bushCols.length)] });
+    }
+    instMesh(THREE, TG.trunk, matTrunk, oliveItems, root);
+    instMesh(THREE, TG.canopy, matTree, oliveCanopy, root);
+    instMesh(THREE, pineTrunk, matTrunk, pineItems, root);
+    instMesh(THREE, pineGeo, matPine, pineCanopy, root);
+    instMesh(THREE, TG.cyp, matCypress, cypItems, root);
+    instMesh(THREE, bushGeo, matBush, bushItems, root);
+
+    // ---------- ágora: plaza de piedra con pórticos en dos lados ----------
+    {
+      const ah = H(160, -150);
+      MB.box(160, ah - 1.2, -150, 62, 2.4, 42, C_PAL);
+      for (let i = 0; i < 9; i++) {
+        const cx = 160 - 26 + i * 6.5;
+        MB.cyl(cx, ah, -169, 0.45, 5, C_MARBLE);
+        MB.cyl(cx, ah, -131, 0.45, 5, C_MARBLE);
+      }
+      MB.box(160, ah + 5.4, -169, 62, 0.8, 2.2, C_MARBLE2);
+      MB.box(160, ah + 5.4, -131, 62, 0.8, 2.2, C_MARBLE2);
+    }
 
     // ---------- piedra y mármol fusionados ----------
     const stoneMesh = new THREE.Mesh(SB.build(), matBuild);
@@ -952,7 +1021,8 @@
       const wall = s.wall || 0;
       const quake = clamp01(s.quake || 0);
       const today = clamp01(s.today || 0);
-      // el sol nace por el este (+X), sube hacia el sur (+Z) y se pone por el oeste (-X)
+      // noche de las cenizas (t 41-58): cielo estrellado con luna, aunque el ciclo marque atardecer
+      const Nt = sstep(41, 44, s.t || 0) * (1 - sstep(55, 58, s.t || 0));
       const a = (tod - 0.25) * TAU;
       sunDir.set(Math.cos(a), Math.sin(a) * EY, Math.sin(a) * EZ);
       moonDir.set(-sunDir.x, MOON_Y, -sunDir.z).normalize();
@@ -960,22 +1030,21 @@
       moonCut.copy(moonDir).addScaledVector(tmpV, -0.012).normalize();
       sunT1.crossVectors(sunDir, upV).normalize();
       sunT2.crossVectors(sunDir, sunT1).normalize();
-
       const el = sunDir.y;
-      const sunVis = sstep(0.0, 0.12, el);
-      const moonVis = sstep(0.0, -0.12, el);
-      const dayF = sstep(-0.05, 0.3, el);
+      const sunVis = sstep(0.0, 0.12, el) * (1 - Nt);
+      const moonVis = Math.max(sstep(0.0, -0.12, el), Nt);
+      const dayF = sstep(-0.05, 0.3, el) * (1 - Nt);
       const dusk = sunVis * (1 - sstep(0.1, 0.5, el));
       keyAt(tod);
-
-      const lightDir = el >= 0 ? sunDir : moonDir;
+      if (Nt > 0) { tZen.lerp(NIGHT_ZEN, Nt); tHor.lerp(NIGHT_HOR, Nt); }
+      const lightDir = (el >= 0 && Nt < 0.5) ? sunDir : moonDir;
       sun.position.copy(lightDir).multiplyScalar(SHADOW_DIST);
       sun.color.copy(MOON_COL).lerp(tSun, sunVis);
       sun.intensity = kSunI * sunVis + 0.6 * moonVis;
       tHemG.copy(HEM_GROUND_NIGHT).lerp(HEM_GROUND_DAY, dayF);
       hemi.color.copy(tHem);
       hemi.groundColor.copy(tHemG);
-      hemi.intensity = 0.25 + 0.6 * dayF;
+      hemi.intensity = 0.22 + 0.35 * dayF;
       renderer.toneMappingExposure = 0.8 + 0.1 * dayF;
 
       sky.position.copy(camera.position);
@@ -990,11 +1059,11 @@
       skyU.uSunAng.value = 0.0047 * (1 + 2.5 * dusk);
       skyU.uTime.value = wall;
 
-      // niebla: muy suave de día; el terremoto la tiñe de polvo
-      tFog.copy(tHor).lerp(FOG_DAY, 0.7 * dayF);
+      // niebla mínima; el terremoto la tiñe de polvo
+      tFog.copy(tHor).lerp(FOG_DAY, 0.2 * dayF);
       tFog.lerp(DUST_FOG, 0.55 * quake);
       scene.fog.color.copy(tFog);
-      scene.fog.density = 0.00006 * (1 - 0.3 * moonVis) + 0.00026 * quake;
+      scene.fog.density = 0.00004 * (1 - 0.3 * moonVis) + 0.00026 * quake;
       skyU.uBelow.value.copy(tFog);
 
       waterU.uTime.value = wall;
@@ -1007,17 +1076,16 @@
       // ciudad: barrio antiguo o barrio moderno en la zona B
       const modernOn = today > 0.5;
       houseB.visible = !modernOn;
+      roofBm.visible = !modernOn;
       nightPtsB.visible = !modernOn;
       modern.visible = modernOn;
       nightPtsM.visible = modernOn;
       nightU.uNight.value = moonVis * 0.9;
       nightU.uTime.value = wall;
 
-      // recinto moderno
       todayMesh.visible = today > 0.001;
       signMesh.visible = today > 0.001;
 
-      // terremoto: polvo
       quakeMesh.visible = quake > 0.001;
       quakeU.uAlpha.value = quake * 0.8;
       quakeU.uTime.value = wall;

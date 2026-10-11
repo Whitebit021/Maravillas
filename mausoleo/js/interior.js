@@ -241,7 +241,7 @@
       rock: new THREE.MeshStandardMaterial({ map: texRock, emissive: 0xffffff, emissiveMap: texRock, emissiveIntensity: 0.1, roughness: 0.93, side: THREE.DoubleSide }),
       terrace: new THREE.MeshStandardMaterial({ map: texTerrace, emissive: 0xffffff, emissiveMap: texTerrace, emissiveIntensity: 0.04, roughness: 0.9, side: THREE.DoubleSide }),
       earth: new THREE.MeshStandardMaterial({ map: texEarth, emissive: 0xffffff, emissiveMap: texEarth, emissiveIntensity: 0.1, roughness: 1, side: THREE.DoubleSide }),
-      block: new THREE.MeshStandardMaterial({ map: texBlock, emissive: 0xffffff, emissiveMap: texBlock, emissiveIntensity: 0.1, roughness: 0.85, side: THREE.DoubleSide, transparent: true, opacity: 1, depthWrite: false }),
+      block: new THREE.MeshStandardMaterial({ map: texBlock, emissive: 0xffffff, emissiveMap: texBlock, emissiveIntensity: 0.1, roughness: 0.85, side: THREE.DoubleSide }),
       wicker: new THREE.MeshStandardMaterial({ map: texWicker, emissive: 0xffffff, emissiveMap: texWicker, emissiveIntensity: 0.1, roughness: 0.9, side: THREE.DoubleSide }),
       bone: new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.7, transparent: true, opacity: 0, depthWrite: false }),
       vessel: new THREE.MeshStandardMaterial({ color: 0xb5653a, roughness: 0.6, transparent: true, opacity: 0, depthWrite: false }),
@@ -323,22 +323,25 @@
     const cg = new THREE.Group(); root.add(cg);
     const W = CH.halfX, D = CH.halfZ, TH = 0.9, BT = 1.2;
     const K = 5, Hc = CH.y1 - CH.y0, hK = Hc / K;
-    const courses = [];
+    const courses = [], cutCourses = [];
     for (let k = 0; k < K; k++) {
-      const bk = CH.y0 + k * hK, s = new Soup();
-      const b = function (x0, x1, ya, yb, z0, z1) { s.box(x0, x1, ya - bk, yb - bk, z0, z1, BT); };
-      if (k === 0) b(-W, W, CH.y0, CH.y0 + 0.6, -D, D);                 // solera
-      b(-W, W, bk, bk + hK, -D, -D + TH);                                // muro norte
-      b(-W, W, bk, bk + hK, D - TH, D);                                  // muro sur
-      b(W - TH, W, bk, bk + hK, -D + TH, D - TH);                        // muro este
-      if (bk >= -3.8) b(-W, -W + TH, bk, bk + hK, -D + TH, D - TH);      // muro oeste (dintel encima)
+      const bk = CH.y0 + k * hK, s = new Soup(), c = new Soup();
+      const b = function (sol, x0, x1, ya, yb, z0, z1) { sol.box(x0, x1, ya - bk, yb - bk, z0, z1, BT); };
+      if (k === 0) b(s, -W, W, CH.y0, CH.y0 + 0.6, -D, D);              // solera
+      b(c, -W, W, bk, bk + hK, -D, -D + TH);                             // muro norte (se corta con rayos X)
+      b(s, -W, W, bk, bk + hK, D - TH, D);                               // muro sur
+      b(c, W - TH, W, bk, bk + hK, -D + TH, D - TH);                     // muro este (se corta con rayos X)
+      if (bk >= -3.8) b(s, -W, -W + TH, bk, bk + hK, -D + TH, D - TH);   // muro oeste (dintel encima)
       else {                                                              // muro oeste con la entrada
-        b(-W, -W + TH, bk, bk + hK, -D + TH, -1.5);
-        b(-W, -W + TH, bk, bk + hK, 1.5, D - TH);
+        b(s, -W, -W + TH, bk, bk + hK, -D + TH, -1.5);
+        b(s, -W, -W + TH, bk, bk + hK, 1.5, D - TH);
       }
       const mesh = new THREE.Mesh(s.geo(), M.block);
       mesh.position.set(0, bk, 0); mesh.receiveShadow = true;
       cg.add(mesh); courses.push(mesh);
+      const cut = new THREE.Mesh(c.geo(), M.block);
+      cut.position.set(0, bk, 0); cut.receiveShadow = true;
+      cg.add(cut); cutCourses.push(cut);
     }
     // techo de losas (cuatro, de 2 m) que se cierran al final de la obra
     const roofS = new Soup();
@@ -428,30 +431,41 @@
     const tg = new THREE.Group(); root.add(tg);
     const FL = -6.4;                                                     // suelo de la cámara
     const goldL = [];
-    goldL.push(place(new THREE.BoxGeometry(2.4, 0.9, 1.2), 0.6, FL + 0.45, 0));           // caja
+    const S = 1.35, SX = 0.6;                                            // sarcófago 1.35 x el modelo base
+    goldL.push(place(new THREE.BoxGeometry(2.4, 0.9, 1.2), SX, FL + 0.45 * S, 0, 0, 0, 0, S, S, S));   // caja
     const lidShape = new THREE.Shape();
     lidShape.moveTo(-0.6, 0); lidShape.lineTo(0.6, 0); lidShape.lineTo(0.6, 0.12);
     lidShape.lineTo(0, 0.42); lidShape.lineTo(-0.6, 0.12); lidShape.closePath();
     const lidG = new THREE.ExtrudeGeometry(lidShape, { depth: 2.4, bevelEnabled: false, steps: 1 });
     lidG.translate(0, 0, -1.2);
-    goldL.push(place(lidG, 0.6, FL + 0.9, 0, 0, Math.PI / 2, 0));                          // tapa a dos aguas
-    [[-0.55, -0.55], [1.75, -0.55], [-0.55, 0.55], [1.75, 0.55]].forEach(function (p) {
-      goldL.push(place(new THREE.BoxGeometry(0.12, 0.92, 0.12), p[0], FL + 0.46, p[1]));
+    goldL.push(place(lidG, SX, FL + 0.9 * S, 0, 0, Math.PI / 2, 0, S, S, S));                          // tapa a dos aguas
+    [[-1.2, -0.6], [1.2, -0.6], [-1.2, 0.6], [1.2, 0.6]].forEach(function (p) {
+      goldL.push(place(new THREE.BoxGeometry(0.16, 1.2, 0.16), SX + p[0] * S, FL + 0.6, p[1] * S));
     });
-    [[-1.4, 0.9], [-1.1, -1.0]].forEach(function (p) {                  // coronas de oro
-      goldL.push(place(new THREE.TorusGeometry(0.2, 0.025, 6, 24), p[0], FL + 0.03, p[1], Math.PI / 2, 0, 0));
+    [[-1.7, -1.25], [-1.7, 1.2]].forEach(function (p) {                  // cofres de oro
+      goldL.push(place(new THREE.BoxGeometry(1.0, 0.6, 0.7), p[0], FL + 0.3, p[1]));
+      goldL.push(place(new THREE.BoxGeometry(1.06, 0.14, 0.76), p[0], FL + 0.67, p[1]));
+    });
+    [[SX, FL + 1.84, 0], [-1.7, FL + 0.8, 1.2]].forEach(function (p) {  // coronas de oro
+      goldL.push(place(new THREE.TorusGeometry(0.22, 0.03, 6, 24), p[0], p[1], p[2], Math.PI / 2, 0, 0));
       for (let j = 0; j < 6; j++) {
         const a = j / 6 * Math.PI * 2;
-        goldL.push(place(new THREE.ConeGeometry(0.04, 0.14, 6), p[0] + Math.cos(a) * 0.2, FL + 0.07, p[1] + Math.sin(a) * 0.2));
+        goldL.push(place(new THREE.ConeGeometry(0.05, 0.16, 6), p[0] + Math.cos(a) * 0.22, p[1] + 0.08, p[2] + Math.sin(a) * 0.22));
       }
     });
-    [[-2.2, -0.3, 0.9], [-1.9, 0.7, -0.4], [-2.6, 1.0, 0.2]].forEach(function (p) {  // espadas
-      goldL.push(place(new THREE.BoxGeometry(0.9, 0.012, 0.06), p[0], FL + 0.008, p[1], 0, p[2], 0));
-      const hx = p[0] + Math.cos(p[2]) * 0.5, hz = p[1] - Math.sin(p[2]) * 0.5;
-      goldL.push(place(new THREE.BoxGeometry(0.2, 0.03, 0.1), hx, FL + 0.015, hz, 0, p[2], 0));
+    [-0.4, 0.4, 1.2].forEach(function (x) {                              // espadas tumbadas
+      goldL.push(place(new THREE.BoxGeometry(0.9, 0.012, 0.06), x, FL + 0.008, -1.75));
+      goldL.push(place(new THREE.BoxGeometry(0.2, 0.03, 0.1), x - 0.5, FL + 0.015, -1.75));
     });
-    goldL.push(place(new THREE.CylinderGeometry(0.02, 0.02, 1.6, 6), 2.3, FL + 0.02, 0, Math.PI / 2, 0, 0));  // lanzas
-    goldL.push(place(new THREE.CylinderGeometry(0.02, 0.02, 1.6, 6), 2.6, FL + 0.02, 0.3, Math.PI / 2, 0, 0));
+    goldL.push(place(new THREE.CylinderGeometry(0.02, 0.02, 1.6, 6), 2.7, FL + 0.02, -0.5, Math.PI / 2, 0, 0));  // lanzas
+    goldL.push(place(new THREE.CylinderGeometry(0.02, 0.02, 1.6, 6), 2.7, FL + 0.02, 0.5, Math.PI / 2, 0, 0));
+    const R5 = mulberry32(91);
+    for (let i = 0; i < 70; i++) {                                       // monedas sueltas en el suelo
+      const x = -2.8 + R5() * 5.6, z = -1.9 + R5() * 3.8;
+      if (x > -1.1 && x < 2.3 && Math.abs(z) < 0.85) continue;
+      if (x < -1.1 && x > -2.3 && (Math.abs(z + 1.25) < 0.45 || Math.abs(z - 1.2) < 0.45)) continue;
+      goldL.push(place(new THREE.CylinderGeometry(0.09, 0.09, 0.02, 8), x, FL + 0.01, z, R5() * 0.3, R5() * 3, 0));
+    }
     const goldMesh = new THREE.Mesh(mergeGeos(goldL, false), M.gold);
     tg.add(goldMesh);
 
@@ -459,8 +473,8 @@
     const jewelL = [];
     for (let i = 0; i < 40; i++) {
       const r = 0.05 + R3() * 0.06, x = -2.7 + R3() * 5.4, z = -1.8 + R3() * 3.6;
-      const onLid = Math.abs(x - 0.6) < 1.2 && Math.abs(z) < 0.5;
-      const y = onLid ? -5.5 + r * 0.6 : FL + r * 0.6;
+      const onLid = Math.abs(x - 0.6) < 1.5 && Math.abs(z) < 0.7;
+      const y = onLid ? FL + 1.8 + r * 0.6 : FL + r * 0.6;
       jewelL.push(tint(place(new THREE.OctahedronGeometry(r, 0), x, y, z, R3() * 3, R3() * 3, 0, 1, 0.6, 1), palette[i % palette.length]));
     }
     const jewelMesh = new THREE.Mesh(mergeGeos(jewelL, true), M.jewel);
@@ -492,9 +506,9 @@
       root.add(sp);
       return sp;
     }
-    const lblCam = label('CÁMARA FUNERARIA', [-2, -7.5, 0], 6.5);
-    const lblSeal = label('BLOQUE DE SELLADO', [-9, -8, 1], 5.5);
-    const lblOff = label('OFRENDAS', [-15, -1.2, 9], 5);
+    const lblCam = label('CÁMARA FUNERARIA', [-4, -8, 2], 4.5);
+    const lblSeal = label('BLOQUE DE SELLADO', [-9, -8, -4], 4);
+    const lblOff = label('OFRENDAS', [-15, -1.2, 9], 3.5);
 
     // luz cálida tenue dentro de la cámara (siempre en escena: evita recompilar shaders)
     const light = new THREE.PointLight(0xffd7a0, 0, 30, 2);
@@ -526,11 +540,12 @@
           const p = clamp01(ch * K - k);
           courses[k].visible = p > 0.001;
           courses[k].scale.y = Math.max(0.001, p);
+          cutCourses[k].visible = p > 0.001 && xr < 0.5;               // corte: sin muros norte y este
+          cutCourses[k].scale.y = Math.max(0.001, p);
         }
         const pr = clamp01((ch - 0.8) / 0.2);
-        roof.visible = pr > 0.001;
+        roof.visible = pr > 0.001 && xr < 0.5;                         // sin techo con rayos X
         roof.scale.y = Math.max(0.001, pr);
-        M.block.opacity = 1 - 0.7 * xr;
 
         edges.visible = xr > 0.001;
         M.line.opacity = 0.95 * xr;
@@ -542,7 +557,7 @@
         // tesoro: brilla al subir; al bajar se desvanece con partículas (desaparece en 3 s)
         tg.visible = tr > 0.001;
         M.gold.opacity = tr; M.jewel.opacity = tr;
-        M.gold.emissiveIntensity = tr * (0.25 + 0.1 * Math.sin(wall * 2.1));
+        M.gold.emissiveIntensity = tr * (0.35 + 0.12 * Math.sin(wall * 2.1));
         glow.visible = tr > 0.001;
         M.glow.opacity = tr * 0.75 * (0.85 + 0.15 * Math.sin(wall * 1.7));
         const dis = smooth(clamp01((T - 201) / 3));
@@ -564,7 +579,7 @@
         lblSeal.visible = xr > 0.01; lblSeal.material.opacity = xr;
         lblOff.visible = xr * sa > 0.01; lblOff.material.opacity = xr * sa;
 
-        light.intensity = 30 * Math.max(xr * 0.6, tr * 0.9);
+        light.intensity = 45 * Math.max(xr * 0.8, tr);
       }
     };
   };

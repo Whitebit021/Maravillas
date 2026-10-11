@@ -101,31 +101,32 @@
       return out;
     }
 
-    // ---------- columna jónica: basa, fuste estriado con entasis, equino, ábaco y dos volutas ----------
+    // ---------- columna jónica: basa con toros, fuste de 24 estrías con entasis, equino, ábaco y volutas grandes ----------
     function columnGeo() {
-      const shaft = [[0, 0], [0.8, 0], [0.8, 0.1], [0.66, 0.2], [0.6, 0.34], [0.6, 0.6]];
-      for (let i = 1; i <= 8; i++) {
-        const u = i / 8;
-        shaft.push([0.6 - 0.1 * u + 0.03 * Math.sin(Math.PI * u), 0.6 + 10.0 * u]);
+      const shaft = [[0, 0], [0.8, 0], [0.84, 0.08], [0.74, 0.16], [0.66, 0.26], [0.6, 0.34]];
+      for (let i = 1; i <= 6; i++) {
+        const u = i / 6;
+        shaft.push([0.6 - 0.1 * u + 0.025 * Math.sin(Math.PI * u), 0.34 + 10.26 * u]);
       }
       shaft.push([0.84, 10.7], [0.8, 10.98], [0, 10.98]);
-      const sh = lathe(shaft, 36), Pa = sh.attributes.position;
-      for (let i = 0; i < Pa.count; i++) {        // 12 estrías: el radio oscila con el ángulo
+      const sh = lathe(shaft, 48), Pa = sh.attributes.position;
+      for (let i = 0; i < Pa.count; i++) {        // 24 estrías: surcos de radio variable con el ángulo
         const x = Pa.getX(i), y = Pa.getY(i), z = Pa.getZ(i), r = Math.hypot(x, z);
-        if (y > 0.7 && y < 10.5 && r > 0.3) {
-          const th = Math.atan2(z, x), k = 1 - 0.05 * (0.5 + 0.5 * Math.cos(12 * th));
+        if (y > 0.4 && y < 10.6 && r > 0.3) {
+          const th = Math.atan2(z, x), k = 1 - 0.12 * (0.5 + 0.5 * Math.cos(24 * th));
           Pa.setXYZ(i, x * k, y, z * k);
         }
       }
       sh.computeVertexNormals();
       const ab = boxG(1.9, 0.36, 1.9); ab.translate(0, 11.16, 0);
+      // volutas grandes (~1 m de diámetro) en las caras frontal y posterior, bajo el ábaco
       function volute(cx, sg) {
         const pts = [];
-        for (let i = 0; i <= 24; i++) {
-          const th = i / 24 * Math.PI * 2.4, r = 0.34 * Math.exp(-0.2 * th) + 0.03;
-          pts.push(new THREE.Vector3(cx + sg * Math.cos(th) * r, 10.86 + Math.sin(th) * r, 0.84));
+        for (let i = 0; i <= 30; i++) {
+          const th = i / 30 * Math.PI * 2.6, r = 0.44 * Math.exp(-0.17 * th) + 0.05;
+          pts.push(new THREE.Vector3(cx + sg * Math.cos(th) * r, 10.75 + Math.sin(th) * r, 0.98));
         }
-        return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.055, 5, false);
+        return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 36, 0.07, 6, false);
       }
       return mergeGeos([{ g: sh }, { g: ab }, { g: volute(-0.5, -1) }, { g: volute(0.5, 1) }]);
     }
@@ -146,41 +147,68 @@
       ]);
     }
 
-    // ---------- caballo de la cuadriga (mirando a +X, pezuñas en y=0) ----------
-    function horseGeo() {
-      const tail = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
-        new THREE.Vector3(-1.2, 1.9, 0), new THREE.Vector3(-1.6, 1.6, 0),
-        new THREE.Vector3(-1.85, 1.1, 0), new THREE.Vector3(-1.9, 0.5, 0)]), 8, 0.06, 5, false);
-      const legG = new THREE.CylinderGeometry(0.08, 0.07, 1.2, 8);
-      const list = [
-        { g: new THREE.SphereGeometry(1, 20, 14), m: tm(0, 1.55, 0, 0, 1.25, 0.62, 0.5) },
-        { g: new THREE.CylinderGeometry(0.22, 0.34, 1.5, 14), m: tm(0.95, 2.3, 0, -0.55) },
-        { g: new THREE.SphereGeometry(0.32, 14, 10), m: tm(1.6, 2.95, 0, 0, 1.35, 0.9, 0.85) },
-        { g: boxG(0.62, 0.34, 0.3), m: tm(2.0, 2.7, 0, -0.35) },
-        { g: tail }
-      ];
-      [[0.85, 0.2], [0.85, -0.2], [-0.85, 0.2], [-0.85, -0.2]].forEach(function (l) {
-        list.push({ g: legG, m: tm(l[0], 0.6, l[1]) });
-      });
-      return mergeGeos(list);
+    // ---------- caballo de la cuadriga: barril, cuello arqueado, cabeza con orejas y crin, patas articuladas, cola ----------
+    function horseGeo(raised) {
+      const L = [];
+      L.push({ g: new THREE.SphereGeometry(1, 24, 18), m: tm(0, 1.6, 0, 0, 1.35, 0.78, 0.62) });      // barril
+      const neck = new THREE.CatmullRomCurve3([new THREE.Vector3(0.9, 1.95, 0), new THREE.Vector3(1.3, 2.55, 0),
+        new THREE.Vector3(1.75, 2.95, 0), new THREE.Vector3(2.0, 3.0, 0)]);
+      L.push({ g: new THREE.TubeGeometry(neck, 14, 0.26, 10, false), m: _id });                         // cuello arqueado
+      const mane = new THREE.CatmullRomCurve3([new THREE.Vector3(0.95, 2.25, 0), new THREE.Vector3(1.35, 2.9, 0),
+        new THREE.Vector3(1.75, 3.25, 0), new THREE.Vector3(1.9, 3.2, 0)]);
+      L.push({ g: new THREE.TubeGeometry(mane, 12, 0.09, 5, false), m: _id });                          // crin
+      L.push({ g: new THREE.SphereGeometry(0.3, 14, 10), m: tm(2.15, 2.75, 0, -0.5, 1.9, 0.95, 0.9) }); // cabeza
+      L.push({ g: new THREE.SphereGeometry(0.25, 12, 8), m: tm(2.5, 2.45, 0, -0.5, 1.0, 0.85, 0.85) }); // hocico
+      L.push({ g: new THREE.ConeGeometry(0.07, 0.3, 6), m: tm(1.95, 3.25, 0.12, 0.2) });                 // orejas
+      L.push({ g: new THREE.ConeGeometry(0.07, 0.3, 6), m: tm(1.95, 3.25, -0.12, 0.2) });
+      const leg = function (x, z, fwd) {
+        const c1 = new THREE.CylinderGeometry(0.13, 0.11, 0.75, 8), kn = new THREE.SphereGeometry(0.12, 10, 8);
+        const c2 = new THREE.CylinderGeometry(0.09, 0.07, 0.75, 8), hf = boxG(0.2, 0.16, 0.22);
+        if (!fwd) {
+          L.push({ g: c1, m: tm(x, 1.2, z) }, { g: kn, m: tm(x, 0.8, z) }, { g: c2, m: tm(x, 0.42, z) }, { g: hf, m: tm(x, 0.08, z) });
+        } else {                               // pata delantera levantada: antebrazo hacia delante, casco en el aire
+          L.push({ g: c1, m: tm(x + 0.2, 1.3, z, -0.6) }, { g: kn, m: tm(x + 0.42, 1.1, z) },
+            { g: c2, m: tm(x + 0.55, 0.8, z, -0.9) }, { g: hf, m: tm(x + 0.75, 0.62, z) });
+        }
+      };
+      leg(0.9, 0.22, raised); leg(0.9, -0.22, raised);
+      leg(-0.9, 0.22, false); leg(-0.9, -0.22, false);
+      L.push({ g: new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(-1.15, 1.95, 0), new THREE.Vector3(-1.6, 1.7, 0),
+        new THREE.Vector3(-1.85, 1.1, 0), new THREE.Vector3(-1.9, 0.45, 0)]), 10, 0.09, 6, false), m: _id });   // cola
+      return mergeGeos(L);
+    }
+    // rueda de radios: aro, ocho radios y cubo (plano XY, eje Z)
+    function wheelItems(z, out) {
+      out.push({ g: new THREE.TorusGeometry(0.85, 0.08, 8, 24), m: tm(0, 3.25, z) });
+      for (let k = 0; k < 8; k++) out.push({ g: boxG(0.07, 1.7, 0.07), m: tm(0, 3.25, z, k * Math.PI / 8) });
+      out.push({ g: new THREE.SphereGeometry(0.15, 8, 6), m: tm(0, 3.25, z) });
+      return out;
     }
 
-    // ---------- textura de mármol (sillar con juntas y vetas) y núcleo de piedra verdosa ----------
+    // ---------- textura de mármol: sillares finos con juntas, bisel, manchas y vetas suaves ----------
     function marbleCanvases() {
       const N = 512, c = makeCanvas(N, N), b = makeCanvas(N, N);
       const g = c.getContext('2d'), h = b.getContext('2d'), r = makeRng(77);
-      g.fillStyle = '#c9bfa8'; g.fillRect(0, 0, N, N);
+      g.fillStyle = '#c4baa3'; g.fillRect(0, 0, N, N);
       h.fillStyle = '#2a2a2a'; h.fillRect(0, 0, N, N);
-      const rows = 1, cols = 2, rh = N / rows, cw = N / cols;
+      const rows = 2, cols = 2, rh = N / rows, cw = N / cols;
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
-          const x = col * cw, y = row * rh, tone = 0.96 + 0.05 * r();
-          g.fillStyle = 'rgb(' + Math.round(240 * tone) + ',' + Math.round(234 * tone) + ',' + Math.round(222 * tone) + ')';
+          const x = col * cw, y = row * rh, tone = 0.9 + 0.12 * r(), warm = 0.97 + 0.04 * r();
+          g.fillStyle = 'rgb(' + Math.round(242 * tone) + ',' + Math.round(236 * tone * warm) + ',' + Math.round(224 * tone) + ')';
           g.fillRect(x + 2, y + 2, cw - 4, rh - 4);
-          h.fillStyle = '#b4b4b4'; h.fillRect(x + 2, y + 2, cw - 4, rh - 4);
-          g.strokeStyle = 'rgba(130,118,98,0.22)';
-          for (let v = 0; v < 3; v++) {
-            g.lineWidth = 0.8 + r() * 1.2;
+          for (let m = 0; m < 4; m++) {           // manchas suaves de tono
+            const mx = x + r() * cw, my = y + r() * rh, mr = 30 + r() * 60;
+            const gr = g.createRadialGradient(mx, my, 0, mx, my, mr);
+            gr.addColorStop(0, 'rgba(170,155,130,0.10)'); gr.addColorStop(1, 'rgba(170,155,130,0)');
+            g.fillStyle = gr; g.fillRect(x + 2, y + 2, cw - 4, rh - 4);
+          }
+          h.fillStyle = '#b8b8b8'; h.fillRect(x + 2, y + 2, cw - 4, rh - 4);
+          h.fillStyle = 'rgba(255,255,255,0.35)'; h.fillRect(x + 2, y + 2, cw - 4, 3); h.fillRect(x + 2, y + 2, 3, rh - 4);
+          h.fillStyle = 'rgba(0,0,0,0.35)'; h.fillRect(x + 2, y + rh - 5, cw - 4, 3); h.fillRect(x + cw - 5, y + 2, 3, rh - 4);
+          for (let v = 0; v < 4; v++) {           // vetas finas
+            g.strokeStyle = 'rgba(' + Math.round(110 + 40 * r()) + ',100,88,' + (0.10 + 0.12 * r()).toFixed(2) + ')';
+            g.lineWidth = 0.6 + r() * 1.6;
             const x0 = x + r() * cw, y0 = y + r() * rh;
             g.beginPath(); g.moveTo(x0, y0);
             g.bezierCurveTo(x0 + 20 + r() * 30, y0 - 10 + r() * 20, x0 + 40 + r() * 40, y0 + 10, x0 + 70 + r() * 60, y0 - 5 + r() * 30);
@@ -188,8 +216,8 @@
           }
         }
       }
-      for (let i = 0; i < 500; i++) {
-        g.fillStyle = 'rgba(150,140,120,' + (0.05 + 0.1 * r()).toFixed(2) + ')';
+      for (let i = 0; i < 600; i++) {
+        g.fillStyle = 'rgba(150,140,120,' + (0.04 + 0.08 * r()).toFixed(2) + ')';
         g.fillRect(r() * N, r() * N, 1 + r() * 2, 1 + r() * 2);
       }
       return { map: c, bump: b };
@@ -214,7 +242,7 @@
     // ---------- frisos: escenas de amazonas, carros y guerreros (dibujadas por código) ----------
     const PAL = {
       marble: { bg: "#efe9dd", fig: "#d3c8b3", line: "#5f5644", acc: "#b5a88f" },
-      paint:  { bg: '#2a4d8f', fig: '#a8322a', line: '#5b1a15', acc: '#e0b257' },
+      paint:  { bg: "#1d4b96", fig: "#b8362b", line: "#4a1410", acc: "#e8b84a" },
       bump:   { bg: '#2e2e2e', fig: '#c8c8c8', line: '#101010', acc: '#e6e6e6' }
     };
     function drawWarrior(g, x, y, s, flip, c) {
@@ -376,7 +404,7 @@
     const mC = marbleCanvases(), cC = coreCanvases();
     const marbleMat = new THREE.MeshStandardMaterial({
       map: canvasTex(mC.map, true), bumpMap: canvasTex(mC.bump, false), bumpScale: 0.35,
-      roughness: 0.4, envMap: env || null, envMapIntensity: 0.35
+      roughness: 0.33, envMap: env || null, envMapIntensity: 0.6
     });
     const podMat = marbleMat.clone();              // fachada del podio (translúcida en rayos X)
     const coreMat = new THREE.MeshStandardMaterial({
@@ -388,7 +416,7 @@
     const frBumpMap = canvasTex(bandCanvas(PAL.bump), false);
     const frMat = new THREE.MeshStandardMaterial({ map: frMap, bumpMap: frBumpMap, bumpScale: 4, roughness: 0.62, side: THREE.DoubleSide });
     const frPaintMat = new THREE.MeshStandardMaterial({
-      map: frPaintMap, transparent: true, opacity: 0, depthWrite: false, roughness: 0.7, side: THREE.DoubleSide,
+      map: frPaintMap, emissiveMap: frPaintMap, emissive: 0xffffff, emissiveIntensity: 0.55, transparent: true, opacity: 0, depthWrite: false, roughness: 0.7, side: THREE.DoubleSide,
       polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2
     });
     const podFrMat = frMat.clone();
@@ -413,7 +441,7 @@
           const rd = d - D / 2, yaw = Math.atan2(-tz, tx) + (rnd() - 0.5) * 0.01;
           blocks.push({
             c: c, x: nx * rd + tx * tau, z: nz * rd + tz * tau, L: L * 0.96, D: D,
-            q: yawQ(yaw), delay: 0.5 * rnd(), thr: 0.88 * rnd(), tone: 0.9 + 0.1 * rnd()
+            q: yawQ(yaw), delay: 0.5 * rnd(), thr: 0.88 * rnd(), tone: 0.84 + 0.2 * rnd()
           });
         }
       }
@@ -428,10 +456,10 @@
     coreMesh.castShadow = true; coreMesh.receiveShadow = true;
     root.add(coreMesh);
     // molduras: base (bajo los escalones) y cornisa del podio (cubre el arranque de las columnas)
-    const baseMold = new THREE.Mesh(boxG(2 * (PD.halfX + 3.3), 0.25, 2 * (PD.halfZ + 3.1)), marbleMat);
+    const baseMold = new THREE.Mesh(boxG(2 * (PD.halfX + 3.3), 0.25, 2 * (PD.halfZ + 3.1)), podMat);
     baseMold.position.set(0, 0.12, 0); baseMold.receiveShadow = true;
     root.add(baseMold);
-    const cornice = new THREE.Mesh(boxG(2 * (PD.halfX + 0.6), 0.5, 2 * (PD.halfZ + 0.6)), marbleMat);
+    const cornice = new THREE.Mesh(boxG(2 * (PD.halfX + 0.6), 0.5, 2 * (PD.halfZ + 0.6)), podMat);
     cornice.position.set(0, PD.y1, 0); cornice.castShadow = true; cornice.receiveShadow = true;
     root.add(cornice);
     // friso del podio (amazonomaquia): geometría de cuatro lados, relieve con marmol y policromía superpuesta
@@ -471,9 +499,19 @@
       { x: 0, z: -CO.halfZ + 4.0, sx: 28, sz: 1 }, { x: 0, z: CO.halfZ - 4.0, sx: 28, sz: 1 },
       { x: 13.5, z: 0, sx: 1, sz: 22 }, { x: -13.5, z: 0, sx: 1, sz: 22 }
     ];
+    // pilastras de sillar que sobresalen de los muros hacia el interior
+    [-10, -5, 5, 10].forEach(function (x) {
+      CELLA.push({ x: x, z: -9.9, sx: 1.2, sz: 1.2 });
+      CELLA.push({ x: x, z: 9.9, sx: 1.2, sz: 1.2 });
+    });
+    [-7, 7].forEach(function (z) { CELLA.push({ x: 12.9, z: z, sx: 1.2, sz: 1.2 }); CELLA.push({ x: -12.9, z: z, sx: 1.2, sz: 1.2 }); });
     const cellaInst = new THREE.InstancedMesh(unitBox, marbleMat, CELLA.length);
     cellaInst.castShadow = true; cellaInst.receiveShadow = true; cellaInst.frustumCulled = false;
     root.add(cellaInst);
+    // puerta de la cella en el muro sur (hueco oscuro; su altura sigue a la cella)
+    const cellaDoor = new THREE.Mesh(boxG(3.2, 1, 0.3), new THREE.MeshStandardMaterial({ color: 0x2a1e14, roughness: 0.9 }));
+    cellaDoor.position.set(0, PD.y1 + 3, CO.halfZ - 3.5);
+    root.add(cellaDoor);
 
     // ---------- 3. ENTABLAMENTO: arquitrabe en 3 fajas, friso, cornisa con dentículos (grupo con pivote) ----------
     const entabPivot = new THREE.Group();
@@ -520,7 +558,7 @@
     for (let k = 0; k < PY.steps; k++) {
       PYRF.push(0.5 * rnd());
       const a = rnd() * Math.PI * 2, r = 14 + 14 * rnd();
-      PYRT.push({ x: Math.cos(a) * r, y: 0.4 + 0.8 * rnd(), z: Math.sin(a) * r });
+      PYRT.push({ x: Math.cos(a) * r, y: 0.55 + 0.2 * rnd(), z: Math.sin(a) * r });
       PYRTQ.push(new THREE.Quaternion().setFromEuler(new THREE.Euler(rnd() * 0.8, rnd() * 6.28, rnd() * 0.8)));
     }
 
@@ -532,43 +570,64 @@
       { g: boxG(9, 2, 7), m: tm(0, 1, 0) },                       // pedestal (0..2 m)
       { g: boxG(3.6, 0.4, 2.6), m: tm(0.2, 2.2, 0) },              // plataforma del carro
       { g: boxG(2.2, 1.0, 2.0), m: tm(-0.6, 2.9, 0) },             // caja del carro
-      { g: boxG(2.6, 0.12, 0.12), m: tm(2.2, 2.6, 0) },            // timón
-      { g: new THREE.TorusGeometry(0.85, 0.1, 8, 20), m: tm(0, 3.25, 1.35) },
-      { g: new THREE.TorusGeometry(0.85, 0.1, 8, 20), m: tm(0, 3.25, -1.35) }
+      { g: boxG(2.6, 0.12, 0.12), m: tm(2.2, 2.6, 0) }             // timón
     ];
+    wheelItems(1.35, QA); wheelItems(-1.35, QA);
     const quadMesh = new THREE.Mesh(mergeGeos(QA), marbleMat);
     quadMesh.castShadow = true; quadMesh.receiveShadow = true;
     quadG.add(quadMesh);
-    const HZ = [-2.1, -0.7, 0.7, 2.1];
-    const horseInst = new THREE.InstancedMesh(horseGeo(), marbleMat, 4);
-    horseInst.castShadow = true; horseInst.frustumCulled = false;
-    quadG.add(horseInst);
+    const HZ = [-2.1, -0.7, 0.7, 2.1];                 // caballos 0 y 2: normales; 1 y 3: patas delanteras levantadas
+    const horseA = new THREE.InstancedMesh(horseGeo(false), marbleMat, 2);
+    const horseB = new THREE.InstancedMesh(horseGeo(true), marbleMat, 2);
+    [horseA, horseB].forEach(function (h) { h.castShadow = true; h.frustumCulled = false; quadG.add(h); });
     const figInst = new THREE.InstancedMesh(statueGeo(), statueMat, 2);
     figInst.castShadow = true; figInst.frustumCulled = false;
     quadG.add(figInst);
     const QYQ = yawQ(Math.PI / 2);
 
-    // ---------- 6. RUINA: bloques dispersos y tambores caídos ----------
-    const NR = 90, RUB = [];
+    // ---------- 6. RUINA: sillares apilados por el suelo, tambores de columna y trozos de la cuadriga ----------
+    const NR = 150, RUB = [];
     for (let i = 0; i < NR; i++) {
       const a = rnd() * Math.PI * 2, r = 9 + 30 * rnd();
       const sx = 1.2 + 1.8 * rnd(), sy = 0.8 + 0.8 * rnd(), sz = 1.0 + 1.6 * rnd();
-      RUB.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, sx: sx, sy: sy, sz: sz,
+      RUB.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, sx: sx, sy: sy, sz: sz, stack: i % 4 === 0 ? 1 : 0,
         q: yawQ(rnd() * Math.PI), thr: 0.1 + 0.5 * rnd(), thr2: 0.4 + 0.5 * rnd() });
     }
     const rubInst = new THREE.InstancedMesh(unitBox, marbleMat, NR);
     rubInst.castShadow = true; rubInst.receiveShadow = true; rubInst.frustumCulled = false;
     root.add(rubInst);
-    const ND = 24, DRM = [];
-    const lyingQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2);
-    for (let i = 0; i < ND; i++) {
-      const a = rnd() * Math.PI * 2, r = 16 + 12 * rnd();
-      DRM.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, q: new THREE.Quaternion().multiplyQuaternions(yawQ(rnd() * 3.14), lyingQ),
-        thr: 0.5 + 0.35 * rnd(), thr2: 0.45 + 0.4 * rnd() });
-    }
-    const drumInst = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.6, 0.6, 0.9, 14), marbleMat, ND);
+    // cada columna caída se rompe en cuatro tambores tumbados a lo largo de su eje
+    const DRM = [];
+    COLP.forEach(function (p, i) {
+      const dl = Math.hypot(p[0], p[1]), dx = p[0] / dl, dz = p[1] / dl;
+      const qd = new THREE.Quaternion().setFromUnitVectors(UP, new THREE.Vector3(dx, 0, dz));
+      for (let k = 0; k < 4; k++) {
+        const along = 0.8 + 1.6 * k;
+        DRM.push({ x: p[0] + dx * along, z: p[1] + dz * along, q: qd, thr: COLFALL[i] + 0.6, thr2: COLTHR[i] });
+      }
+    });
+    const drumInst = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.6, 0.6, 0.9, 14), marbleMat, DRM.length);
     drumInst.castShadow = true; drumInst.frustumCulled = false;
     root.add(drumInst);
+    // trozos de la cuadriga rota (un grupo que cae del suelo con la ruina)
+    const chunkDefs = [
+      { g: boxG(4.6, 2.0, 3.6), x: 8.2, y: 1.0, z: -4.5, q: yawQ(0.3) },
+      { g: boxG(3.6, 0.4, 2.6), x: 11.5, y: 0.2, z: 2.5, q: yawQ(-0.5) },
+      { g: boxG(2.2, 1.0, 2.0), x: 6.5, y: 0.5, z: 3.5, q: yawQ(0.8) },
+      { g: new THREE.CylinderGeometry(0.85, 0.85, 0.2, 18), x: 9.0, y: 0.85, z: 6.0,
+        q: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2) },
+      { g: new THREE.CylinderGeometry(0.85, 0.85, 0.2, 18), x: 12.5, y: 0.85, z: -1.5,
+        q: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2) },
+      { g: boxG(1.8, 0.9, 0.9), x: 7.0, y: 0.45, z: -7.5, q: yawQ(0.2) },
+      { g: boxG(1.8, 0.9, 0.9), x: 10.5, y: 0.45, z: 9.0, q: yawQ(-0.9) },
+      { g: boxG(1.8, 0.9, 0.9), x: 13.0, y: 0.45, z: -6.0, q: yawQ(1.4) },
+      { g: boxG(1.8, 0.9, 0.9), x: 5.0, y: 0.45, z: 8.0, q: yawQ(0.6) }
+    ];
+    const chunkMesh = new THREE.Mesh(mergeGeos(chunkDefs.map(function (c) {
+      return { g: c.g, m: new THREE.Matrix4().compose(new THREE.Vector3(c.x, c.y, c.z), c.q, new THREE.Vector3(1, 1, 1)) };
+    })), marbleMat);
+    chunkMesh.castShadow = true; chunkMesh.receiveShadow = true; chunkMesh.frustumCulled = false;
+    root.add(chunkMesh);
 
     // ---------- 7. FANTASMA: mausoleo completo translúcido con aristas (cian; cuadriga en dorado) ----------
     const cylG = new THREE.CylinderGeometry(0.6, 0.6, 12, 10);
@@ -605,29 +664,34 @@
     ghostRoot.add(ghostG);
 
     // ---------- escritura por estado (solo cuando cambian las entradas) ----------
-    function writePodium(f, dis) {
+    function writePodium(f, dis, rr) {
       const fn = f * NCP;
       for (let i = 0; i < blocks.length; i++) {
         const b = blocks[i];
         const kp = keepOf(dis, b.thr);
         const loc = clamp01((fn - b.c - b.delay) / 0.5);
-        if (loc <= 0 || kp <= 0.001) { hide(podInst, i); continue; }
-        const k = 1 - smooth(loc);                         // 1 = aún cayendo, 0 = asentado
-        _p.set(b.x, b.c + CUT * 0.5 + k * 6, b.z);
-        _s.set(b.L * kp, 0.96 * kp, b.D * kp);
+        const rt = 0.2 + 0.6 * (1 - b.c / NCP);     // las hiladas altas se desploman antes con la ruina
+        const fall = smooth(clamp01((rr - rt) / 0.2));
+        if (loc <= 0 || kp <= 0.001 || fall >= 0.999) { hide(podInst, i); continue; }
+        const k = 1 - smooth(loc);                   // 1 = aún cayendo, 0 = asentado
+        const ox = b.x * (1 + 0.8 * fall), oz = b.z * (1 + 0.8 * fall);
+        const yy = b.c + CUT * 0.5 + k * 6 - fall * (b.c + 1.0);
+        const kf = kp * (1 - 0.6 * fall);
+        _p.set(ox, yy, oz);
+        _s.set(b.L * kf, 0.96 * kf, b.D * kf);
         _m.compose(_p, b.q, _s);
         podInst.setMatrixAt(i, _m);
       }
       podInst.instanceMatrix.needsUpdate = true;
     }
 
-    // columnas: suben desde dentro del podio; ruina: caen hacia fuera girando sobre la basa
+    // columnas: suben desde dentro del podio; ruina: caen hacia fuera girando sobre la basa y se rompen en tambores
     function writeColumns(c, rr, dis) {
       for (let i = 0; i < COLP.length; i++) {
         const cx = COLP[i][0], cz = COLP[i][1];
         const u = clamp01((c - COLST[i]) / 0.7);
         const kp = keepOf(dis, COLTHR[i]);
-        if (u <= 0 || kp <= 0.001) { hide(colInst, i); continue; }
+        if (u <= 0 || kp <= 0.001 || rr > COLFALL[i] + 0.6) { hide(colInst, i); continue; }
         let py = PD.y1 - 12 * (1 - smooth(u)), q = COLYQ[i];
         if (rr > 0) {
           const e = smooth(clamp01((rr - COLFALL[i]) / 0.6));
@@ -656,24 +720,29 @@
         const loc = clamp01(p * PY.steps - k);
         const kp = keepOf(dis, 0.3 + 0.5 * PYRF[k]);
         if (loc <= 0 || kp <= 0.001) { hide(pyrInst, k); continue; }
+        const e = rr > 0 ? smooth(clamp01((rr - PYRF[k]) / 0.5)) : 0;
         let px = 0, py = st.y + st.h / 2 + (1 - smooth(loc)) * 5, pz = 0;
-        let q = null;
-        if (rr > 0) {
-          const e = smooth(clamp01((rr - PYRF[k]) / 0.5)), T = PYRT[k];
+        let sx = 2 * st.halfX, sy = st.h, sz = 2 * st.halfZ, q = null;
+        if (e > 0) {                                  // los escalones se rompen en sillares sueltos
+          const T = PYRT[k];
           px = T.x * e; py = py + (T.y - py) * e; pz = T.z * e;
+          sx += (2.2 - sx) * e; sy += (1.1 - sy) * e; sz += (1.6 - sz) * e;
           q = new THREE.Quaternion().copy(PYRTQ[k]).slerp(_qI.set(0, 0, 0, 1), 1 - e);
         }
-        put(pyrInst, k, px, py, pz, q, 2 * st.halfX * kp, st.h * kp, 2 * st.halfZ * kp);
+        put(pyrInst, k, px, py, pz, q, sx * kp, sy * kp, sz * kp);
       }
       pyrInst.instanceMatrix.needsUpdate = true;
     }
-    function writeHorses(u3s, dis) {
-      for (let i = 0; i < 4; i++) {
-        const u = clamp01(u3s - i * 0.05);
-        if (u <= 0) { hide(horseInst, i); continue; }
-        put(horseInst, i, 2.8, 2.4 + (1 - smooth(u)) * 6, HZ[i], null, 1, 1, 1);
-      }
-      horseInst.instanceMatrix.needsUpdate = true;
+    function writeHorses(u3s) {
+      [[horseA, [0, 2]], [horseB, [1, 3]]].forEach(function (pair) {
+        const inst = pair[0], idx = pair[1];
+        for (let j = 0; j < 2; j++) {
+          const i = idx[j], u = clamp01(u3s - i * 0.05);
+          if (u <= 0) { hide(inst, j); continue; }
+          put(inst, j, 2.8, 2.4 + (1 - smooth(u)) * 6, HZ[i], null, 1, 1, 1);
+        }
+        inst.instanceMatrix.needsUpdate = true;
+      });
     }
     function writeFigures(u4) {
       const Z = [-0.45, 0.45];
@@ -686,14 +755,15 @@
     }
     function writeRubble(rr, dis) {
       for (let i = 0; i < NR; i++) {
-        const r0 = RUB[i];
+        const r0 = RUB[i], base = r0.stack ? RUB[i - 1] : r0;   // los apilados van sobre el bloque anterior
         const loc = clamp01((rr - r0.thr) / 0.35), kp = keepOf(dis, r0.thr2);
         if (loc <= 0 || kp <= 0.001) { hide(rubInst, i); continue; }
         const drop = (1 - smooth(loc)) * 14;
-        put(rubInst, i, r0.x, r0.sy * 0.5 + drop, r0.z, r0.q, r0.sx * kp, r0.sy * kp, r0.sz * kp);
+        const y = r0.sy * 0.5 + r0.stack * base.sy + drop;
+        put(rubInst, i, base.x, y, base.z, r0.q, r0.sx * kp, r0.sy * kp, r0.sz * kp);
       }
       rubInst.instanceMatrix.needsUpdate = true;
-      for (let i = 0; i < ND; i++) {
+      for (let i = 0; i < DRM.length; i++) {
         const D0 = DRM[i];
         const loc = clamp01((rr - D0.thr) / 0.25), kp = keepOf(dis, D0.thr2);
         if (loc <= 0 || kp <= 0.001) { hide(drumInst, i); continue; }
@@ -703,7 +773,7 @@
     }
 
     // ---------- actualización: función pura del estado s ----------
-    let lastF = -1, lastD = -1, lastP = -1;
+    let lastF = -1, lastD = -1, lastP = -1, lastR = -1;
     function sideRev(fr, i) { return smooth(clamp01((fr - i * 0.18) / 0.4)); }
 
     function update(s) {
@@ -712,34 +782,41 @@
       const qd = clamp01(s.quadriga || 0), rr = clamp01(s.ruin || 0), dis = clamp01(s.dismantle || 0);
       const xr = clamp01(s.xray || 0), gh = clamp01(s.ghost || 0), qk = clamp01(s.quake || 0);
       const wall = s.wall || 0;
+      const xOn = xr > 0.001;
 
       // terremoto: sacudida del conjunto
       const qx = Math.sin(wall * 17) * 0.1 * qk, qz = Math.cos(wall * 13) * 0.08 * qk;
       root.position.set(qx, 0, qz);
 
-      // podio (hilada a hilada) y núcleo verdoso
-      if (f !== lastF || dis !== lastD) { lastF = f; lastD = dis; writePodium(f, dis); }
-      const cK = keepOf(dis, 0.5), coreH = f * PD.y1 * cK;
+      // podio: hiladas, núcleo verdoso que se desmorona con la ruina
+      if (f !== lastF || dis !== lastD || rr !== lastR) { lastF = f; lastD = dis; lastR = rr; writePodium(f, dis, rr); }
+      const cK = keepOf(dis, 0.5), crumP = smooth(clamp01((rr - 0.2) / 0.6));
+      const coreH = f * PD.y1 * cK * (1 - 0.6 * crumP);
       coreMesh.visible = coreH > 0.01;
       coreMesh.position.set(0, coreH / 2, 0);
       coreMesh.scale.set(2 * (PD.halfX - 1.6), Math.max(0.001, coreH), 2 * (PD.halfZ - 1.6));
       podInst.visible = f > 0.0001 && keepOf(dis, 0) > 0.001;
       baseMold.visible = f > 0.02 && dis < 0.9;
-      cornice.visible = f > 0.999 && keepOf(dis, 0.3) > 0.001;
+      cornice.visible = f > 0.999 && rr < 0.25 && keepOf(dis, 0.3) > 0.001;
       cornice.scale.setScalar(Math.max(0.001, keepOf(dis, 0.3)));
 
-      // frisos: se despliegan lado a lado (E, N, S, O); la policromía los cubre por encima
-      const kf = keepOf(dis, 0.85);
+      // frisos: se despliegan lado a lado (E, N, S, O); la ruina los va cayendo
+      const kf = keepOf(dis, 0.85) * (1 - 0.8 * smooth(clamp01((rr - 0.3) / 0.5)));
       const rev = [sideRev(fr, 0), sideRev(fr, 1), sideRev(fr, 2), sideRev(fr, 3)];
       frPod.reveal(rev.map(function (r) { return r * kf; }));
       frEnt.reveal(rev.map(function (r) { return r * kf; }));
       podFr.visible = fr > 0.001 && f > 0.5; podFrP.visible = podFr.visible && pa > 0.001;
-      podPaintMat.opacity = pa;
+      podPaintMat.opacity = pa * (xOn ? 0.12 : 1);
+      podFrMat.opacity = 1;
 
-      // columnas y cella
+      // columnas, cella y puerta
       writeColumns(c, rr, dis);
       writeCella(c, rr, dis);
       colInst.visible = c > 0.0001; cellaInst.visible = c > 0.0001;
+      const doorH = 6 * c * keepOf(dis, 0.1) * (1 - smooth(clamp01((rr - 0.15) / 0.3)));
+      cellaDoor.visible = doorH > 0.01;
+      cellaDoor.scale.y = Math.max(0.001, doorH);
+      cellaDoor.position.y = PD.y1 + doorH / 2;
 
       // entablamento: sube sobre las columnas; la ruina lo desmorona
       const crumble = smooth(clamp01((rr - 0.2) / 0.3));
@@ -749,7 +826,6 @@
       entabPivot.scale.setScalar(Math.max(0.001, eK));
       entFrP.visible = pa > 0.001;
       frPaintMat.opacity = pa;
-      dentInst.visible = true;
 
       // estatuas (aparecen con su lado) y su policromía
       if (pa !== lastP) {
@@ -767,30 +843,31 @@
       statueInst.instanceMatrix.needsUpdate = true;
       statueInst.visible = fr > 0.001;
 
-      // pirámide de 24 escalones y ruina
+      // pirámide de 24 escalones: aparecen uno a uno y la ruina los convierte en sillares
       writePyramid(p, rr, dis);
       pyrInst.visible = p > 0.0001 || rr > 0;
 
-      // cuadriga: sube, cae por el lado este con la ruina y se desvanece con el desmontaje
+      // cuadriga: sube; con la ruina cae y se rompe en trozos; con el desmontaje se desvanece
       const qe = smooth(clamp01((rr - 0.25) / 0.5)), qK = keepOf(dis, 0);
-      quadG.visible = qd > 0.001 && qK > 0.001;
+      quadG.visible = qd > 0.001 && qK > 0.001 && qe < 0.5;
       quadG.position.set(qe * 3, PY.y1 - (1 - smooth(qd)) * 6 - (PY.y1 - 1.2) * qe, 0);
       quadG.rotation.set(0, 0, -qe * Math.PI / 2);
       quadG.scale.setScalar(Math.max(0.001, qK));
-      writeHorses(clamp01(qd * 1.5 - 0.3), dis);
+      writeHorses(clamp01(qd * 1.5 - 0.3));
       writeFigures(clamp01(qd * 1.4 - 0.4));
+      chunkMesh.visible = qe >= 0.5 && dis < 0.5;
+      chunkMesh.position.y = (1 - smooth(clamp01((qe - 0.5) / 0.5))) * 12;
 
-      // ruina: bloques y tambores por el suelo
+      // ruina: sillares apilados, tambores
       writeRubble(rr, dis);
       rubInst.visible = rr > 0; drumInst.visible = rr > 0;
 
-      // cimientos: quedan al final (y se ven en el hueco del suelo)
+      // cimientos: quedan al final (se ven en el hueco del suelo)
       fdn.visible = rr > 0 || dis > 0;
 
-      // rayos X: el podio se vuelve translúcido para ver la cámara subterránea
-      const xOn = xr > 0.001;
+      // rayos X: el podio casi invisible para ver la cámara subterránea (sin escribir profundidad)
       [podMat, podFrMat, coreMatX].forEach(function (m) {
-        m.transparent = xOn; m.opacity = 1 - 0.78 * xr; m.depthWrite = !xOn;
+        m.transparent = xOn; m.opacity = xOn ? 0.12 : 1; m.depthWrite = !xOn;
       });
 
       // fantasma (prólogo)

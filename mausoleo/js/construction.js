@@ -19,8 +19,9 @@
     const CS = 54, WT = 3.6;                       // semilado del castillo y grosor de muro
     const CX = SITE.castle.x, CZ = SITE.castle.z;
     const PY = { x: -22, z: 28 };                   // pira detrás de la figura de Artemisia (origen)
-    const QUAY = { x: 60, z: 249 };                // pivote de la grúa (extremo del pantalán)
-    const DOCK = { x: 60, z: 262 }, DOCK_HD = Math.PI / 2;   // proa hacia el norte
+    const QUAY = { x: 68, z: 240 };                // pivote de la grúa (borde este del pantalán)
+    const DOCK = { x: 80, z: 240 }, DOCK_HD = Math.PI / 2;   // barcos atracados junto al pantalán, proa al norte
+    const SK = 2.0;                                // escala de los mercantes de mármol (se leen desde lejos)
     const UNLOAD_DT = 24;
     const _yAxis = new THREE.Vector3(0, 1, 0);
     const _ONE = new THREE.Vector3(1, 1, 1);
@@ -286,7 +287,7 @@
     const dockM = new THREE.Matrix4().compose(new THREE.Vector3(DOCK.x, SEA + 0.25, DOCK.z), new THREE.Quaternion().setFromAxisAngle(_yAxis, DOCK_HD), _ONE);
     const shipState = [];
     for (let i = 0; i < 3; i++) shipState.push({ x: 0, z: 0, hd: 0, f: 0 });
-    function deckLocal(c) { return new THREE.Vector3(-4.5 + (c % 3) * 4.5, 3.2 + Math.floor(c / 3) * 1.2, 0); }
+    function deckLocal(c) { return new THREE.Vector3((-4.5 + (c % 3) * 4.5) * SK, (3.2 + Math.floor(c / 3) * 1.2) * SK, 0); }
     function stackPos(i, c) { return [55.5 + (c % 3) * 2.6, 2.0 + Math.floor(c / 3) * 1.2, 236 + i * 2.2]; }
     let qAct = null;   // bloque que la grúa del muelle está moviendo ahora
 
@@ -306,7 +307,7 @@
         const bob = 0.06 * Math.sin(W * 0.9 + i * 2.1);
         st.x = P[0]; st.z = P[1]; st.hd = hd; st.f = f;
         const y = SEA + 0.25 + bob;
-        _P.set(st.x, y, st.z); _Q.setFromAxisAngle(_yAxis, hd); _S.set(fs, fs, fs);
+        _P.set(st.x, y, st.z); _Q.setFromAxisAngle(_yAxis, hd); _S.set(fs * SK, fs * SK, fs * SK);
         const hm = _m.compose(_P, _Q, _S).clone();
         const hmPos = new THREE.Matrix4().compose(_P, _Q, _ONE);
         hullIM.setMatrixAt(i, hm); sailIM.setMatrixAt(i, hm);
@@ -552,7 +553,8 @@
         drawWorker(i, PW);
       }
       // 28-51: obra en la cima, de pie en el borde de la planta a la altura actual
-      const ob = yT > 0.3 && V(s.cranes) > 0.02 && wo > 0.02 && V(s.ruin) < 0.01;
+      // (la cima se despeja cuando se coloca la cuadriga: quadriga > 0.3)
+      const ob = yT > 0.3 && V(s.cranes) > 0.02 && wo > 0.02 && V(s.ruin) < 0.01 && V(s.quadriga) < 0.3;
       const inset = yT > 31 ? 1.2 : 3.0;
       const ol = outline(Math.max(0, yT - 0.05));
       const hx = Math.max(1, ol.hx - inset), hz = Math.max(1, ol.hz - inset);
@@ -635,11 +637,15 @@
       // dos grúas de la cima: en el lado oeste de la planta (fuera de la vista de la cámara)
       const topOn = yT > 0.5 && cr > 0.002 && ruinOk;
       const ol = outline(Math.max(0, yT - 0.05));
+      // al colocar la cuadriga (quadriga 0..0.3) las grúas se apartan al suroeste, con el brazo hacia fuera
+      const a = sstep(clamp(V(s.quadriga) / 0.3, 0, 1));
       for (let k = 0; k < 2; k++) {
         const sc = topOn ? Math.max(0.001, cr) : 0.0001;
-        const bx = -0.42 * ol.hx, bz = (k === 0 ? 0.45 : -0.45) * ol.hz;
-        const rot = 0.04 * Math.sin(W * 0.3 + k * 2);
-        const M = TRS(_m, bx, topOn ? yT : -60, bz, 0, rot, 0, sc, sc, sc).clone();
+        const bx0 = -0.42 * ol.hx, bz0 = (k === 0 ? 0.45 : -0.45) * ol.hz;
+        const bx1 = -36, bz1 = k === 0 ? 30 : 20;   // en el suelo, detrás de la cuadriga
+        const bx = bx0 + (bx1 - bx0) * a, bz = bz0 + (bz1 - bz0) * a;
+        const rot = 0.04 * Math.sin(W * 0.3 + k * 2) + Math.PI * a;
+        const M = TRS(_m, bx, topOn ? yT * (1 - a) : -60, bz, 0, rot, 0, sc, sc, sc).clone();
         frameIM.setMatrixAt(k, M);
         const wsign = k === 0 ? 1 : -1, wa = W * 0.9 * wsign;
         const Wh = _m2.copy(M).multiply(Tr(-2.0, 3.6, 1.4)).multiply(Rz(wa)).clone();

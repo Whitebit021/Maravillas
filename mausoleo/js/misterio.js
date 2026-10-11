@@ -163,10 +163,10 @@
     '  float a = uOp * (uBase + uEdge * pow(f, 2.0));\n' +
     '  vec3 c = mix(uA, uB, pow(f, 1.4));\n' +
     '  gl_FragColor = vec4(c, a); }';
-  function ashMat(base, edge) {
+  function ashMat(base, edge, colA, colB) {
     return new THREE.ShaderMaterial({
       uniforms: {
-        uA: { value: new THREE.Color(PURPLE) }, uB: { value: new THREE.Color(GOLD) },
+        uA: { value: new THREE.Color(colA || PURPLE) }, uB: { value: new THREE.Color(colB || GOLD) },
         uOp: { value: 0 }, uBase: { value: base }, uEdge: { value: edge }
       },
       vertexShader: ASH_VS, fragmentShader: ASH_FS,
@@ -373,9 +373,9 @@
     return [sx * halfW + 0.07 * Math.sin(v * 9 + sx * 2.5), y, z + 0.05 * Math.sin(v * 7 - sx * 3)];
   }
   function buildArtemisia() {
-    const B = newB();
+    const B = newB(), K = newB();   // B: túnica, velo, brazos, copa; K: cabeza y manos (piel clara)
     grid(B, 40, 56, robePoint, false, 8, 8);                    // túnica con pliegues
-    grid(B, 20, 32, headPoint, false, 8, 4);                    // cabeza (elipsoide suave)
+    grid(K, 20, 32, headPoint, false, 8, 4);                    // cabeza (elipsoide suave)
     grid(B, 14, 16, veilPoint, true, 4, 0);                     // velo
     loft(B, [[0, 9.9, 0, 0.5, 0.46], [0, 10.6, 0, 0.43, 0.4], [0, 11.1, 0, 0.4, 0.38]], 24, false, 4); // cuello
     // brazo derecho (+X) levantando la copa hasta la boca
@@ -383,13 +383,13 @@
     ball(B, S, 0.62, 16);
     limb(B, S, E, 0.5, 0.42, 14, 4);
     limb(B, E, Wr, 0.42, 0.3, 12, 3);
-    ball(B, Hd, 0.42, 12);
+    ball(K, Hd, 0.42, 12);
     // brazo izquierdo caído
     const S2 = [-1.55, 9.1, -0.2], E2 = [-2.2, 6.6, -0.6], W2 = [-2.3, 4.7, -0.9], Hd2 = [-2.35, 4.45, -1.0];
     ball(B, S2, 0.6, 16);
     limb(B, S2, E2, 0.46, 0.4, 14, 4);
     limb(B, E2, W2, 0.4, 0.3, 12, 3);
-    ball(B, Hd2, 0.4, 12);
+    ball(K, Hd2, 0.4, 12);
     // copa (pie, fuste, cuenco abierto)
     const cx = CUP[0], cz = CUP[2];
     loft(B, [
@@ -399,7 +399,7 @@
     // diadema y gema en la frente
     loft(B, [[0, 11.55, 0, 0.77, 0.8], [0, 11.62, 0, 0.8, 0.83], [0, 11.7, 0, 0.77, 0.8]], 40, true, 0);
     ball(B, [0, 11.62, -0.84], 0.12, 8);
-    return B;
+    return [B, K];
   }
 
   G.createMystery = function (ctx) {
@@ -545,9 +545,10 @@
     const lab38 = label('38 m', { lh: 2.2, color: '#ffe9a8', pos: [0, 2.2, -36] });
     const lab32 = label('32 m', { lh: 2.2, color: '#ffe9a8', pos: [-30, 2.2, -22] });
     const labNivel = [
-      label('NIVEL ±0', { lh: 2.4, color: '#9fe9ff', pos: [12, 3.4, CANALS[0]] }),
-      label('NIVEL ±0', { lh: 2.4, color: '#9fe9ff', pos: [12, 3.4, CANALS[1]] })
+      label('NIVEL ±0', { lh: 1.3, color: '#9fe9ff', pos: [36, 2.6, CANALS[0]] }),
+      label('NIVEL ±0', { lh: 1.3, color: '#9fe9ff', pos: [36, 2.6, CANALS[1]] })
     ];
+    labNivel.forEach(function (L) { L.maxF = 4; });
     const surveyLabs = [lab38, lab32, labNivel[0], labNivel[1]];
     surveyLabs.forEach(function (L) { surveyG.add(L.sprite); });
 
@@ -555,11 +556,15 @@
     const ashG = new THREE.Group();
     ashG.position.set(ASH.x, 0, ASH.z);
     root.add(ashG);
-    const FB = buildArtemisia();
-    const bodyMat = ashMat(0.14, 0.7);
+    const FBs = buildArtemisia(), FB = FBs[0], SK = FBs[1];
+    const bodyMat = ashMat(0.12, 0.8);
     const body = new THREE.Mesh(fillGeo(FB), bodyMat);
     body.frustumCulled = false;
     ashG.add(body);
+    const skinMat = ashMat(0.2, 0.6, 0xe9dcff, 0xfff1d6);
+    const skin = new THREE.Mesh(fillGeo(SK), skinMat);
+    skin.frustumCulled = false;
+    ashG.add(skin);
     const figLines = new THREE.LineSegments(lineGeo(FB), lineMat(GOLD_HI, 0));
     ashG.add(figLines);
     // círculo de luz en el suelo bajo la reina
@@ -569,11 +574,11 @@
     ashG.add(cupGlow);
     // cenizas: 260 puntos aditivos que suben en espiral desde el borde de la copa
     const aRnd = seeded(211);
-    const NA = 260;
+    const NA = 170;
     const aBase = new Float32Array(NA * 3), aSeed = new Float32Array(NA), aSize = new Float32Array(NA);
     for (let i = 0; i < NA; i++) {
       aSeed[i] = aRnd();
-      aSize[i] = 0.22 + 0.25 * aRnd();
+      aSize[i] = 0.12 + 0.13 * aRnd();
     }
     const ashGeo = new THREE.BufferGeometry();
     ashGeo.setAttribute('position', new THREE.BufferAttribute(aBase, 3));
@@ -582,8 +587,8 @@
     const ashMatP = new THREE.ShaderMaterial({
       uniforms: {
         uMap: { value: softTex() }, uColA: { value: new THREE.Color(0xffe3a8) }, uColB: { value: new THREE.Color(0xd9a6ff) },
-        uTime: { value: 0 }, uPx: { value: 500 }, uRate: { value: 0.09 }, uHeight: { value: 7.5 }, uRad: { value: 2.6 },
-        uOrigin: { value: new THREE.Vector3(CUP[0], CUP[1], CUP[2]) }, uI: { value: 0 }, uAlpha: { value: 0.7 }
+        uTime: { value: 0 }, uPx: { value: 500 }, uRate: { value: 0.09 }, uHeight: { value: 4.2 }, uRad: { value: 1.1 },
+        uOrigin: { value: new THREE.Vector3(CUP[0], CUP[1], CUP[2]) }, uI: { value: 0 }, uAlpha: { value: 0.5 }
       },
       vertexShader: ASHP_VS, fragmentShader: ASHP_FS,
       transparent: true, depthWrite: false, fog: false, blending: THREE.AdditiveBlending
@@ -594,36 +599,32 @@
     ashG.add(ashPts);
     // etiquetas: nombre y leyenda, a los pies de la reina (fuera de la franja del rótulo del capítulo)
     // (en el lado de la figura, a la altura del torso: fuera del rótulo del capítulo y de los subtítulos)
-    const labAsh = label('ARTEMISIA II', { lh: 1.8, color: '#ffd27a', pos: [0, 6.1, 0], depthTest: false });
-    const labAshTag = label('bebía las cenizas de Mausolo (dicen)', { lh: 0.95, color: '#d9b3ff', pos: [0, 4.3, 0], depthTest: false });
+    const labAsh = label('ARTEMISIA II', { lh: 1.4, color: '#ffd27a', pos: [-13, 6.6, 0], depthTest: false });
+    const labAshTag = label('bebía las cenizas de Mausolo (dicen)', { lh: 0.72, color: '#d9b3ff', pos: [-13, 5.2, 0], depthTest: false });
     addLab(ashG, labAsh); addLab(ashG, labAshTag);
 
     // ================= 3. sculptors: un nombre por lado =================
     const scG = new THREE.Group();
     root.add(scG);
     const SIDE_DEF = [
-      { key: 'N', name: SIDES.N || 'Briaxis', face: [0, 22, -CHZ - 0.6], at: [0, 24.6, -HZ - 10], cap: 'LADO NORTE' },
-      // (los nombres van por encima del centro del lado: quedan lejos de los subtítulos inferiores)
-      { key: 'E', name: SIDES.E || 'Escopas', face: [CHX + 0.6, 22, 0], at: [HX + 10, 24.6, 0], cap: 'LADO ESTE' },
-      { key: 'S', name: SIDES.S || 'Timoteo', face: [0, 22, CHZ + 0.6], at: [0, 24.6, HZ + 10], cap: 'LADO SUR' },
-      { key: 'O', name: SIDES.O || 'Leócares', face: [-CHX - 0.6, 22, 0], at: [-HX - 10, 24.6, 0], cap: 'LADO OESTE' }
+      { name: SIDES.N || 'Briaxis', face: [0, 18.6, -HZ - 0.3], at: [0, 18.6, -HZ - 5], c: 124 },
+      { name: SIDES.E || 'Escopas', face: [HX + 0.3, 18.6, 0], at: [HX + 5, 18.6, 0], c: 129 },
+      { name: SIDES.S || 'Timoteo', face: [0, 18.6, HZ + 0.3], at: [0, 18.6, HZ + 5], c: 134 },
+      { name: SIDES.O || 'Leócares', face: [-HX - 0.3, 18.6, 0], at: [-HX - 5, 18.6, 0], c: 139 }
     ];
-    // cada escultor aparece en su plano (124 N, 129 E, 134 S, 139 O): ventana temporal propia
-    // para que los nombres no se solapen desde cada cámara
+    // (al pie del podio, delante de su cara y a la altura de la hilada baja: no tapa columnas ni frisos)
     const scLabs = [];
-    SIDE_DEF.forEach(function (d, i) {
-      const nm = label(d.name.toUpperCase(), { lh: 2.2, color: '#ffd27a', pos: [0, 0, 0], depthTest: false, plate: true });
-      const cp = label(d.cap, { lh: 0.9, color: '#9fe9ff', pos: [0, 0, 0], depthTest: false, plate: true });
+    SIDE_DEF.forEach(function (d) {
+      const nm = label(d.name.toUpperCase(), { lh: 1.1, color: '#ffd27a', pos: [0, 0, 0], depthTest: false, plate: true });
       placeLab(nm, d.at[0], d.at[1], d.at[2], 1);
-      placeLab(cp, d.at[0], d.at[1] - 1.8, d.at[2], 1);
-      addLab(scG, nm); addLab(scG, cp);
-      // línea que señala el lado: desde la fachada hasta la etiqueta
+      addLab(scG, nm);
+      // línea corta que señala el lado: desde la cara del podio hasta la etiqueta
       const sl = { P: [], C: [] };
-      seg(sl, d.face, [d.at[0], d.at[1] + 0.2, d.at[2]], rgb(GOLD, 1.0));
+      seg(sl, d.face, d.at, rgb(GOLD, 1.0));
       const line = new THREE.LineSegments(segGeo(sl), vlineMat(0));
       line.frustumCulled = false;
       scG.add(line);
-      scLabs.push({ nm: nm, cp: cp, line: line, c: [124, 129, 134, 139][i] });
+      scLabs.push({ nm: nm, line: line, c: d.c });
     });
 
     // ================= 4. measure: regla de 0 a 46 m y proporciones =================
@@ -702,26 +703,27 @@
           const op = ramp(sv, 0.35 + 0.05 * i, 0.75 + 0.05 * i);
           L.mat.opacity = op;
           L.sprite.visible = op > 0.001;
-          if (L.sprite.visible) fitScale(L, L.sprite.position.x, L.sprite.position.y, L.sprite.position.z, 45, 12);
+          if (L.sprite.visible) fitScale(L, L.sprite.position.x, L.sprite.position.y, L.sprite.position.z, 45, L.maxF || 12);
         }
       }
 
       // 2. cenizas: la reina fantasma con la copa
       ashG.visible = ash > 0.001;
       if (ashG.visible) {
-        bodyMat.uniforms.uOp.value = 0.72 * ash;
-        figLines.material.opacity = 0.35 * ash;
+        bodyMat.uniforms.uOp.value = 0.6 * ash;
+        skinMat.uniforms.uOp.value = 0.75 * ash;
+        figLines.material.opacity = 0.45 * ash;
         ringLine.material.opacity = (0.45 + 0.2 * Math.sin(wall * 1.7)) * ash;
         cupGlow.visible = ash > 0.001;
         cupGlow.material.opacity = (0.5 + 0.15 * Math.sin(wall * 2.3)) * ash;
         ashMatP.uniforms.uTime.value = wall;
-        ashMatP.uniforms.uI.value = ramp(ash, 0.4, 1) * 0.8;
+        ashMatP.uniforms.uI.value = ramp(ash, 0.4, 1) * 0.6;
         ashMatP.uniforms.uPx.value = renderer.domElement.height / (2 * Math.tan(camera.fov * Math.PI / 360));
         const la = ramp(ash, 0.3, 0.8);
         // a la izquierda de la pantalla (lado -X de la reina visto desde el norte): f crece con la distancia
-        const fa = Math.max(0.7, Math.min(2.5, distTo(-8.5, 5.2, 0) / 30));
-        placeLab(labAsh, -8.5, 6.1, 0, fa); labAsh.mat.opacity = la; labAsh.sprite.visible = la > 0.001;
-        placeLab(labAshTag, -8.5, 4.3, 0, fa); labAshTag.mat.opacity = la * 0.95; labAshTag.sprite.visible = la > 0.001;
+        const fa = Math.max(0.7, Math.min(2.5, distTo(-13, 5.9, 0) / 34));
+        placeLab(labAsh, -13, 6.6, 0, fa); labAsh.mat.opacity = la; labAsh.sprite.visible = la > 0.001;
+        placeLab(labAshTag, -13, 5.2, 0, fa); labAshTag.mat.opacity = la * 0.95; labAshTag.sprite.visible = la > 0.001;
       }
 
       // 3. escultores: un nombre por lado (legible desde los planos de 124 a 139)
@@ -732,7 +734,6 @@
           const L = scLabs[i];
           const win = ramp(t, L.c - 2.6, L.c - 1.2) * (1 - ramp(t, L.c + 1.2, L.c + 2.6));
           setOp(L.nm, win);
-          setOp(L.cp, win * 0.9);
           L.line.material.opacity = 0.9 * win;
           L.line.visible = win > 0.001;
         }
