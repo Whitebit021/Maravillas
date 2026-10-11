@@ -241,7 +241,7 @@
       rock: new THREE.MeshStandardMaterial({ map: texRock, emissive: 0xffffff, emissiveMap: texRock, emissiveIntensity: 0.1, roughness: 0.93, side: THREE.DoubleSide }),
       terrace: new THREE.MeshStandardMaterial({ map: texTerrace, emissive: 0xffffff, emissiveMap: texTerrace, emissiveIntensity: 0.04, roughness: 0.9, side: THREE.DoubleSide }),
       earth: new THREE.MeshStandardMaterial({ map: texEarth, emissive: 0xffffff, emissiveMap: texEarth, emissiveIntensity: 0.1, roughness: 1, side: THREE.DoubleSide }),
-      block: new THREE.MeshStandardMaterial({ map: texBlock, emissive: 0xffffff, emissiveMap: texBlock, emissiveIntensity: 0.1, roughness: 0.9, side: THREE.DoubleSide, transparent: false }),
+      block: new THREE.MeshStandardMaterial({ map: texBlock, emissive: 0xffffff, emissiveMap: texBlock, emissiveIntensity: 0.02, roughness: 0.9, side: THREE.DoubleSide, transparent: false }),
       wicker: new THREE.MeshStandardMaterial({ map: texWicker, emissive: 0xffffff, emissiveMap: texWicker, emissiveIntensity: 0.1, roughness: 0.9, side: THREE.DoubleSide }),
       bone: new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.7, transparent: true, opacity: 0, depthWrite: false }),
       vessel: new THREE.MeshStandardMaterial({ color: 0xb5653a, roughness: 0.6, transparent: true, opacity: 0, depthWrite: false }),
@@ -578,7 +578,7 @@
         lblSeal.visible = xr > 0.01; lblSeal.material.opacity = xr;
         lblOff.visible = xr * sa > 0.01; lblOff.material.opacity = xr * sa;
 
-        light.intensity = 45 * Math.max(xr * 0.8, tr);
+        light.intensity = 14 * Math.max(xr * 0.8, tr);
       }
     };
   };

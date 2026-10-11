@@ -51,7 +51,7 @@
     function keepOf(d, thr) { return 1 - smooth(clamp01((d - thr) / 0.12)); }   // 1 = intacto, 0 = desmontado
 
     // fusiona piezas {g, m, paint}: guarda el color de mármol y el de policromía por vértice
-    const MARBLE = new THREE.Color(0xefe9dd);
+    const MARBLE = new THREE.Color(0xefe6d6);
     function mergeGeos(list) {
       const pos = [], nor = [], uv = [], idx = [], cM = [], cP = [];
       const v = new THREE.Vector3(), nv = new THREE.Vector3(), nm = new THREE.Matrix3();
@@ -147,34 +147,30 @@
       ]);
     }
 
-    // ---------- caballo de la cuadriga: barril, cuello arqueado, cabeza con orejas y crin, patas articuladas, cola ----------
+    // ---------- caballo de la cuadriga: proporciones reales (cuerpo ~2.4 m, patas de 1.4 m, cuello a 45°, cabeza estrecha) ----------
     function horseGeo(raised) {
       const L = [];
-      L.push({ g: new THREE.SphereGeometry(1, 24, 18), m: tm(0, 1.6, 0, 0, 1.35, 0.78, 0.62) });      // barril
-      const neck = new THREE.CatmullRomCurve3([new THREE.Vector3(0.9, 1.95, 0), new THREE.Vector3(1.3, 2.55, 0),
-        new THREE.Vector3(1.75, 2.95, 0), new THREE.Vector3(2.0, 3.0, 0)]);
-      L.push({ g: new THREE.TubeGeometry(neck, 14, 0.26, 10, false), m: _id });                         // cuello arqueado
-      const mane = new THREE.CatmullRomCurve3([new THREE.Vector3(0.95, 2.25, 0), new THREE.Vector3(1.35, 2.9, 0),
-        new THREE.Vector3(1.75, 3.25, 0), new THREE.Vector3(1.9, 3.2, 0)]);
-      L.push({ g: new THREE.TubeGeometry(mane, 12, 0.09, 5, false), m: _id });                          // crin
-      L.push({ g: new THREE.SphereGeometry(0.3, 14, 10), m: tm(2.15, 2.75, 0, -0.5, 1.9, 0.95, 0.9) }); // cabeza
-      L.push({ g: new THREE.SphereGeometry(0.25, 12, 8), m: tm(2.5, 2.45, 0, -0.5, 1.0, 0.85, 0.85) }); // hocico
-      L.push({ g: new THREE.ConeGeometry(0.07, 0.3, 6), m: tm(1.95, 3.25, 0.12, 0.2) });                 // orejas
-      L.push({ g: new THREE.ConeGeometry(0.07, 0.3, 6), m: tm(1.95, 3.25, -0.12, 0.2) });
+      L.push({ g: new THREE.SphereGeometry(1, 28, 20), m: tm(0, 1.85, 0, 0, 1.2, 0.45, 0.46) });              // barril (2.4 m de largo, 0.9 m de alto)
+      L.push({ g: new THREE.CylinderGeometry(0.2, 0.28, 1.7, 14), m: tm(1.6, 2.8, 0, -Math.PI / 4) });        // cuello inclinado 45°
+      L.push({ g: boxG(0.1, 1.6, 0.14), m: tm(1.45, 2.95, 0, -Math.PI / 4) });                                   // crin
+      L.push({ g: new THREE.SphereGeometry(1, 16, 12), m: tm(2.55, 2.95, 0, -0.6, 0.32, 0.13, 0.14) });          // cabeza estrecha (0.6 m)
+      L.push({ g: new THREE.SphereGeometry(1, 10, 8), m: tm(2.85, 2.6, 0, -0.6, 0.12, 0.11, 0.12) });           // hocico
+      L.push({ g: new THREE.ConeGeometry(0.04, 0.18, 6), m: tm(2.3, 3.6, 0.07, -0.2) });                          // orejas
+      L.push({ g: new THREE.ConeGeometry(0.04, 0.18, 6), m: tm(2.3, 3.6, -0.07, -0.2) });
       const leg = function (x, z, fwd) {
-        const c1 = new THREE.CylinderGeometry(0.13, 0.11, 0.75, 8), kn = new THREE.SphereGeometry(0.12, 10, 8);
-        const c2 = new THREE.CylinderGeometry(0.09, 0.07, 0.75, 8), hf = boxG(0.2, 0.16, 0.22);
+        const c1 = new THREE.CylinderGeometry(0.075, 0.06, 0.7, 8), kn = new THREE.SphereGeometry(0.07, 10, 8);
+        const c2 = new THREE.CylinderGeometry(0.05, 0.045, 0.7, 8), hf = boxG(0.12, 0.1, 0.13);
         if (!fwd) {
-          L.push({ g: c1, m: tm(x, 1.2, z) }, { g: kn, m: tm(x, 0.8, z) }, { g: c2, m: tm(x, 0.42, z) }, { g: hf, m: tm(x, 0.08, z) });
-        } else {                               // pata delantera levantada: antebrazo hacia delante, casco en el aire
-          L.push({ g: c1, m: tm(x + 0.2, 1.3, z, -0.6) }, { g: kn, m: tm(x + 0.42, 1.1, z) },
-            { g: c2, m: tm(x + 0.55, 0.8, z, -0.9) }, { g: hf, m: tm(x + 0.75, 0.62, z) });
+          L.push({ g: c1, m: tm(x, 1.05, z) }, { g: kn, m: tm(x, 0.7, z) }, { g: c2, m: tm(x, 0.35, z) }, { g: hf, m: tm(x, 0.05, z) });
+        } else {                                   // pata delantera levantada: antebrazo hacia delante, casco en el aire
+          L.push({ g: c1, m: tm(x + 0.2, 1.15, z, -0.5) }, { g: kn, m: tm(x + 0.42, 0.92, z) },
+            { g: c2, m: tm(x + 0.55, 0.6, z, -0.9) }, { g: hf, m: tm(x + 0.74, 0.45, z) });
         }
       };
-      leg(0.9, 0.22, raised); leg(0.9, -0.22, raised);
-      leg(-0.9, 0.22, false); leg(-0.9, -0.22, false);
-      L.push({ g: new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(-1.15, 1.95, 0), new THREE.Vector3(-1.6, 1.7, 0),
-        new THREE.Vector3(-1.85, 1.1, 0), new THREE.Vector3(-1.9, 0.45, 0)]), 10, 0.09, 6, false), m: _id });   // cola
+      leg(0.9, 0.15, raised); leg(0.9, -0.15, raised);
+      leg(-0.9, 0.15, false); leg(-0.9, -0.15, false);
+      L.push({ g: new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(-1.15, 2.1, 0), new THREE.Vector3(-1.7, 1.6, 0),
+        new THREE.Vector3(-1.85, 1.0, 0), new THREE.Vector3(-1.9, 0.5, 0)]), 10, 0.07, 5, false), m: _id });   // cola
       return mergeGeos(L);
     }
     // rueda de radios: aro, ocho radios y cubo (plano XY, eje Z)
@@ -185,29 +181,29 @@
       return out;
     }
 
-    // ---------- textura de mármol: sillares finos con juntas, bisel, manchas y vetas suaves ----------
+    // ---------- textura de mármol cálida: sillares con juntas oscuras, bisel, manchas y vetas suaves ----------
     function marbleCanvases() {
       const N = 512, c = makeCanvas(N, N), b = makeCanvas(N, N);
       const g = c.getContext('2d'), h = b.getContext('2d'), r = makeRng(77);
-      g.fillStyle = '#c4baa3'; g.fillRect(0, 0, N, N);
-      h.fillStyle = '#2a2a2a'; h.fillRect(0, 0, N, N);
-      const rows = 2, cols = 2, rh = N / rows, cw = N / cols;
+      g.fillStyle = '#8f8472'; g.fillRect(0, 0, N, N);          // juntas oscuras
+      h.fillStyle = '#1e1e1e'; h.fillRect(0, 0, N, N);
+      const rows = 2, cols = 2, rh = N / rows, cw = N / cols, J = 5;
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
-          const x = col * cw, y = row * rh, tone = 0.9 + 0.12 * r(), warm = 0.97 + 0.04 * r();
-          g.fillStyle = 'rgb(' + Math.round(242 * tone) + ',' + Math.round(236 * tone * warm) + ',' + Math.round(224 * tone) + ')';
-          g.fillRect(x + 2, y + 2, cw - 4, rh - 4);
+          const x = col * cw, y = row * rh, tone = 0.93 + 0.1 * r(), warm = 0.98 + 0.03 * r();
+          g.fillStyle = 'rgb(' + Math.round(239 * tone) + ',' + Math.round(230 * tone * warm) + ',' + Math.round(214 * tone) + ')';
+          g.fillRect(x + J, y + J, cw - 2 * J, rh - 2 * J);
           for (let m = 0; m < 4; m++) {           // manchas suaves de tono
             const mx = x + r() * cw, my = y + r() * rh, mr = 30 + r() * 60;
             const gr = g.createRadialGradient(mx, my, 0, mx, my, mr);
-            gr.addColorStop(0, 'rgba(170,155,130,0.10)'); gr.addColorStop(1, 'rgba(170,155,130,0)');
-            g.fillStyle = gr; g.fillRect(x + 2, y + 2, cw - 4, rh - 4);
+            gr.addColorStop(0, 'rgba(170,150,120,0.10)'); gr.addColorStop(1, 'rgba(170,150,120,0)');
+            g.fillStyle = gr; g.fillRect(x + J, y + J, cw - 2 * J, rh - 2 * J);
           }
-          h.fillStyle = '#b8b8b8'; h.fillRect(x + 2, y + 2, cw - 4, rh - 4);
-          h.fillStyle = 'rgba(255,255,255,0.35)'; h.fillRect(x + 2, y + 2, cw - 4, 3); h.fillRect(x + 2, y + 2, 3, rh - 4);
-          h.fillStyle = 'rgba(0,0,0,0.35)'; h.fillRect(x + 2, y + rh - 5, cw - 4, 3); h.fillRect(x + cw - 5, y + 2, 3, rh - 4);
+          h.fillStyle = '#b8b8b8'; h.fillRect(x + J, y + J, cw - 2 * J, rh - 2 * J);
+          h.fillStyle = 'rgba(255,255,255,0.35)'; h.fillRect(x + J, y + J, cw - 2 * J, 3); h.fillRect(x + J, y + J, 3, rh - 2 * J);
+          h.fillStyle = 'rgba(0,0,0,0.35)'; h.fillRect(x + J, y + rh - J - 3, cw - 2 * J, 3); h.fillRect(x + cw - J - 3, y + J, 3, rh - 2 * J);
           for (let v = 0; v < 4; v++) {           // vetas finas
-            g.strokeStyle = 'rgba(' + Math.round(110 + 40 * r()) + ',100,88,' + (0.10 + 0.12 * r()).toFixed(2) + ')';
+            g.strokeStyle = 'rgba(' + Math.round(120 + 40 * r()) + ',105,88,' + (0.10 + 0.12 * r()).toFixed(2) + ')';
             g.lineWidth = 0.6 + r() * 1.6;
             const x0 = x + r() * cw, y0 = y + r() * rh;
             g.beginPath(); g.moveTo(x0, y0);
@@ -217,7 +213,7 @@
         }
       }
       for (let i = 0; i < 600; i++) {
-        g.fillStyle = 'rgba(150,140,120,' + (0.04 + 0.08 * r()).toFixed(2) + ')';
+        g.fillStyle = 'rgba(150,135,110,' + (0.04 + 0.08 * r()).toFixed(2) + ')';
         g.fillRect(r() * N, r() * N, 1 + r() * 2, 1 + r() * 2);
       }
       return { map: c, bump: b };
@@ -573,10 +569,13 @@
       { g: boxG(2.6, 0.12, 0.12), m: tm(2.2, 2.6, 0) }             // timón
     ];
     wheelItems(1.35, QA); wheelItems(-1.35, QA);
+    [-1.35, -0.45, 0.45, 1.35].forEach(function (z) {       // riendas: de las manos del auriga a las bocas
+      QA.push({ g: new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0.3, 3.95, z * 0.25), new THREE.Vector3(2.4, 4.0, z * 0.7), new THREE.Vector3(5.2, 5.2, z)]), 8, 0.025, 4, false), m: _id });
+    });
     const quadMesh = new THREE.Mesh(mergeGeos(QA), marbleMat);
     quadMesh.castShadow = true; quadMesh.receiveShadow = true;
     quadG.add(quadMesh);
-    const HZ = [-2.1, -0.7, 0.7, 2.1];                 // caballos 0 y 2: normales; 1 y 3: patas delanteras levantadas
+    const HZ = [-1.35, -0.45, 0.45, 1.35];                 // caballos 0 y 2: normales; 1 y 3: patas delanteras levantadas
     const horseA = new THREE.InstancedMesh(horseGeo(false), marbleMat, 2);
     const horseB = new THREE.InstancedMesh(horseGeo(true), marbleMat, 2);
     [horseA, horseB].forEach(function (h) { h.castShadow = true; h.frustumCulled = false; quadG.add(h); });
@@ -880,6 +879,7 @@
       haloMat.opacity = 0.3 * gh * (0.85 + 0.15 * Math.sin(wall * 1.7));
     }
 
+    root.traverse(function (o) { if (o.isMesh) { o.receiveShadow = true; o.castShadow = true; } });
     return { update: update, group: root };
   };
 })();

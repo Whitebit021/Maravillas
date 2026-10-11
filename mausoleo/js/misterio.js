@@ -602,8 +602,8 @@
     ashG.add(ashPts);
     // etiquetas: nombre y leyenda, a los pies de la reina (fuera de la franja del rótulo del capítulo)
     // (en el lado de la figura, a la altura del torso: fuera del rótulo del capítulo y de los subtítulos)
-    const labAsh = label('ARTEMISIA II', { lh: 1.4, color: '#ffd27a', pos: [-13, 6.6, 0], depthTest: false });
-    const labAshTag = label('bebía las cenizas de Mausolo (dicen)', { lh: 0.72, color: '#d9b3ff', pos: [-13, 5.2, 0], depthTest: false });
+    const labAsh = label('ARTEMISIA II', { lh: 1.4, color: '#ffd27a', pos: [-13, 6.6, 0], depthTest: false, plate: true });
+    const labAshTag = label('bebía las cenizas de Mausolo (dicen)', { lh: 0.72, color: '#d9b3ff', pos: [-13, 5.2, 0], depthTest: false, plate: true });
     addLab(ashG, labAsh); addLab(ashG, labAshTag);
 
     // ================= 3. sculptors: un nombre por lado =================
@@ -726,8 +726,8 @@
         const la = ramp(ash, 0.3, 0.8);
         // a la izquierda de la pantalla (lado -X de la reina visto desde el norte): f crece con la distancia
         const fa = Math.max(0.7, Math.min(2.5, distTo(-13, 5.9, 0) / 34));
-        placeLab(labAsh, -13, 6.6, 0, fa); labAsh.mat.opacity = la; labAsh.sprite.visible = la > 0.001;
-        placeLab(labAshTag, -13, 5.2, 0, fa); labAshTag.mat.opacity = la * 0.95; labAshTag.sprite.visible = la > 0.001;
+        placeLab(labAsh, -13, 6.6, 0, fa); setOp(labAsh, la);
+        placeLab(labAshTag, -13, 5.2, 0, fa); setOp(labAshTag, la * 0.95);
       }
 
       // 3. escultores: un nombre por lado (legible desde los planos de 124 a 139)

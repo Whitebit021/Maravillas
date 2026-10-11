@@ -130,7 +130,7 @@
   }
   function inZoneB(x, z) { return x > ZONE_B.x0 && x < ZONE_B.x1 && z > ZONE_B.z0 && z < ZONE_B.z1; }
   // ejes de la malla: fino (4 m) junto al recinto, grueso en los bordes; con los cortes exactos
-  function stepAt(a) { return a <= 90 ? 4 : (a <= 400 ? 12 : (a <= 1000 ? 30 : 100)); }
+  function stepAt(a) { return a <= 90 ? 6 : (a <= 400 ? 16 : (a <= 1000 ? 40 : 100)); }
   function axisCoords() {
     const vals = [];
     let v = -GRID_L;
@@ -821,43 +821,63 @@
     }
     for (const group of streetLines) for (const run of group) ribbon(RD, run, 1.8, C_ROAD);
 
-    // ---------- casas en manzanas (encaladas y ocres con tejado de teja); barrio moderno en la zona B ----------
+    // ---------- ciudad: manzanas irregulares que siguen las curvas de nivel ----------
     const NS_X = [], EW_Z = [-225, -265, -305, -400, -450, -500, -550, 170, 205];
     for (let x = -800; x <= 800; x += 80) NS_X.push(x);
-    const nearLine = function (v, arr) { for (let i = 0; i < arr.length; i++) if (Math.abs(v - arr[i]) < 4.5) return true; return false; };
+    const nearLine = function (v, arr, m) { for (let i = 0; i < arr.length; i++) if (Math.abs(v - arr[i]) < m) return true; return false; };
     const inAgora = function (x, z) { return Math.abs(x - 160) < 40 && Math.abs(z + 150) < 28; };
+    const BLK = 36;
     const occ = {};
-    const occKey = function (x, z) { return Math.floor(x / 12) + ',' + Math.floor(z / 12); };
-    const PITCH = 12;
-    const houses = [];
-    for (let gz = CITY.zMin; gz < CITY.zMax; gz += PITCH) {
-      for (let gx = CITY.xMin; gx < CITY.xMax; gx += PITCH) {
-        const x = gx + PITCH / 2, z = gz + PITCH / 2;
-        if (nearLine(x, NS_X) || nearLine(z, EW_Z)) continue;     // calles entre manzanas
-        if (rnd() > 0.85) continue;
-        if (houseExcluded(x, z) || inAgora(x, z)) continue;
-        const h0 = H(x, z);
-        if (h0 < 1.2 || slopeAt(x, z) > 0.4) continue;
-        houses.push({ x: x, z: z, y: h0 - 0.8, w: 6.8 + rnd() * 1.2, d: 6.8 + rnd() * 1.2, h: 3 + rnd() * 3.2,
-          zoneB: inZoneB(x, z), c: rnd() });
-        occ[occKey(x, z)] = true;
-      }
-    }
-    const ANC_COLS = ['#f2ebdc', '#ece4d0', '#e8dcc0', '#d2a777', '#c28f5e', '#e4cfa6'].map(col);
+    const occKey = function (x, z) { return Math.floor(x / BLK) + ',' + Math.floor(z / BLK); };
+    const ANC_COLS = ['#f2ebdc', '#ece4d0', '#e8dcc0', '#d2a777', '#c28f5e', '#e4cfa6', '#d9c2a0'].map(col);
     const ROOF_COLS = ['#a8694a', '#9a5b40', '#b07050', '#8c5a44'].map(col);
+    const PUB_COL = col('#e9dcc0'), PUB_ROOF = col('#a8694a');
     const itemsA = [], itemsB = [], roofA = [], roofB = [], itemsM = [];
     const nightA = [], nightB = [], nightM = [];
-    for (let i = 0; i < houses.length; i++) {
-      const hs = houses[i];
-      const yTop = hs.y + hs.h + 0.8;
-      const item = { x: hs.x, y: hs.y, z: hs.z, w: hs.w, h: hs.h + 0.8, d: hs.d, ry: 0, col: ANC_COLS[Math.floor(hs.c * ANC_COLS.length)] };
-      const roof = { x: hs.x, y: yTop - 0.2, z: hs.z, w: hs.w + 0.5, h: 0.9, d: hs.d + 0.5, ry: 0,
-        col: ROOF_COLS[Math.floor(fract(hs.c * 7.3) * ROOF_COLS.length)] };
-      (hs.zoneB ? itemsB : itemsA).push(item);
-      (hs.zoneB ? roofB : roofA).push(roof);
-      if (rnd() < 0.4) (hs.zoneB ? nightB : nightA).push(hs.x, yTop + 0.6, hs.z);
+    const placedAll = [];
+    for (let gz = CITY.zMin; gz < CITY.zMax; gz += BLK) {
+      for (let gx = CITY.xMin; gx < CITY.xMax; gx += BLK) {
+        // centro de manzana con desfase; su orientación sigue la curva de nivel
+        const bx = gx + BLK / 2 + (rnd() - 0.5) * 6, bz = gz + BLK / 2 + (rnd() - 0.5) * 6;
+        if (houseExcluded(bx, bz) || inAgora(bx, bz)) continue;
+        const hb = H(bx, bz);
+        if (hb < 1.2 || slopeAt(bx, bz) > 0.45) continue;
+        const gxh = (H(bx + 3, bz) - H(bx - 3, bz)) / 6, gzh = (H(bx, bz + 3) - H(bx, bz - 3)) / 6;
+        const contour = Math.atan2(gzh, gxh) + Math.PI / 2;
+        const blockYaw = -contour + (rnd() - 0.5) * 0.3;
+        const cy = Math.cos(blockYaw), sy = Math.sin(blockYaw);
+        const pub = rnd() < 0.1;                         // edificio público más grande
+        const nH = pub ? 1 : 1 + Math.floor(rnd() * 3);
+        for (let k = 0; k < nH; k++) {
+          const w = pub ? 18 + rnd() * 6 : 5 + rnd() * 4.5;
+          const d = pub ? 12 + rnd() * 4 : 5 + rnd() * 4.5;
+          const ox = pub ? 0 : (rnd() - 0.5) * (BLK - w - 6);
+          const oz = pub ? 0 : (rnd() - 0.5) * (BLK - d - 6);
+          // desplazamiento en el marco de la manzana (rotación de Y como en instMesh)
+          const x = bx + ox * cy + oz * sy, z = bz - ox * sy + oz * cy;
+          if (nearLine(x, NS_X, 7) || nearLine(z, EW_Z, 7)) continue;
+          if (placedAll.some(function (p) { return Math.hypot(p[0] - x, p[1] - z) < 9; })) continue;
+          if (houseExcluded(x, z) || inAgora(x, z)) continue;
+          const h0 = H(x, z);
+          if (h0 < 1.2 || slopeAt(x, z) > 0.5) continue;
+          placedAll.push([x, z]);
+          occ[occKey(x, z)] = true;
+          // patios: algunas casas más bajas y otras de dos pisos
+          const hh = pub ? 9 + rnd() * 2 : (rnd() < 0.35 ? 7 + rnd() * 1.5 : 3.5 + rnd() * 1.5);
+          const c = rnd();
+          const item = { x: x, y: h0 - 0.8, z: z, w: w, h: hh + 0.8, d: d, ry: blockYaw, col: pub ? PUB_COL : ANC_COLS[Math.floor(c * ANC_COLS.length)] };
+          const hasRoof = pub || rnd() < 0.7;
+          const roof = hasRoof ? { x: x, y: h0 - 0.8 + hh + 0.6, z: z, w: w + 0.4, h: 0.8, d: d + 0.4, ry: blockYaw,
+            col: pub ? PUB_ROOF : ROOF_COLS[Math.floor(fract(c * 7.3) * ROOF_COLS.length)] } : null;
+          const zb = inZoneB(x, z);
+          (zb ? itemsB : itemsA).push(item);
+          if (roof) (zb ? roofB : roofA).push(roof);
+          if (rnd() < 0.35) (zb ? nightB : nightA).push(x, h0 + hh + 1.4, z);
+        }
+      }
     }
     // barrio moderno: cubos blancos apiñados sobre la zona B
+    const PITCH = 12;
     for (let gz = ZONE_B.z0; gz < ZONE_B.z1; gz += PITCH) {
       for (let gx = ZONE_B.x0; gx < ZONE_B.x1; gx += PITCH) {
         const x = gx + PITCH / 2, z = gz + PITCH / 2;
@@ -880,7 +900,7 @@
     houseA.receiveShadow = true; houseB.receiveShadow = true; modern.receiveShadow = true;
     roofAm.receiveShadow = true; roofBm.receiveShadow = true;
 
-    // ---------- vegetación densa: olivos, cipreses, pinos y matorral ----------
+    // ---------- vegetación: olivos, pinos, cipreses y matorral entre las manzanas ----------
     const TG = treeGeoms(THREE);
     const pineGeo = new THREE.ConeGeometry(2.6, 9, 7); pineGeo.translate(0, 8.5, 0);
     const pineTrunk = new THREE.CylinderGeometry(0.22, 0.3, 7, 6); pineTrunk.translate(0, 3.5, 0);
@@ -892,8 +912,8 @@
     const freeAt = function (x, z) {
       return !houseExcluded(x, z) && !inAgora(x, z) && !occ[occKey(x, z)] && !(Math.abs(x) < 62 && Math.abs(z) < 126);
     };
-    const oliveItems = [], oliveCanopy = [], pineItems = [], pineCanopy = [], cypItems = [], bushItems = [];
-    for (let k = 0; k < 6000 && oliveItems.length < 420; k++) {
+    const oliveItems = [], oliveCanopy = [], pineItems = [], cypItems = [], bushItems = [];
+    for (let k = 0; k < 6000 && oliveItems.length < 300; k++) {
       const x = -1000 + rnd() * 2000, z = -1200 + rnd() * 1450;
       if (z > coastZ(x) - 6 || !freeAt(x, z)) continue;
       const h0 = H(x, z);
@@ -902,16 +922,16 @@
       oliveItems.push({ x: x, y: h0 - 0.2, z: z, w: s, h: s, d: s, ry: ry });
       oliveCanopy.push({ x: x, y: h0 - 0.2, z: z, w: s, h: s, d: s, ry: ry, col: oliveCols[Math.floor(rnd() * oliveCols.length)] });
     }
-    for (let k = 0; k < 6000 && pineItems.length < 240; k++) {
+    for (let k = 0; k < 6000 && pineItems.length < 200; k++) {
       const x = -1000 + rnd() * 2000, z = -1300 + rnd() * 1100;
       if (!freeAt(x, z)) continue;
       const h0 = H(x, z);
       if (h0 < 10 || slopeAt(x, z) > 0.9) continue;
       const s = 0.9 + rnd() * 0.6;
-      pineItems.push({ x: x, y: h0 - 0.3, z: z, w: s, h: s, d: s, ry: rnd() * TAU });
-      pineCanopy.push({ x: x, y: h0 - 0.3, z: z, w: s, h: s, d: s, ry: 0, col: col('#3d5a2f') });
+      pineItems.push({ x: x, y: h0 - 0.3, z: z, w: s, h: s, d: s, ry: rnd() * TAU, col: col('#3d5a2f') });
     }
-    for (let k = 0; k < 6000 && cypItems.length < 150; k++) {
+    const pineTrunkItems = pineItems.map(function (it) { return { x: it.x, y: it.y, z: it.z, w: it.w, h: it.h, d: it.d, ry: it.ry }; });
+    for (let k = 0; k < 6000 && cypItems.length < 120; k++) {
       let x, z;
       if (k % 2 === 0) { x = (rnd() < 0.5 ? -1 : 1) * (56 + rnd() * 14); z = (rnd() * 2 - 1) * 140; }
       else { x = -900 + rnd() * 1800; z = -700 + rnd() * 900; }
@@ -921,7 +941,7 @@
       const s = 0.8 + rnd() * 0.5;
       cypItems.push({ x: x, y: h0 - 0.2, z: z, w: s, h: s, d: s, ry: 0 });
     }
-    for (let k = 0; k < 9000 && bushItems.length < 900; k++) {
+    for (let k = 0; k < 9000 && bushItems.length < 500; k++) {
       const x = -1100 + rnd() * 2200, z = -1250 + rnd() * 1500;
       if (z > coastZ(x) - 4 || !freeAt(x, z)) continue;
       const h0 = H(x, z);
@@ -931,8 +951,8 @@
     }
     instMesh(THREE, TG.trunk, matTrunk, oliveItems, root);
     instMesh(THREE, TG.canopy, matTree, oliveCanopy, root);
-    instMesh(THREE, pineTrunk, matTrunk, pineItems, root);
-    instMesh(THREE, pineGeo, matPine, pineCanopy, root);
+    instMesh(THREE, pineTrunk, matTrunk, pineTrunkItems, root);
+    instMesh(THREE, pineGeo, matPine, pineItems, root);
     instMesh(THREE, TG.cyp, matCypress, cypItems, root);
     instMesh(THREE, bushGeo, matBush, bushItems, root);
 
@@ -1095,6 +1115,15 @@
       dustU.uAlpha.value = 0.12 + 0.12 * dayF;
     }
 
+    (function () {
+      let n = 0;
+      root.traverse(function (o) {
+        if (!o.isMesh) return;
+        const g = o.geometry, c = o.isInstancedMesh ? o.count : 1;
+        n += (g.index ? g.index.count / 3 : g.attributes.position.count / 3) * c;
+      });
+      console.log('[environment] triangulos ' + Math.round(n));
+    })();
     return {
       update: update,
       sunDirection: sunDir,
