@@ -22,6 +22,21 @@
     // ida y vuelta en [0,1] a partir de una distancia d (módulo 2L)
     function pingPong(d, L) { const p = frac(d / (2 * L)); return p < 0.5 ? 2 * p : 2 - 2 * p; }
 
+    // sprite circular para humo y chispas (evita puntos cuadrados)
+    const dotTex = (function () {
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = 64;
+      const g = cv.getContext('2d');
+      const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gr.addColorStop(0, 'rgba(255,255,255,1)');
+      gr.addColorStop(0.5, 'rgba(255,255,255,0.6)');
+      gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+      const tex = new THREE.CanvasTexture(cv);
+      tex.encoding = THREE.sRGBEncoding;
+      return tex;
+    })();
+
     // ---------- materiales ----------
     const MAT = {
       hull:     new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true }),
@@ -40,8 +55,8 @@
       clay:     new THREE.MeshStandardMaterial({ color: 0xb9835a, roughness: 1, flatShading: true }),
       molten:   new THREE.MeshBasicMaterial({ color: 0xffa456 }),
       glow:     new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }),
-      smoke:    new THREE.PointsMaterial({ color: 0xd0cabc, size: 5.5, transparent: true, opacity: 0.38, depthWrite: false }),
-      spark:    new THREE.PointsMaterial({ color: 0xffc070, size: 1.3, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending })
+      smoke:    new THREE.PointsMaterial({ color: 0xd0cabc, map: dotTex, size: 6.5, transparent: true, opacity: 0.3, depthWrite: false }),
+      spark:    new THREE.PointsMaterial({ color: 0xffc070, map: dotTex, size: 1.6, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending })
     };
 
     // ---------- geometría fusionada con vertex colors ----------
@@ -161,7 +176,6 @@
     const merchSailIM = mkIM(merchSailGeo, MAT.sail, NM, true);
     // carga de mármol/granito y lingotes sobre cubierta
     const cargoIM = mkIM(new THREE.BoxGeometry(1.4, 0.9, 1.0), MAT.stone, NM * 6, true);
-    cargoIM.setColorAt = cargoIM.setColorAt; // (se colorea abajo)
     boatsG.add(merchIM, merchSailIM, cargoIM);
 
     // trirreme: 36 m, manga 5 m, con remos (ritmo de remada con el reloj de pared)
@@ -226,7 +240,6 @@
       { A: [-200, -640], B: [520, -640], v: 1.1, ph: 0.9 }
     ];
     function laneLen(l) { return Math.hypot(l.B[0] - l.A[0], l.B[1] - l.A[1]); }
-    const _ref = new THREE.Vector3();
     function placeOnLane(l, t, out) {
       const L = laneLen(l);
       const d = l.v * t + l.ph * L;
@@ -241,7 +254,6 @@
     }
     const _pos = { x: 0, z: 0, hd: 0 };
     const _hm = new THREE.Matrix4(), _lm = new THREE.Matrix4(), _tm = new THREE.Matrix4(), _rm = new THREE.Matrix4();
-    const _cargoCols = [0xd9978a, 0xc97e70, 0xb9b09a, 0xd9c69a];
 
     // colores de la carga (granito rojo de Asuán y caliza)
     for (let i = 0; i < NM * 6; i++) cargoIM.setColorAt(i, _c3.setHex(i % 3 === 0 ? 0xd9978a : (i % 3 === 1 ? 0xc97e70 : 0xd9c69a)));
@@ -362,7 +374,7 @@
         _hm.compose(_p3, _q4, _s3.set(fade, fade, fade));
         bargeIM.setMatrixAt(bi, _hm);
         for (let c = 0; c < 6; c++) {
-          _tm.makeTranslation(-5.0 + (c % 3) * 3.2, 1.6 + Math.floor(c / 3) * 1.2, 0);
+          _tm.makeTranslation(-5.0 + (c % 3) * 3.2, 1.0 + Math.floor(c / 3) * 1.2, 0);
           _lm.copy(_hm).multiply(_tm).multiply(_rm.makeScale(fade, fade, fade));
           blockIM.setMatrixAt(bi * 6 + c, _lm);
         }
@@ -377,15 +389,15 @@
       for (let c = 0; c < 6; c++) {
         const t0 = UNLOAD_T0 + c * UNLOAD_DT;
         const p = clamp((t - t0) / 9, 0, 1);
-        const onBoat = t < t0 ? 1 : 0;
         // posición sobre cubierta (o en el aire, entre la barcaza y la pila)
-        const sx = qb.x + Math.cos(qb.hd) * (-5 + (c % 3) * 3.2);
-        const sz = qb.z + Math.sin(qb.hd) * (-5 + (c % 3) * 3.2);
+        // origen en cubierta: eje X local de la barcaza = (cos hd, -sin hd)
+        const lx = -5 + (c % 3) * 3.2, lyDeck = SEA + 0.3 + 1.0 + Math.floor(c / 3) * 1.2;
+        const sx = qb.x + Math.cos(qb.hd) * lx, sz = qb.z - Math.sin(qb.hd) * lx;
         const k = STACK[c];
         const bx = sx + (k.x - sx) * sstep(p), bz = sz + (k.z - sz) * sstep(p);
-        const by = (1.6 + Math.floor(c / 3) * 1.2) + (k.y - (1.6 + Math.floor(c / 3) * 1.2)) * sstep(p) + Math.sin(Math.PI * p) * 6 * (p > 0 && p < 1 ? 1 : 0);
-        const lift = t < t0 ? 1 : (p >= 1 ? 1 : 1);
-        _tm.makeTranslation(bx, by + SEA + 0.3, bz);
+        // sube con la grúa hasta la altura de la pila y luego baja (arco de 6 m)
+        const by = lyDeck + (k.y - lyDeck) * sstep(p) + Math.sin(Math.PI * p) * 6 * (p > 0 && p < 1 ? 1 : 0);
+        _tm.makeTranslation(bx, by, bz);
         _rm.makeRotationY(qb.hd);
         _lm.copy(_tm).multiply(_rm).multiply(_rm.makeScale(b, b, b));
         blockIM.setMatrixAt(bi * 6 + c, _lm);
@@ -393,3 +405,356 @@
       bargeIM.instanceMatrix.needsUpdate = true;
       blockIM.instanceMatrix.needsUpdate = true;
     }
+
+    // =====================================================================
+    // 3. OBREROS (InstancedMesh, animados con s.wall)
+    //    0-35 patio de labra (picando bloques), 36-47 muelle (acarreo),
+    //    48-63 podio (martilleo), 64-83 cima de la obra (a la altura build*111), 84-99 caminantes
+    // =====================================================================
+    // bloques del patio de labra: montones de caliza y granito a medio labrar (arco oeste-norte)
+    (function buildYard() {
+      const YB = 22;
+      const yardIM = mkIM(new THREE.BoxGeometry(2.4, 1.2, 1.2), MAT.stone, YB, true);
+      root.add(yardIM);
+      for (let i = 0; i < YB; i++) {
+        const a = 1.9 + hash(i + 1500) * 4.1, r = 7 + hash(i + 1600) * 7;
+        const x = SITE.stoneYard.x + Math.cos(a) * r, z = SITE.stoneYard.z + Math.sin(a) * r;
+        const ry = hash(i + 1700) * Math.PI;
+        const layer = i % 3 === 2 ? 1.2 : 0;
+        _p3.set(x, 0.6 + layer, z); _q4.setFromAxisAngle(_yAxis, ry);
+        _m4.compose(_p3, _q4, _s3.set(1, 1, 1));
+        yardIM.setMatrixAt(i, _m4);
+        yardIM.setColorAt(i, _c3.setHex(i % 3 === 0 ? 0xd9978a : (i % 3 === 1 ? 0xd9c69a : 0xcdb88c)));
+      }
+      yardIM.instanceMatrix.needsUpdate = true;
+      yardIM.instanceColor.needsUpdate = true;
+    })();
+
+    const workersG = new THREE.Group();
+    root.add(workersG);
+    const NW = 100;
+    const wTorso = mkIM(new THREE.BoxGeometry(0.42, 0.66, 0.24), MAT.cloth, NW, true);
+    const wHead = mkIM(new THREE.SphereGeometry(0.14, 6, 4), MAT.skin, NW, false);
+    const wLeg = mkIM(new THREE.BoxGeometry(0.19, 0.9, 0.2), MAT.cloth, NW * 2, true);
+    const wArm = mkIM(new THREE.BoxGeometry(0.13, 0.66, 0.13), MAT.skin, NW * 2, false);
+    const wTool = mkIM(new THREE.BoxGeometry(0.16, 0.12, 0.26), MAT.iron, NW, false);
+    const WIMS = [wTorso, wHead, wLeg, wArm, wTool];
+    WIMS.forEach(function (im) { workersG.add(im); });
+    (function () {
+      const pal = [0xd9c9a3, 0xb8794a, 0x3d6f9e, 0xe6e0d0, 0x8c3b2a];
+      for (let i = 0; i < NW; i++) wTorso.setColorAt(i, _c3.setHex(pal[i % pal.length]));
+      for (let i = 0; i < NW * 2; i++) wLeg.setColorAt(i, _c3.setHex(i % 2 ? 0x5b4a36 : 0x6b5a42));
+      wTorso.instanceColor.needsUpdate = true;
+      wLeg.instanceColor.needsUpdate = true;
+    })();
+    const _wR = new THREE.Matrix4(), _wq = new THREE.Quaternion(), _wp = new THREE.Vector3();
+    const _wA = new THREE.Matrix4(), _wB = new THREE.Matrix4(), _wE = new THREE.Euler();
+    function wRoot(x, y, z, hd) { _wp.set(x, y, z); _wq.setFromAxisAngle(_yAxis, hd); _wR.compose(_wp, _wq, _s3.set(1, 1, 1)); }
+    // pieza: M = root * T(p) * R(rx,rz) * T(off) * S(size)
+    function wPart(im, idx, px, py, pz, rx, rz, ox, oy, oz, sx, sy, sz) {
+      _wA.makeTranslation(px, py, pz);
+      _wE.set(rx, 0, rz, 'XYZ'); _wB.makeRotationFromEuler(_wE); _wA.multiply(_wB);
+      _wB.makeTranslation(ox, oy, oz); _wA.multiply(_wB);
+      _wB.makeScale(sx, sy, sz); _wA.multiply(_wB);
+      _wB.multiplyMatrices(_wR, _wA);
+      im.setMatrixAt(idx, _wB);
+    }
+    function drawWorker(i, P) {
+      wPart(wTorso, i, 0, 1.25, 0, P.lean, 0, 0, 0, 0, 1, 1, 1);
+      wPart(wHead, i, 0, 1.25, 0, P.lean, 0, 0, 0.45, 0, 1, 1, 1);
+      wPart(wLeg, 2 * i, -0.11, 0.9, 0, P.ll, 0, 0, -0.45, 0, 1, 1, 1);
+      wPart(wLeg, 2 * i + 1, 0.11, 0.9, 0, P.lr, 0, 0, -0.45, 0, 1, 1, 1);
+      wPart(wArm, 2 * i, -0.27, 1.5, 0, P.al, 0, 0, -0.33, 0, 1, 1, 1);
+      wPart(wArm, 2 * i + 1, 0.27, 1.5, 0, P.ar, 0, 0, -0.33, 0, 1, 1, 1);
+      wPart(wTool, i, 0.27, 1.5, 0, P.ar, 0, 0, -0.72, 0.1, P.tool ? 1 : 0.0001, P.tool ? 1 : 0.0001, P.tool ? 1 : 0.0001);
+    }
+    const PW = { ll: 0, lr: 0, al: 0, ar: 0, lean: 0, tool: 0 };
+    const QUAY_TGT = { x: 60, z: 120 };
+    // radio del tramo de cima (donde están los obreros y las grúas) según la altura y
+    function rimR(y) {
+      if (y < TOWER.tier2.y0) return TOWER.tier1HalfAt(y) * 0.9;
+      if (y < TOWER.tier3.y0) return TOWER.tier2.radius - 1.2;
+      return TOWER.tier3.radius - 1.2;
+    }
+    // radio exterior del andamio (alrededor de la franja en construcción)
+    function scaffoldR(y) {
+      if (y < TOWER.tier2.y0) return 21;
+      if (y < TOWER.tier3.y0) return TOWER.tier2.radius + 2.2;
+      return TOWER.tier3.radius + 2.2;
+    }
+
+    function updateWorkers(s) {
+      const W = s.wall, w = clamp(s.workers, 0, 1);
+      workersG.visible = w > 0.002;
+      if (!workersG.visible) return;
+      const SY = SITE.stoneYard;
+      // 0-35: patio de labra, de pie picando con cincel y mazo; arco al oeste y norte (la cámara mira desde el SE)
+      for (let i = 0; i < 36; i++) {
+        const h1 = hash(i + 500), h2 = hash(i + 600), h3 = hash(i + 700);
+        const a = 1.9 + h1 * 4.1, r = 4 + h2 * 8;
+        const x = SY.x + Math.cos(a) * r, z = SY.z + Math.sin(a) * r;
+        wRoot(x, 0, z, Math.atan2(-(x - SY.x), -(z - SY.z)) + (h3 - 0.5) * 0.6);
+        const ph = W * 3.0 + i;
+        PW.ar = -1.2 + 0.9 * Math.cos(ph); PW.al = -0.3; PW.ll = 0.08; PW.lr = -0.08; PW.lean = 0.35; PW.tool = 1;
+        drawWorker(i, PW);
+      }
+      // 36-47: muelle, cargan bloques entre la barcaza y la pila
+      const qb = QUAY_BARGE;
+      for (let j = 0; j < 12; j++) {
+        const i = 36 + j, h1 = hash(i + 500);
+        const f = pingPong(W * 0.12 + h1 * 2, 1);
+        const sx = qb.x + (QUAY_TGT.x - qb.x) * f, sz = qb.z + (QUAY_TGT.z - qb.z) * f;
+        wRoot(sx + (hash(i + 900) - 0.5) * 2, 0, sz, headingOf(QUAY_TGT.x - qb.x, QUAY_TGT.z - qb.z) + Math.PI * (f > 0.5 ? 1 : 0));
+        const sw = Math.sin(W * 5 + h1 * TAU);
+        PW.ll = 0.4 * sw; PW.lr = -0.4 * sw; PW.al = -1.0; PW.ar = -1.0; PW.lean = 0.12; PW.tool = 0;
+        drawWorker(i, PW);
+      }
+      // 48-63: podio, martilleando los bloques del basamento (arco al oeste, fuera de la vista de la cámara)
+      for (let j = 0; j < 16; j++) {
+        const i = 48 + j, h1 = hash(i + 500), h2 = hash(i + 600);
+        const a = 3.0 + j / 15 * 1.4 + h1 * 0.1, r = 30 + h2 * 2;
+        const x = Math.cos(a) * r, z = Math.sin(a) * r;
+        wRoot(x, 0, z, Math.atan2(-x, -z));
+        PW.ar = -1.2 + 0.9 * Math.cos(W * 3 + i); PW.al = -0.3; PW.ll = 0.08; PW.lr = -0.08; PW.lean = 0.35; PW.tool = 1;
+        drawWorker(i, PW);
+      }
+      // 64-83: cima de la obra, de pie en el borde a la altura actual (solo arco sur-oeste)
+      const yt = clamp(s.build, 0, 1) * TOWER.H;
+      const topOn = s.build > 0.3 && yt > 8;
+      for (let j = 0; j < 20; j++) {
+        const i = 64 + j, h1 = hash(i + 500), h2 = hash(i + 600);
+        if (!topOn) { wRoot(0, -50, 0, 0); }
+        else {
+          const a = 1.3 + j / 19 * 3.3 + h1 * 0.15, r = rimR(yt) * (0.8 + 0.2 * h2);
+          const x = Math.cos(a) * r, z = Math.sin(a) * r;
+          wRoot(x, yt, z, Math.atan2(-x, -z));
+        }
+        PW.ar = -1.0 + 0.8 * Math.cos(W * 3 + i); PW.al = -0.2; PW.ll = 0; PW.lr = 0; PW.lean = 0.25; PW.tool = 1;
+        drawWorker(i, PW);
+      }
+      // 84-99: caminantes al noroeste de la isla, lejos de la torre
+      for (let j = 0; j < 16; j++) {
+        const i = 84 + j, h1 = hash(i + 500);
+        const a = 3.7 + 0.9 * pingPong(W * 0.05 + h1, 1), r = 90;
+        const x = Math.cos(a) * r, z = Math.sin(a) * r;
+        wRoot(x, 0, z, Math.atan2(-Math.sin(a), Math.cos(a)) + Math.PI * 0.5);
+        const sw = Math.sin(W * 5 + h1 * TAU);
+        PW.ll = 0.4 * sw; PW.lr = -0.4 * sw; PW.al = -0.35 * sw; PW.ar = 0.35 * sw; PW.lean = 0.04; PW.tool = 0;
+        drawWorker(i, PW);
+      }
+      WIMS.forEach(function (im) { im.instanceMatrix.needsUpdate = true; });
+    }
+
+    // =====================================================================
+    // 4. GRÚAS de madera con rueda de pisar (hombres dentro) en la cima, a la altura actual;
+    //    andamios de madera ~8 m bajo la cima; grúa de descarga en el muelle.
+    // =====================================================================
+    const cW = new THREE.Color(0x6e4a2a), cDk = new THREE.Color(0x3a2a1a);
+    function mbGeom(mb, geo, m, c) {
+      const g = geo.clone().applyMatrix4(m);
+      if (!g.index) { const n = g.attributes.position.count; const idx = []; for (let i = 0; i < n; i++) idx.push(i); g.setIndex(idx); }
+      if (!g.attributes.normal) g.computeVertexNormals();
+      mbAppend(mb, g, c);
+      g.dispose();
+    }
+    // armazón (mástil 14 m, pluma hacia +X, contrapeso hacia -X)
+    const craneFrameGeo = (function () {
+      const mb = MB();
+      mbBox(mb, 0, 0.3, 0, 3.6, 0.6, 2.4, cW);                 // plataforma
+      mbBox(mb, 0, 7.0, 0, 0.45, 14, 0.45, cW);                // mástil
+      mbBox(mb, 0, 4.6, 0.8, 0.12, 0.12, 0.12, cW);            // travesaños
+      mbBox(mb, 0, 9.6, 0.8, 0.12, 0.12, 0.12, cW);
+      mbBox(mb, 6.2, 13.2, 0, 12.5, 0.3, 0.3, cW);             // pluma
+      mbBox(mb, -2.2, 13.0, 0, 4.8, 0.25, 0.25, cW);           // contrapluma
+      mbBox(mb, -4.6, 12.5, 0, 1.4, 1.1, 1.1, cDk);            // contrapeso
+      mbBox(mb, 0, 14.3, 0, 1.0, 0.6, 0.9, cW);                // cabeza del mástil
+      return mbGeo(mb);
+    })();
+    // rueda de pisar: aro y radios (plano XY, eje Z)
+    const wheelGeo = (function () {
+      const mb = MB();
+      mbGeom(mb, new THREE.TorusGeometry(2.4, 0.2, 6, 20), new THREE.Matrix4(), cW);
+      for (let k = 0; k < 6; k++) mbBox(mb, 0, 0, 0, 4.8, 0.12, 0.12, cW, 0, 0, k * Math.PI / 3);
+      return mbGeo(mb);
+    })();
+    const menWheelIM = mkIM(new THREE.BoxGeometry(0.34, 0.6, 0.24), MAT.cloth, 4, false);
+    const menHeadIM = mkIM(new THREE.SphereGeometry(0.13, 6, 4), MAT.skin, 4, false);
+    const _cm = new THREE.Matrix4(), _cp = new THREE.Vector3(), _cs = new THREE.Vector3(1, 1, 1), _cq = new THREE.Quaternion();
+    for (let k = 0; k < 4; k++) {
+      const a = k * TAU / 4;
+      _cp.set(Math.cos(a) * 1.9, Math.sin(a) * 1.9, 0); _cq.setFromAxisAngle(_yAxis, 0);
+      _cm.compose(_cp, _cq, _cs); menWheelIM.setMatrixAt(k, _cm);
+      _cp.set(Math.cos(a) * 1.85, Math.sin(a) * 1.85 + 0.42, 0);
+      _cm.compose(_cp, _cq, _cs); menHeadIM.setMatrixAt(k, _cm);
+    }
+    menWheelIM.instanceMatrix.needsUpdate = true;
+    menHeadIM.instanceMatrix.needsUpdate = true;
+    const ropeMesh = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1, 0.06), MAT.woodDk);
+    const hookBlockGeo = new THREE.BoxGeometry(2.4, 1.2, 1.2);
+    // constructor de grúa: grupo con armazón, rueda (girando con s.wall), bloque colgando
+    function makeCrane(withWheel) {
+      const g = new THREE.Group();
+      const frame = new THREE.Mesh(craneFrameGeo, MAT.wood);
+      frame.castShadow = true;
+      g.add(frame);
+      const rope = new THREE.Mesh(ropeMesh.geometry, MAT.woodDk);
+      const block = new THREE.Mesh(hookBlockGeo, MAT.stone);
+      block.castShadow = true;
+      g.add(rope, block);
+      let wheel = null;
+      if (withWheel) {
+        wheel = new THREE.Group();
+        wheel.position.set(-2.6, 3.0, 0.6);
+        const wm = new THREE.Mesh(wheelGeo, MAT.wood);
+        wm.castShadow = true;
+        wheel.add(wm);
+        const men = new THREE.Group();
+        men.add(menWheelIM.clone(), menHeadIM.clone());
+        wheel.add(men);
+        g.add(wheel);
+      }
+      g.userData = { rope: rope, block: block, wheel: wheel };
+      root.add(g);
+      return g;
+    }
+    // dos grúas sobre la cima (posición en la cima a la altura build*111)
+    const TOPC = [{ a: 3.4, r: 1.0 }, { a: 4.0, r: 1.0 }].map(function (c) { c.g = makeCrane(true); return c; });
+    // grúa de descarga del muelle, sobre el pantalán, girando hacia la barcaza
+    const quayCrane = makeCrane(false);
+    quayCrane.position.set(QUAY_PIER.x, 0, QUAY_PIER.z);
+    quayCrane.rotation.y = -headingOf(QUAY_BARGE.x - QUAY_PIER.x, QUAY_BARGE.z - QUAY_PIER.z);
+    // andamios: postes y tablones alrededor de la franja en construcción (~8 m bajo la cima)
+    const NPOST = 40, NBRD = 40;
+    const postIM = mkIM(new THREE.BoxGeometry(0.22, 8, 0.22), MAT.wood, NPOST, true);
+    const boardIM = mkIM(new THREE.BoxGeometry(1.8, 0.14, 0.5), MAT.wood, NBRD, true);
+    root.add(postIM, boardIM);
+
+    function updateCranes(s) {
+      const W = s.wall, b = clamp(s.build, 0, 1);
+      const yt = b * TOWER.H;
+      const topOn = b > 0.3 && yt > 8;
+      // grúas de la cima
+      TOPC.forEach(function (C, k) {
+        const g = C.g;
+        g.visible = topOn;
+        if (!topOn) return;
+        const rr = rimR(yt) * C.r;
+        const cx = Math.cos(C.a) * rr, cz = Math.sin(C.a) * rr;
+        g.position.set(cx, yt, cz);
+        g.rotation.y = -C.a + 0.12 * Math.sin(W * 0.25 + k * 2);
+        const ud = g.userData;
+        const ropeLen = 3.8 + 1.4 * (0.5 + 0.5 * Math.sin(W * 0.5 + k));
+        ud.rope.position.set(12.5, 13.2 - ropeLen / 2, 0);
+        ud.rope.scale.set(1, ropeLen, 1);
+        ud.block.position.set(12.5, 13.2 - ropeLen - 0.6, 0);
+        if (ud.wheel) ud.wheel.rotation.z = -W * 0.9;
+      });
+      // grúa del muelle: visible mientras hay barcazas
+      quayCrane.visible = s.barges > 0.002;
+      if (quayCrane.visible) {
+        const ql = 3.5 + 2.5 * (0.5 + 0.5 * Math.sin(W * 0.4));
+        quayCrane.userData.rope.position.set(12.5, 13.2 - ql / 2, 0);
+        quayCrane.userData.rope.scale.set(1, ql, 1);
+        quayCrane.userData.block.position.set(12.5, 13.2 - ql - 0.6, 0);
+      }
+      // andamios: una fila de postes y tablones a ~8 m bajo la cima, en el arco sur-oeste
+      const scOn = b > 0.4 && yt > 30;
+      const sy = yt - 8, sr = scaffoldR(sy);
+      for (let k = 0; k < NPOST; k++) {
+        const a = 1.3 + k / (NPOST - 1) * 3.3;
+        if (scOn) setPRS(postIM, k, Math.cos(a) * sr, sy, Math.sin(a) * sr, 0);
+        else setPRS(postIM, k, 0, -60, 0, 0, 0.0001, 0.0001, 0.0001);
+      }
+      for (let k = 0; k < NBRD; k++) {
+        const a = 1.3 + k / (NBRD - 1) * 3.3;
+        const ry = Math.atan2(-Math.cos(a), -Math.sin(a));
+        if (scOn) setPRS(boardIM, k, Math.cos(a) * sr, sy + 1.5 * (k % 2 ? 1 : 0) - 0.5, Math.sin(a) * sr, ry);
+        else setPRS(boardIM, k, 0, -60, 0, 0, 0.0001, 0.0001, 0.0001);
+      }
+      postIM.instanceMatrix.needsUpdate = true;
+      boardIM.instanceMatrix.needsUpdate = true;
+    }
+
+    // =====================================================================
+    // 5. PLOMO FUNDIDO (s.lead, t 66-77): tres crisoles sobre el podio, vertiendo en las juntas
+    //    entre bloques en el arco sureste; resplandor moderado, chispas y humo.
+    // =====================================================================
+    const leadG = new THREE.Group();
+    root.add(leadG);
+    const NCR = 3, PT_R = 21.5, PT_Y = 6.0;
+    const POUR_ANG = [0.35, 0.6, 0.85];
+    const crucibleIM = mkIM(new THREE.CylinderGeometry(1.0, 0.7, 1.1, 10, 1, true), MAT.iron, NCR, true);
+    const poolIM = mkIM(new THREE.CircleGeometry(0.9, 12).rotateX(-Math.PI / 2), MAT.lead, NCR, false);
+    const streamIM = mkIM(new THREE.CylinderGeometry(0.16, 0.12, 1, 8), MAT.lead, NCR, false);
+    const glowIM = mkIM(new THREE.CylinderGeometry(0.55, 0.35, 1, 8), MAT.glow, NCR, false);
+    leadG.add(crucibleIM, poolIM, streamIM, glowIM);
+    const NSM = 70, smokePos = new Float32Array(NSM * 3);
+    const smokeGeo = new THREE.BufferGeometry();
+    smokeGeo.setAttribute('position', new THREE.BufferAttribute(smokePos, 3));
+    const smokePts = new THREE.Points(smokeGeo, MAT.smoke);
+    smokePts.frustumCulled = false;
+    const NSP = 40, sparkPos = new Float32Array(NSP * 3);
+    const sparkGeo = new THREE.BufferGeometry();
+    sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+    const sparkPts = new THREE.Points(sparkGeo, MAT.spark);
+    sparkPts.frustumCulled = false;
+    leadG.add(smokePts, sparkPts);
+
+    function updateLead(s) {
+      const f = clamp(s.lead, 0, 1), W = s.wall;
+      leadG.visible = f > 0.002;
+      if (!leadG.visible) return;
+      for (let k = 0; k < NCR; k++) {
+        const a = POUR_ANG[k];
+        const cx = Math.cos(a) * PT_R, cz = Math.sin(a) * PT_R;
+        const fk = clamp(f * 1.25 - k * 0.12, 0, 1);
+        const ix = -Math.cos(a) * 0.9, iz = -Math.sin(a) * 0.9;     // el chorro cae hacia el centro
+        setPRS(crucibleIM, k, cx, PT_Y + 0.55, cz, -a);
+        setPRS(poolIM, k, cx, PT_Y + 1.06, cz, 0, fk > 0.01 ? 1 : 0.0001, 1, fk > 0.01 ? 1 : 0.0001);
+        const Ls = 1.8 * fk;
+        setPRS(streamIM, k, cx + ix, PT_Y + 1.0 - Ls / 2, cz + iz, 0, 1, Math.max(Ls, 0.0001), 1);
+        setPRS(glowIM, k, cx + ix, PT_Y + 0.5, cz + iz, 0, 1, Math.max(0.8 * fk, 0.0001), 1);
+      }
+      crucibleIM.instanceMatrix.needsUpdate = true;
+      poolIM.instanceMatrix.needsUpdate = true;
+      streamIM.instanceMatrix.needsUpdate = true;
+      glowIM.instanceMatrix.needsUpdate = true;
+      // humo: asciende desde las juntas, deriva con el viento
+      const nS = Math.round(NSM * clamp(f * 2, 0, 1));
+      smokeGeo.setDrawRange(0, nS);
+      for (let i = 0; i < NSM; i++) {
+        const k = i % NCR, a = POUR_ANG[k];
+        const age = frac(W * 0.22 + hash(i + 3000));
+        const bx = Math.cos(a) * PT_R + (-Math.cos(a)) * 0.9, bz = Math.sin(a) * PT_R + (-Math.sin(a)) * 0.9;
+        smokePos[i * 3] = bx + (hash(i + 3100) - 0.5) * 1.5 + age * 3.0;
+        smokePos[i * 3 + 1] = PT_Y + 1.5 + age * 11;
+        smokePos[i * 3 + 2] = bz + (hash(i + 3200) - 0.5) * 1.5 + age * 1.5;
+      }
+      smokeGeo.attributes.position.needsUpdate = true;
+      // chispas en el punto de impacto
+      const nP = Math.round(NSP * clamp((f - 0.4) * 2, 0, 1));
+      sparkGeo.setDrawRange(0, nP);
+      for (let i = 0; i < NSP; i++) {
+        const k = i % NCR, a = POUR_ANG[k];
+        const age = frac(W * 1.3 + hash(i + 4000));
+        sparkPos[i * 3] = Math.cos(a) * PT_R - Math.cos(a) * 0.9 + (hash(i + 4100) - 0.5) * 1.6 * age;
+        sparkPos[i * 3 + 1] = PT_Y + 0.4 + age * 1.8;
+        sparkPos[i * 3 + 2] = Math.sin(a) * PT_R - Math.sin(a) * 0.9 + (hash(i + 4200) - 0.5) * 1.6 * age;
+      }
+      sparkGeo.attributes.position.needsUpdate = true;
+    }
+
+    // =====================================================================
+    // update: cada grupo depende solo de s (sin acumular)
+    // =====================================================================
+    function update(s) {
+      updateBoats(s);
+      updateBarges(s);
+      updateWorkers(s);
+      updateCranes(s);
+      updateLead(s);
+    }
+
+    return { update: update, group: root };
+  };
+})();

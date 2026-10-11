@@ -16,7 +16,7 @@
   const SEA_Y = SITE.seaLevel;                       // -1.5
   const SUN_ELEV = 60 * Math.PI / 180;               // altura del sol al mediodía
   const EY = Math.sin(SUN_ELEV), EZ = Math.cos(SUN_ELEV);
-  const MOON_Y = 0.32;                               // luna baja: sombras largas
+  const MOON_Y = 0.16;                               // luna baja (dentro del encuadre del prólogo)
   const SHADOW_DIST = 500;
   const SUN_TARGET = { x: 0, y: 50, z: 0 };          // centro de la torre: sombras de ±90 m, alto 130 m
   const SEA_HALF = 6000;
@@ -323,8 +323,8 @@
     '  p.z += cos(uTime * 0.6 + aSeed * 13.0) * 4.0 * ph;',
     '  vec4 mv = modelViewMatrix * vec4(p, 1.0);',
     '  gl_Position = projectionMatrix * mv;',
-    '  gl_PointSize = clamp(uPx / -mv.z, 2.0, 22.0);',
-    '  vA = uQuake * (0.9 - ph) * smoothstep(0.0, 0.15, ph) * 0.5;',
+    '  gl_PointSize = clamp(uPx / -mv.z, 6.0, 30.0);',
+    '  vA = uQuake * (0.9 - ph) * smoothstep(0.0, 0.15, ph) * 0.9;',
     '}'
   ].join('\n');
 
@@ -1006,7 +1006,7 @@
     const dustGeo = new THREE.BufferGeometry();
     dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
     dustGeo.setAttribute('aSeed', new THREE.BufferAttribute(dustSeed, 1));
-    const dustU = { uTime: { value: 0 }, uQuake: { value: 0 }, uPx: { value: 170 }, uColor: { value: col('#c8a77a') } };
+    const dustU = { uTime: { value: 0 }, uQuake: { value: 0 }, uPx: { value: 320 }, uColor: { value: col('#c8a77a') } };
     const dustMat = new THREE.ShaderMaterial({
       uniforms: dustU, vertexShader: DUST_VS, fragmentShader: POINT_FS,
       transparent: true, depthWrite: false
