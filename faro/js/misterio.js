@@ -364,7 +364,7 @@
     root.add(beamG);
     const beamLen = Math.hypot(BEAM_R, TOP - SEA);
     // cono: apex en y=0 (linterna), base en y=-L (sobre el mar)
-    const coneGeo = new THREE.CylinderGeometry(0.5, Math.tan(1.2 * Math.PI / 180) * beamLen, beamLen, 28, 1, true);
+    const coneGeo = new THREE.CylinderGeometry(2.6, Math.tan(1.2 * Math.PI / 180) * beamLen, beamLen, 28, 1, true);
     coneGeo.translate(0, -beamLen / 2, 0);
     const beamMatM = beamMat(0xbfeaff, beamLen, 1.6, 0.25);
     const cone = new THREE.Mesh(coneGeo, beamMatM);
@@ -381,6 +381,9 @@
     beamG.add(streak);
     const beamGlow = glowSprite('255,236,190', 90, [0, SEA, 0]);
     beamG.add(beamGlow);
+    // halo en la fuente: el haz se lee más ancho junto a la linterna
+    const beamSrc = glowSprite('200,240,255', 34, [0, TOP, 0]);
+    beamG.add(beamSrc);
 
     // ================= 3. burn: MITO del espejo que incendia la flota =================
     const burnG = new THREE.Group();
@@ -437,11 +440,11 @@
     }
     const flameGeo = pointGeo(90, flameRnd, 22, deckY);
     const sf = flameGeo.attributes.aSize.array;
-    for (let i = 0; i < sf.length; i++) sf[i] = 5 + 6 * flameRnd();
-    const smokeGeo = pointGeo(44, smokeRnd, 26, deckY + 2);
+    for (let i = 0; i < sf.length; i++) sf[i] = 11 + 11 * flameRnd();
+    const smokeGeo = pointGeo(70, smokeRnd, 9, deckY + 2);
     const ss = smokeGeo.attributes.aSize.array;
-    for (let i = 0; i < ss.length; i++) ss[i] = 14 + 18 * smokeRnd();
-    function partMat(rise, drift, height, color, alpha) {
+    for (let i = 0; i < ss.length; i++) ss[i] = 18 + 16 * smokeRnd();
+    function partMat(rise, drift, height, color, alpha, normalBlend) {
       return new THREE.ShaderMaterial({
         uniforms: {
           uMap: { value: softTex() }, uColor: { value: new THREE.Color(color) },
@@ -449,11 +452,12 @@
           uHeight: { value: height }, uI: { value: 0 }, uAlpha: { value: alpha }
         },
         vertexShader: PART_VS, fragmentShader: PART_FS,
-        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false
+        transparent: true, depthWrite: false, fog: false,
+        blending: normalBlend ? THREE.NormalBlending : THREE.AdditiveBlending
       });
     }
-    const flameMat = partMat(0.95, 1.1, 13, FIRE, 0.9);
-    const smokeMat = partMat(0.07, 5, 95, 0xc9b8a0, 0.2);
+    const flameMat = partMat(0.95, 1.4, 26, FIRE, 0.95, false);
+    const smokeMat = partMat(0.05, 1.4, 175, 0x0d0c0b, 0.6, true);   // humo negro en columna
     const flames = new THREE.Points(flameGeo, flameMat);
     const smoke = new THREE.Points(smokeGeo, smokeMat);
     flames.frustumCulled = false; smoke.frustumCulled = false;
@@ -462,8 +466,8 @@
     burnG.add(fireGlow);
 
     // ¿UN ARMA DE LUZ? / Dicen: Arquímedes, Siracusa
-    const labArma = label('¿UN ARMA DE LUZ?', { lh: 7, color: '#ffd27a', pos: [-100, SEA + 14, BURN.z + 62] });
-    const labDicen = label('Dicen: Arquímedes, Siracusa', { lh: 3.6, color: '#ffe9a8', pos: [-100, SEA + 4, BURN.z + 62] });
+    const labArma = label('¿UN ARMA DE LUZ?', { lh: 13, color: '#ffd27a', pos: [-175, SEA + 26, BURN.z + 95] });
+    const labDicen = label('Dicen: Arquímedes, Siracusa', { lh: 6, color: '#ffe9a8', pos: [-175, SEA + 9, BURN.z + 95] });
     burnG.add(labArma.sprite, labDicen.sprite);
 
     // ================= 4. mythCross: aspa roja y etiqueta "¿MITO?" =================
@@ -494,7 +498,7 @@
     cross.renderOrder = 5;
     crossG.position.set(BURN.x, 100, BURN.z);
     crossG.add(cross);
-    const labMito = label('¿MITO? · 700 m · ningún espejo de bronce lo consigue', { lh: 5.5, color: '#ff8a7a', pos: [0, 54, 0] });
+    const labMito = label('¿MITO? · 700 m · ningún espejo de bronce lo consigue', { lh: 16, color: '#ff8a7a', pos: [0, 80, 0] });
     crossG.add(labMito.sprite);
 
     // ================= 5. measure: regla de 0 a 124 m junto a la torre + anillo de 50 km =================
@@ -601,6 +605,7 @@
         streakMat.opacity = 0.42 * bm * fade;
         beamGlow.position.set(tx, SEA + 2, tz);
         beamGlow.material.opacity = 0.7 * bm * fade;
+        beamSrc.material.opacity = 0.85 * bm * fade;
       }
 
       // mito: rayo del espejo, flota fantasma y fuego
@@ -611,7 +616,7 @@
         // el rayo se desvanece cerca de la cámara para no quemar la imagen
         tmpA.set(0, TOP, 0);
         tmpB.set(BURN.x, SEA + 0.8, BURN.z);
-        rayMat.uniforms.uOp.value = 0.7 * ramp(bu, 0, 0.35) * ramp(distToSeg(camP, tmpA, tmpB), 10, 70);
+        rayMat.uniforms.uOp.value = 0.7 * ramp(bu, 0, 0.35) * 0.6 * ramp(distToSeg(camP, tmpA, tmpB), 30, 150);
         mirrorGlow.material.opacity = 0.85 * ramp(bu, 0, 0.35);
         fireGlow.material.opacity = 0.7 * ramp(bu, 0.4, 0.9);
         const fire = ramp(bu, 0.45, 1);

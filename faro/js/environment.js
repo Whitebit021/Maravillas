@@ -198,7 +198,7 @@
     'void main() {',
     '  vec3 d = normalize(vDir);',
     '  float h = d.y;',
-    '  vec3 up = mix(uHorizon, uZenith, pow(clamp(h, 0.0, 1.0), 0.45));',
+    '  vec3 up = mix(uHorizon, uZenith, pow(clamp(h, 0.0, 1.0), 0.6));',
     '  vec3 sky = mix(uBelow, up, smoothstep(-0.02, 0.02, h));',
     // sol: disco (más grande al amanecer y al atardecer) + halo
     '  float sd = dot(d, uSunDir);',
@@ -292,7 +292,7 @@
     '  body = mix(body, uFoam, fm * 0.85);',
     '  vec3 R = reflect(-V, n);',
     '  vec3 sky = mix(uHorizon, uZenith, smoothstep(0.0, 0.5, R.y));',
-    '  vec3 col = mix(body, sky, clamp(fres * 1.2, 0.0, 1.0));',
+    '  vec3 col = mix(body, sky, clamp(fres * 0.8, 0.0, 1.0));',
     '  float ndl = max(dot(n, L), 0.0);',
     '  col *= 0.85 + 0.15 * ndl;',
     '  float rl = max(dot(reflect(-L, n), V), 0.0);',
@@ -300,12 +300,12 @@
     '  col += uLightCol * spec * clamp(uLightI, 0.0, 2.5) * 0.35;',
     '  col += uLightCol * pow(rl, 40.0) * 0.6 * uMoonF;',
     '  float dist = length(vW - cameraPosition);',
-    '  col = mix(col, uFogC, smoothstep(2500.0, 6500.0, dist));',
+    '  col = mix(col, uFogC, smoothstep(4000.0, 12000.0, dist));',
     // opacidad: 0.85 en mar profundo; sobre fondo somero se ve el lecho (agua clara); lejos, opaca
     '  float aD = mix(0.40, 0.86, smoothstep(0.8, 5.0, dep));',
     '  float aF = mix(aD, 1.0, smoothstep(900.0, 1700.0, length(q)));',
     '  float a = max(aF, fm * 0.9);',
-    '  a = max(a, fres * 0.9);',
+    '  a = max(a, fres * 0.5);',
     '  gl_FragColor = vec4(toSRGB(col), clamp(a, 0.0, 1.0));',
     '}'
   ].join('\n');
@@ -432,8 +432,9 @@
 
     // ---------- colores fijos ----------
     const MOON_COL = col('#6f8fe0');
-    const DEEP_DAY = col('#1b5e86'), DEEP_NIGHT = col('#06141f');
-    const SHALLOW_DAY = col('#3fb7b5'), SHALLOW_NIGHT = col('#0f3440');
+    const DEEP_DAY = col('#165a9e'), DEEP_NIGHT = col('#06141f');
+    const WARM = col('#ff9050');
+    const SHALLOW_DAY = col('#35cfc4'), SHALLOW_NIGHT = col('#0f3440');
     const HEM_GROUND_DAY = col('#bfa27a'), HEM_GROUND_NIGHT = col('#1a2540');
     const LAMP_DAY = col('#e8d8b0'), LAMP_NIGHT = col('#ffd27a');
     const KEYS = [
@@ -442,9 +443,9 @@
       [0.18,  '#02050f', '#0a1830', '#6f8fe0', 0.0, '#1d2c5a'],
       [0.235, '#2a3f8a', '#ff8f86', '#ffa27a', 1.0, '#8a6fa0'],   // amanecer rosado-dorado
       [0.30,  '#3f7fd0', '#ffc8a0', '#ffd9a8', 1.7, '#c3c8d8'],
-      [0.38,  '#2f73c8', '#bfe0ec', '#fff3dc', 2.1, '#bcd8e8'],
-      [0.50,  '#1f5fb8', '#a9d6e8', '#fff6e6', 2.2, '#c6e0ee'],   // mediodía azul mediterráneo
-      [0.62,  '#2f6fc0', '#bfe0ea', '#ffebc6', 2.1, '#bcd8e8'],
+      [0.38,  '#2a6fd0', '#a8d4ee', '#fff3dc', 2.3, '#bcd8e8'],
+      [0.50,  '#1450c0', '#8fc6e8', '#fff6e6', 2.5, '#c6e0ee'],   // mediodía azul mediterráneo
+      [0.62,  '#2466c8', '#9ccfe9', '#ffebc6', 2.3, '#bcd8e8'],
       [0.72,  '#3a4fa0', '#ffb070', '#ffa050', 1.6, '#f0a878'],   // atardecer naranja
       [0.765, '#44407f', '#ff8a2a', '#ff9040', 0.9, '#c07a6a'],
       [0.80,  '#1f2352', '#d0583a', '#ff7a3a', 0.15, '#6a4a5a'],
@@ -490,7 +491,7 @@
     root.add(sky);
 
     // ---------- niebla suave (la ciudad a 1300-2500 m se intuye) ----------
-    scene.fog = new THREE.FogExp2(0xa9d6e8, 0.0001);
+    scene.fog = new THREE.Fog(0xa9d6e8, 2000, 14000);   // niebla lineal: nada antes de 2 km
 
     // ---------- sol / luna con sombras ajustadas a la torre (±90 m) ----------
     const sun = new THREE.DirectionalLight(0xffffff, 2);
@@ -1043,16 +1044,20 @@
       keyAt(tod);
 
       // luz principal: sol de día, luna de noche; sombras sobre la torre
-      const lightDir = el >= 0 ? sunDir : moonDir;
+      // crepúsculo: el sol bajo aún da luz cálida (sol bajo el horizonte hasta -0.42 de elevación)
+      const wK = sstep(-0.42, -0.2, el) * (1 - sstep(-0.05, 0.0, el));
+      const sceneDay = Math.max(dayF, wK * 0.7);
+      const lightDir = (el >= 0 || wK > 0) ? sunDir : moonDir;
       tmpP.copy(lightDir).multiplyScalar(SHADOW_DIST);
       sun.position.set(SUN_TARGET.x + tmpP.x, SUN_TARGET.y + tmpP.y, SUN_TARGET.z + tmpP.z);
       sun.color.copy(MOON_COL).lerp(tSun, sunVis);
-      sun.intensity = kSunI * sunVis + 0.5 * moonVis;
-      tHemG.copy(HEM_GROUND_NIGHT).lerp(HEM_GROUND_DAY, dayF);
+      sun.color.lerp(WARM, wK);
+      sun.intensity = kSunI * sunVis + 0.5 * moonVis * (1 - wK) + 1.3 * wK;
+      tHemG.copy(HEM_GROUND_NIGHT).lerp(HEM_GROUND_DAY, sceneDay);
       hemi.color.copy(tHem);
       hemi.groundColor.copy(tHemG);
-      hemi.intensity = 0.28 + 0.5 * dayF;
-      renderer.toneMappingExposure = 0.82 + 0.08 * dayF;
+      hemi.intensity = 0.25 + 0.42 * sceneDay;
+      renderer.toneMappingExposure = 0.86 + 0.08 * dayF;
 
       // cielo sigue a la cámara
       sky.position.copy(camera.position);
@@ -1070,7 +1075,8 @@
 
       // niebla: del color del horizonte; casi nula cerca, suave a 2 km
       scene.fog.color.copy(tHor);
-      scene.fog.density = 0.0001 * (1 - 0.5 * moonVis);
+      scene.fog.near = 2000 - 400 * moonVis;
+      scene.fog.far = 14000 - 6000 * moonVis;
 
       // mar
       waterU.uTime.value = wall;
@@ -1081,8 +1087,8 @@
       waterU.uHorizon.value.copy(tHor);
       waterU.uZenith.value.copy(tZen);
       waterU.uFogC.value.copy(tHor);
-      waterU.uDeep.value.copy(DEEP_NIGHT).lerp(DEEP_DAY, dayF);
-      waterU.uShallow.value.copy(SHALLOW_NIGHT).lerp(SHALLOW_DAY, dayF);
+      waterU.uDeep.value.copy(DEEP_NIGHT).lerp(DEEP_DAY, sceneDay);
+      waterU.uShallow.value.copy(SHALLOW_NIGHT).lerp(SHALLOW_DAY, sceneDay);
 
       // ciudad de noche
       winU.uTime.value = wall;

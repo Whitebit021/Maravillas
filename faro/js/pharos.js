@@ -31,7 +31,9 @@
     const SQ2 = Math.SQRT2;
     if (renderer) renderer.localClippingEnabled = true;
 
-    function halfT1(y) { return T.tier1HalfAt(Math.max(T1.y0, Math.min(T1.y1, y))); }
+    // cuerpo 1: se estrecha de 15 m (base) a 12.6 m (cima): inclinación visible
+    const W1_BOT = T1.halfBottom, W1_TOP = 12.6;
+    function halfT1(y) { const u = (Math.max(T1.y0, Math.min(T1.y1, y)) - T1.y0) / (T1.y1 - T1.y0); return W1_BOT + (W1_TOP - W1_BOT) * u; }
     function podHalf(y) { return y < 2 ? 25 : (y < 4 ? 21 : 17); }
     // yaw de una pieza plana cuya normal exterior es (nx,nz): su eje X queda sobre la cara
     function faceYaw(nx, nz) { return Math.atan2(-nx, -nz); }
@@ -53,7 +55,7 @@
     // Cara k: ángulos rot+2πk/n .. rot+2π(k+1)/n. Radio interpolado de r0 (y0) a r1 (y1).
     function prismGeo(n, rot, y0, y1, r0, r1, opt) {
       opt = opt || {};
-      const tile = 12, pos = [], nor = [], uv = [], idx = [];
+      const tile = 4.8, pos = [], nor = [], uv = [], idx = [];
       const dr = (r1 - r0) / (y1 - y0);
       const nl = Math.sqrt(1 + dr * dr);
       const faceW = 2 * r0 * Math.sin(Math.PI / n);
@@ -103,7 +105,7 @@
         const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
         let u, v;
         if (nx > 0.5) { u = z; v = y; } else if (ny > 0.5) { u = x; v = z; } else { u = x; v = y; }
-        uv.setXY(i, u / 12, v / 12);
+        uv.setXY(i, u / 4.8, v / 4.8);
       }
       return g;
     }
@@ -188,6 +190,15 @@
           }
         }
       }
+      for (let i = 0; i < 260; i++) {            // desconchados
+        const x = r() * N, y = r() * N, w = 3 + r() * 10, hh = 2 + r() * 5;
+        g.fillStyle = "rgba(70,45,25," + (0.12 + 0.18 * r()).toFixed(2) + ")"; g.fillRect(x, y, w, hh);
+        h.fillStyle = "rgba(0,0,0,0.35)"; h.fillRect(x, y, w, hh);
+      }
+      for (let i = 0; i < 90; i++) {             // regueros verticales
+        const x = r() * N, y = r() * N, hh = 20 + r() * 40;
+        g.fillStyle = "rgba(90,70,45,0.10)"; g.fillRect(x, y, 1 + r() * 2, hh);
+      }
       for (let i = 0; i < 1400; i++) {            // motas y vetas
         const x = r() * N, y = r() * N, s = 1 + r() * 2.5;
         g.fillStyle = r() < 0.5 ? 'rgba(90,65,35,0.22)' : 'rgba(255,245,220,0.18)';
@@ -226,7 +237,7 @@
     const ash = ashlarTextures();
     const stoneMat = new THREE.MeshStandardMaterial({ map: ash.map, bumpMap: ash.bump, bumpScale: 0.6, roughness: 0.92, metalness: 0, side: THREE.DoubleSide });
     const towerStone = stoneMat.clone();     // misma textura, pero recortable (la torre)
-    const frameMat = new THREE.MeshStandardMaterial({ color: 0xd8c59c, roughness: 0.9, side: THREE.DoubleSide });
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0xe6d6ae, roughness: 0.9, side: THREE.DoubleSide });
     const darkMat = new THREE.MeshStandardMaterial({ color: 0x1d1812, roughness: 0.85, side: THREE.DoubleSide });
     const marbleMat = new THREE.MeshStandardMaterial({ color: 0xeee4cf, roughness: 0.45, side: THREE.DoubleSide });
     const fillMat = new THREE.MeshStandardMaterial({ color: 0xa88c5e, roughness: 1, side: THREE.DoubleSide });
@@ -312,7 +323,7 @@
     // ---------- 2. cuerpo 1 (cuadrado, ligera inclinación) ----------
     // radio de vértice = semiancho * √2 (rot π/4 deja las caras sobre los ejes)
     const SQ_ROT = Math.PI / 4;
-    const wall1G = prismGeo(4, SQ_ROT, T1.y0, T1.y1, T1.halfBottom * SQ2, T1.halfTop * SQ2);
+    const wall1G = prismGeo(4, SQ_ROT, T1.y0, T1.y1, W1_BOT * SQ2, W1_TOP * SQ2);
     const wall2G = prismGeo(8, -Math.PI / 8, T.tier2.y0 + 0.8, T.tier2.y1, T.tier2.radius, T.tier2.radius);
     const wall3G = prismGeo(32, 0, T.tier3.y0 + 0.6, T.tier3.y1, T.tier3.radius, T.tier3.radius);
 
@@ -333,19 +344,20 @@
       const tx = -nz, tz = nx;
       return [nx * d + tx * u, y, nz * d + tz * u];
     }
-    // cuerpo 1: 8 pisos, 9 ventanas por cara
+    // cuerpo 1: 8 pisos; ventanas esbeltas que alternan de piso a piso (no en retícula) y algunos huecos
     for (let f = 0; f < 8; f++) {
       const y = T1.y0 + 7.5 * (f + 0.5);
       for (let fi = 0; fi < 4; fi++) {
         const fc = faces1[fi];
         const isN = fc.nz < -0.5, isS = fc.nz > 0.5;
-        if (isN && f === 0) continue;                   // bajo la dedicatoria
-        for (let k = 0; k < 9; k++) {
-          const u = (k - 4) * 3.2;
-          if (isS && f === 0 && Math.abs(u) < 4) continue; // puerta
+        if (isN && f === 0) continue;                       // bajo la dedicatoria
+        for (let k = 0; k < 5; k++) {
+          const u = -8 + k * 4 + (f % 2) * 2;
+          if (rnd() < 0.2) continue;                         // huecos irregulares
+          if (isS && f <= 1 && Math.abs(u) < 7) continue;    // puerta
           const d = halfT1(y) + 0.02;
           const p = facePos(fc.nx, fc.nz, d, u, y);
-          addWin(W1, p[0], p[1], p[2], faceYaw(fc.nx, fc.nz), 1.5, 2.4, 1.1, 1.9, fc.nx, fc.nz, d);
+          addWin(W1, p[0], p[1], p[2], faceYaw(fc.nx, fc.nz), 1.1, 2.8, 0.7, 2.2, fc.nx, fc.nz, d);
         }
       }
     }
@@ -354,27 +366,35 @@
     const stoneT1 = [];
     stoneT1.push({ g: wall1G, m: ID });
     // bandas horizontales (impostas) a 31 m
-    stoneT1.push({ g: prismGeo(4, SQ_ROT, 30.6, 31.4, (halfT1(30.6) + 0.35) * SQ2, (halfT1(31.4) + 0.35) * SQ2), m: ID });
+    for (let k = 2; k <= 7; k++) {          // impostas horizontales cada 7.5 m
+      const yb = T1.y0 + 7.5 * k;
+      stoneT1.push({ g: prismGeo(4, SQ_ROT, yb - 0.3, yb + 0.3, (halfT1(yb - 0.3) + 0.3) * SQ2, (halfT1(yb + 0.3) + 0.3) * SQ2), m: ID });
+    }
     // cornisa y terraza con almenas (66.8 m)
     stoneT1.push({ g: prismGeo(4, SQ_ROT, 64.6, 65.6, 16.2 * SQ2, 16.2 * SQ2), m: ID });
     const terrace1G = prismGeo(4, SQ_ROT, 65.6, 66.8, 15.8 * SQ2, 15.8 * SQ2, { top: true });
     stoneT1.push({ g: terrace1G, m: ID });
-    // portada en la cara sur: pilastras y dintel (umbral en y=6)
-    const S_FI = 0, sN = faces1[S_FI];   // mids: k=0 -> sur (+Z), k=2 -> norte (-Z)
-    const dS = halfT1(9.8) + 0.25;
-    [-2.9, 2.9].forEach(function (u) {
-      const p = facePos(sN.nx, sN.nz, dS, u, 9.8);
-      stoneT1.push({ g: boxG(0.9, 7.6, 0.9), m: mat(p[0], p[1], p[2], faceYaw(sN.nx, sN.nz)) });
+    // pilastras de sillar en los cuatro ángulos
+    for (let k = 0; k < 4; k++) {
+      const a = SQ_ROT + Math.PI / 2 * k, hh = halfT1(36) * SQ2;
+      stoneT1.push({ g: boxG(2.0, 60, 2.0), m: mat(Math.cos(a) * hh, 36, Math.sin(a) * hh, Math.PI / 4) });
+    }
+    // portada en la cara sur: gran puerta (6 m x 9 m), pilastras y dintel
+    const S_FI = 0, sN = faces1[S_FI];
+    const dS = halfT1(10.5) + 0.25;
+    [-3.9, 3.9].forEach(function (u) {
+      const p = facePos(sN.nx, sN.nz, dS, u, 10.5);
+      stoneT1.push({ g: boxG(1.1, 9.4, 0.9), m: mat(p[0], p[1], p[2], faceYaw(sN.nx, sN.nz)) });
     });
-    { const p = facePos(sN.nx, sN.nz, dS, 0, 13.3);
-      stoneT1.push({ g: boxG(6.6, 1.0, 0.9), m: mat(p[0], p[1], p[2], faceYaw(sN.nx, sN.nz)) });
+    { const p = facePos(sN.nx, sN.nz, dS, 0, 15.9);
+      stoneT1.push({ g: boxG(9.2, 1.1, 0.9), m: mat(p[0], p[1], p[2], faceYaw(sN.nx, sN.nz)) });
       const q = facePos(sN.nx, sN.nz, dS, 0, 6.0);
-      stoneT1.push({ g: boxG(6.8, 0.5, 2.6), m: mat(q[0], q[1], q[2], faceYaw(sN.nx, sN.nz)) }); }
+      stoneT1.push({ g: boxG(9.6, 0.5, 2.6), m: mat(q[0], q[1], q[2], faceYaw(sN.nx, sN.nz)) }); }
     const t1Static = mergeGeos(stoneT1);
 
     // vidrio de la puerta (oscuro, en hueco)
-    const pD = facePos(sN.nx, sN.nz, dS - 0.05, 0, 9.3);
-    const doorPane = instanced(unitBox, darkMat, [mat(pD[0], pD[1], pD[2], faceYaw(sN.nx, sN.nz), 4.2, 6.4, 0.2)]);
+    const pD = facePos(sN.nx, sN.nz, dS - 0.05, 0, 10.5);
+    const doorPane = instanced(unitBox, darkMat, [mat(pD[0], pD[1], pD[2], faceYaw(sN.nx, sN.nz), 6.0, 9.0, 0.2)]);
 
     // merlones sobre la terraza (almenas)
     const merl = [];
@@ -605,6 +625,8 @@
       new THREE.MeshStandardMaterial({ map: insTex.map, bumpMap: insTex.bump, bumpScale: 2.0, roughness: 0.9, side: THREE.DoubleSide }));
     insPanel.position.set(0, 12, zN); insPanel.rotation.y = Math.PI;
     const plasterMat = new THREE.MeshStandardMaterial({ map: plTex.map, alphaMap: plTex.alpha, alphaTest: 0.001, roughness: 0.95, side: THREE.DoubleSide });
+    plasterMat.clippingPlanes = clipArr;
+    insPanel.material.clippingPlanes = clipArr;
     const plasterPlane = new THREE.Mesh(new THREE.PlaneGeometry(INS_WM, INS_HM), plasterMat);
     plasterPlane.position.set(0, 12, zN - 0.07); plasterPlane.rotation.y = Math.PI;
     // trozos de yeso que caen al suelo (22 piezas, orden fijo)
@@ -616,6 +638,7 @@
     const frMat = new THREE.MeshStandardMaterial({ color: 0xe8dfc8, roughness: 0.95, side: THREE.DoubleSide });
     const frInst = new THREE.InstancedMesh(unitBox, frMat, FR.length);
     frInst.castShadow = true; frInst.frustumCulled = false;
+    frMat.clippingPlanes = clipArr;
     const _E = new THREE.Euler(), _QF = new THREE.Quaternion();
     function writePlaster(pl) {
       for (let i = 0; i < FR.length; i++) {
@@ -651,9 +674,9 @@
     const ghostG = new THREE.Group();
     const ghostMat = new THREE.MeshBasicMaterial({ color: 0x7fe3f0, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
     ghostG.add(new THREE.Mesh(ghostShell, ghostMat));
-    const ghostEdgeMat = new THREE.LineBasicMaterial({ color: 0x9ff6ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+    const ghostEdgeMat = new THREE.LineBasicMaterial({ color: 0xd4fdff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.NormalBlending });
     ghostG.add(new THREE.LineSegments(new THREE.EdgesGeometry(ghostShell, 30), ghostEdgeMat));
-    const goldEdgeMat = new THREE.LineBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+    const goldEdgeMat = new THREE.LineBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.NormalBlending });
     const goldShell = mergeGeos([{ g: lanternTopG, m: ID }, { g: statueG, m: mat(0, 121.3, 0, 0) }]);
     ghostG.add(new THREE.LineSegments(new THREE.EdgesGeometry(goldShell, 30), goldEdgeMat));
     ghostG.visible = false;
@@ -668,17 +691,18 @@
     // ---------- 9. hundimiento: bloques, columnas y estatuas bajo el agua junto al faro ----------
     const sr = makeRng(911), SB = [], SC = [], SS = [];
     for (let i = 0; i < 60; i++) {
-      const a = sr() * Math.PI * 2, rr = 14 + sr() * 36;
-      SB.push({ x: Math.cos(a) * rr, z: Math.sin(a) * rr, yF: SEA - 0.8 - sr() * 6.5, yaw: sr() * Math.PI, thr: sr() * 0.45, sz: 0.8 + sr() * 0.8 });
+      const ne = i % 5 < 3;                                  // 60% al noreste (agua somera), 40% al este y sur
+      const x = ne ? 15 + sr() * 45 : 30 + sr() * 50;
+      const z = ne ? -75 + sr() * 45 : -10 + sr() * 70;
+      const up = sr() < 0.15;                                // algunos asoman
+      SB.push({ x: x, z: z, yF: up ? SEA - 0.4 - sr() * 0.4 : SEA - 2.0 - sr() * 1.5, yaw: sr() * Math.PI, thr: sr() * 0.45, sz: 0.8 + sr() * 0.8 });
     }
     for (let i = 0; i < 12; i++) {
-      const a = sr() * Math.PI * 2, rr = 16 + sr() * 30;
-      SC.push({ x: Math.cos(a) * rr, z: Math.sin(a) * rr, yF: SEA - 0.6 - sr() * 4, yaw: sr() * Math.PI, thr: 0.1 + sr() * 0.3 });
+      const ne = i % 2 === 0;
+      SC.push({ x: ne ? 20 + sr() * 40 : 40 + sr() * 30, z: ne ? -60 + sr() * 25 : sr() * 40, yF: SEA - 2.6 - sr() * 1.2, yaw: sr() * Math.PI, thr: 0.1 + sr() * 0.3 });
     }
-    for (let i = 0; i < 2; i++) {
-      const a = (i === 0 ? -0.7 : 2.4) + sr() * 0.3, rr = 22 + sr() * 8;
-      SS.push({ x: Math.cos(a) * rr, z: Math.sin(a) * rr, yF: SEA - 3.2, yaw: sr() * Math.PI, thr: 0.2 + sr() * 0.2 });
-    }
+    SS.push({ x: 42 + sr() * 4, z: -42 + sr() * 4, yF: SEA - 2.6, yaw: 0.6, thr: 0.2 });
+    SS.push({ x: 58 + sr() * 3, z: 22 + sr() * 3, yF: SEA - 2.6, yaw: 2.2, thr: 0.3 });
     const sunkBlk = new THREE.InstancedMesh(unitBox, stoneMat, SB.length);
     const sunkCol = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.6, 0.6, 8, 12), stoneMat, SC.length);
     const sunkSta = new THREE.InstancedMesh(statueG, bronzeMat, SS.length);
@@ -791,7 +815,9 @@
 
       // yeso: se agrieta y cae a trozos; la dedicatoria queda al descubierto
       plasterMat.alphaTest = 0.001 + pl * 1.01;
-      plasterPlane.visible = pl < 1;
+      const insOn = bld * T.H >= 13.6;                   // dedicatoria: y=12 + h/2
+      insPanel.visible = insOn; frInst.visible = insOn;
+      plasterPlane.visible = pl < 1 && insOn;
       writePlaster(pl);
 
       // borde de obra
@@ -805,9 +831,9 @@
 
       // fantasma
       ghostG.visible = gh > 0.001;
-      ghostMat.opacity = 0.16 * gh;
-      ghostEdgeMat.opacity = 0.85 * gh;
-      goldEdgeMat.opacity = 0.9 * gh;
+      ghostMat.opacity = 0.22 * gh;
+      ghostEdgeMat.opacity = 1.0 * gh;
+      goldEdgeMat.opacity = 1.0 * gh;
 
       // hundimiento
       if (sk !== lastSk) { lastSk = sk; writeSunk(sk); }

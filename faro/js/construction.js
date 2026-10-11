@@ -369,10 +369,7 @@
         const P = BARGE_ROUTE.at(u);
         const fade = Math.min(sstep(u / 0.04), sstep((1 - u) / 0.04)) * b;
         const bob = 0.08 * Math.sin(W * 1.2 + i * 2.0);
-        // canal de navegación 45 m al este de la ruta (fuera de la línea de visión de la cámara de t=38-55)
-        let nx = -P[3], nz = P[2];
-        if (nx < 0) { nx = -nx; nz = -nz; }
-        _p3.set(P[0] + nx * 45, SEA + 0.3 + bob, P[1] + nz * 45);
+        _p3.set(P[0], SEA + 0.3 + bob, P[1]);
         _q4.setFromAxisAngle(_yAxis, headingOf(P[2], P[3]));
         _hm.compose(_p3, _q4, _s3.set(fade, fade, fade));
         bargeIM.setMatrixAt(bi, _hm);
@@ -415,22 +412,29 @@
     //    48-63 podio (martilleo), 64-83 cima de la obra (a la altura build*111), 84-99 caminantes
     // =====================================================================
     // bloques del patio de labra: montones de caliza y granito a medio labrar (arco oeste-norte)
+    const YARD = [];
     (function buildYard() {
       const YB = 22;
-      const yardIM = mkIM(new THREE.BoxGeometry(2.4, 1.2, 1.2), MAT.stone, YB, true);
-      root.add(yardIM);
+      const SIZES = [[2.4, 1.2, 1.2], [1.6, 1.0, 1.0], [3.0, 1.5, 1.5], [1.2, 0.9, 0.9]];
+      const yardIM = mkIM(new THREE.BoxGeometry(1, 1, 1), MAT.stone, YB, true);
+      const chiselIM = mkIM(new THREE.BoxGeometry(0.07, 0.07, 0.8), MAT.iron, 16, false);
+      root.add(yardIM, chiselIM);
       for (let i = 0; i < YB; i++) {
-        const a = 1.9 + hash(i + 1500) * 4.1, r = 7 + hash(i + 1600) * 7;
+        const a = 1.9 + hash(i + 1500) * 4.1, r = 9 + hash(i + 1600) * 6;
         const x = SITE.stoneYard.x + Math.cos(a) * r, z = SITE.stoneYard.z + Math.sin(a) * r;
-        const ry = hash(i + 1700) * Math.PI;
-        const layer = i % 3 === 2 ? 1.2 : 0;
-        _p3.set(x, 0.6 + layer, z); _q4.setFromAxisAngle(_yAxis, ry);
-        _m4.compose(_p3, _q4, _s3.set(1, 1, 1));
-        yardIM.setMatrixAt(i, _m4);
-        yardIM.setColorAt(i, _c3.setHex(i % 3 === 0 ? 0xd9978a : (i % 3 === 1 ? 0xd9c69a : 0xcdb88c)));
+        const sz = SIZES[i % SIZES.length];
+        setPRS(yardIM, i, x, sz[1] / 2, z, hash(i + 1700) * Math.PI, sz[0], sz[1], sz[2]);
+        yardIM.setColorAt(i, _c3.setHex(i % 2 === 0 ? 0xd9978a : 0xd9c69a));
+        YARD.push({ x: x, z: z, top: sz[1] });
+      }
+      // cinceles tirados junto a los bloques
+      for (let i = 0; i < 16; i++) {
+        const B = YARD[i % YB];
+        setPRS(chiselIM, i, B.x + 1.2 + hash(i + 1800) * 0.8, B.top + 0.04, B.z + hash(i + 1900) * 1.2, hash(i + 2000) * Math.PI);
       }
       yardIM.instanceMatrix.needsUpdate = true;
       yardIM.instanceColor.needsUpdate = true;
+      chiselIM.instanceMatrix.needsUpdate = true;
     })();
 
     const workersG = new THREE.Group();
@@ -440,7 +444,13 @@
     const wHead = mkIM(new THREE.SphereGeometry(0.14, 6, 4), MAT.skin, NW, false);
     const wLeg = mkIM(new THREE.BoxGeometry(0.19, 0.9, 0.2), MAT.cloth, NW * 2, true);
     const wArm = mkIM(new THREE.BoxGeometry(0.13, 0.66, 0.13), MAT.skin, NW * 2, false);
-    const wTool = mkIM(new THREE.BoxGeometry(0.16, 0.12, 0.26), MAT.iron, NW, false);
+    // mazo de madera: mango y cabeza
+    const wTool = mkIM((function () {
+      const mb = MB();
+      mbBox(mb, 0, 0, 0, 0.07, 0.9, 0.07, new THREE.Color(0x7a5230));
+      mbBox(mb, 0, 0.42, 0, 0.22, 0.16, 0.16, new THREE.Color(0x4a3018));
+      return mbGeo(mb);
+    })(), MAT.woodVC, NW, false);
     const WIMS = [wTorso, wHead, wLeg, wArm, wTool];
     WIMS.forEach(function (im) { workersG.add(im); });
     (function () {
@@ -494,9 +504,11 @@
       // 0-35: patio de labra, de pie picando con cincel y mazo; arco al oeste y norte (la cámara mira desde el SE)
       for (let i = 0; i < 36; i++) {
         const h1 = hash(i + 500), h2 = hash(i + 600), h3 = hash(i + 700);
-        const a = 1.9 + h1 * 4.1, r = 4 + h2 * 8;
-        const x = SY.x + Math.cos(a) * r, z = SY.z + Math.sin(a) * r;
-        wRoot(x, 0, z, Math.atan2(-(x - SY.x), -(z - SY.z)) + (h3 - 0.5) * 0.6);
+        // cada obrero trabaja frente a un bloque (dos por bloque), mirando hacia él
+        const Bk = YARD[i % YARD.length];
+        const ux = SY.x - Bk.x, uz = SY.z - Bk.z, ul = Math.hypot(ux, uz) || 1;
+        const x = Bk.x + ux / ul * 2.0 + (h2 - 0.5) * 1.0, z = Bk.z + uz / ul * 2.0 + (h3 - 0.5) * 1.0;
+        wRoot(x, 0, z, Math.atan2(-(x - Bk.x), -(z - Bk.z)) + (h1 - 0.5) * 0.3);
         const ph = W * 3.0 + i;
         PW.ar = -1.2 + 0.9 * Math.cos(ph); PW.al = -0.3; PW.ll = 0.08; PW.lr = -0.08; PW.lean = 0.35; PW.tool = 1;
         drawWorker(i, PW);
@@ -663,16 +675,20 @@
       }
       // andamios: una fila de postes y tablones a ~8 m bajo la cima, en el arco sur-oeste
       const scOn = b > 0.4 && yt > 30;
-      const sy = yt - 8, sr = scaffoldR(sy);
+      const sy = yt - 8;
+      // andamio pegado a las caras (1 m fuera de la pared): postes y tablones siguen el contorno real
       for (let k = 0; k < NPOST; k++) {
         const a = 1.3 + k / (NPOST - 1) * 3.3;
-        if (scOn) setPRS(postIM, k, Math.cos(a) * sr, sy, Math.sin(a) * sr, 0);
+        const p = outlineAt(sy, a, 1.0);
+        if (scOn) setPRS(postIM, k, p[0], sy, p[1], 0);
         else setPRS(postIM, k, 0, -60, 0, 0, 0.0001, 0.0001, 0.0001);
       }
       for (let k = 0; k < NBRD; k++) {
-        const a = 1.3 + k / (NBRD - 1) * 3.3;
+        const a = 1.3 + (k + 0.5) / NBRD * 3.3;
+        const dy = k % 2 ? 2.2 : -2.2;
+        const p = outlineAt(sy + dy, a, 1.0);
         const ry = Math.atan2(-Math.cos(a), -Math.sin(a));
-        if (scOn) setPRS(boardIM, k, Math.cos(a) * sr, sy + 1.5 * (k % 2 ? 1 : 0) - 0.5, Math.sin(a) * sr, ry);
+        if (scOn) setPRS(boardIM, k, p[0], sy + dy, p[1], ry);
         else setPRS(boardIM, k, 0, -60, 0, 0, 0.0001, 0.0001, 0.0001);
       }
       postIM.instanceMatrix.needsUpdate = true;
@@ -751,7 +767,85 @@
     // =====================================================================
     // update: cada grupo depende solo de s (sin acumular)
     // =====================================================================
+    // contorno de la torre a la altura y, ángulo a, desplazado off metros hacia fuera de la pared
+    function outlineAt(y, a, off) {
+      const s = Math.sin(a), c = Math.cos(a);
+      if (y < TOWER.tier2.y0) {
+        const h = TOWER.tier1HalfAt(Math.max(TOWER.tier1.y0, Math.min(TOWER.tier1.y1, y))) + off;
+        const m = Math.max(Math.abs(s), Math.abs(c));
+        return [s / m * h, c / m * h];
+      }
+      const R = (y < TOWER.tier3.y0 ? TOWER.tier2.radius * Math.cos(Math.PI / 8) : TOWER.tier3.radius * Math.cos(Math.PI / 32)) + off;
+      return [s * R, c * R];
+    }
+
+    // barcaza grande (~25 m) con granito rojo y caliza: pasa por (110,·,240) hacia el muelle (t 35-58)
+    const HERO_P0 = [128, 292], HERO_P1 = [92, 188];
+    const HERO_HD = headingOf(HERO_P1[0] - HERO_P0[0], HERO_P1[1] - HERO_P0[1]);
+    const heroG = new THREE.Group();
+    root.add(heroG);
+    (function buildHero() {
+      const hMB = MB();
+      const cW = new THREE.Color(0x6e4a2a), cIn = new THREE.Color(0x4f3519);
+      mbBox(hMB, 0, 0.4, 0, 25, 0.8, 7, cW);                    // casco
+      mbBox(hMB, 0, 1.2, 3.4, 25, 1.2, 0.35, cW);               // bordas
+      mbBox(hMB, 0, 1.2, -3.4, 25, 1.2, 0.35, cW);
+      mbBox(hMB, 12.6, 1.2, 0, 0.35, 1.2, 7, cW);
+      mbBox(hMB, -12.6, 1.2, 0, 0.35, 1.2, 7, cW);
+      mbBox(hMB, 0, 0.85, 0, 24.2, 0.1, 6.2, cIn);              // cubierta
+      mbBox(hMB, 0, 6.5, 0, 0.35, 11, 0.35, cW);                // mástil
+      mbBox(hMB, 0, 11.6, 0, 0.12, 0.12, 8, cW, 0, 0, Math.PI / 2); // verga
+      const hull = new THREE.Mesh(mbGeo(hMB), MAT.woodVC);
+      hull.castShadow = true; hull.receiveShadow = true;
+      heroG.add(hull);
+      // vela cuadra (plano YZ)
+      const sailG = new THREE.PlaneGeometry(6.4, 7, 4, 4);
+      sailG.rotateY(Math.PI / 2); sailG.translate(0, 8.4, 0);
+      sailG.computeVertexNormals();
+      const sail = new THREE.Mesh(sailG, MAT.sail);
+      sail.castShadow = true;
+      heroG.add(sail);
+      // carga: 10 bloques, granito (impares) y caliza (pares), en dos hileras
+      const blocks = mkIM(new THREE.BoxGeometry(1, 1, 1), MAT.granite, 10, true);
+      for (let k = 0; k < 10; k++) {
+        const row = Math.floor(k / 5), col = k % 5;
+        const granite = (k % 2) === 0;
+        const sz = granite ? [3.0, 1.4, 1.4] : [2.4, 1.2, 1.2];
+        setPRS(blocks, k, -9 + col * 4.5, 0.9 + sz[1] / 2, -1.4 + row * 2.8, 0, sz[0], sz[1], sz[2]);
+        blocks.setColorAt(k, _c3.setHex(granite ? 0xd9978a : 0xd9c69a));
+      }
+      blocks.instanceMatrix.needsUpdate = true;
+      blocks.instanceColor.needsUpdate = true;
+      heroG.add(blocks);
+      // remos: 8 por banda, pivotan en la borda
+      const oarG = new THREE.BoxGeometry(0.12, 0.12, 4.5).translate(0, 0, 2.25);
+      heroOarR = mkIM(oarG, MAT.wood, 8, false);
+      heroOarL = mkIM(oarG, MAT.wood, 8, false);
+      heroG.add(heroOarR, heroOarL);
+    })();
+    let heroOarR = null, heroOarL = null;
+    function updateHero(s) {
+      const t = s.t, W = s.wall;
+      const on = t >= 35 && t <= 58 && s.barges > 0.002;
+      heroG.visible = on;
+      if (!on) return;
+      const u = clamp((t - 35) / 18, 0, 1);
+      const x = HERO_P0[0] + (HERO_P1[0] - HERO_P0[0]) * u, z = HERO_P0[1] + (HERO_P1[1] - HERO_P0[1]) * u;
+      heroG.position.set(x, SEA + 0.3 + 0.06 * Math.sin(W * 1.1), z);
+      heroG.rotation.y = HERO_HD;
+      for (let k = 0; k < 8; k++) {
+        const ang = 0.45 * Math.sin(W * 2.2 + k * 0.4), xo = -10 + k * 2.8;
+        _tm.makeTranslation(xo, 1.1, 3.7); _rm.makeRotationY(ang);
+        _lm.copy(_tm).multiply(_rm); heroOarR.setMatrixAt(k, _lm);
+        _tm.makeTranslation(xo, 1.1, -3.7); _rm.makeRotationY(-ang);
+        _lm.copy(_tm).multiply(_rm).multiply(_rm.makeScale(1, 1, -1)); heroOarL.setMatrixAt(k, _lm);
+      }
+      heroOarR.instanceMatrix.needsUpdate = true;
+      heroOarL.instanceMatrix.needsUpdate = true;
+    }
+
     function update(s) {
+      updateHero(s);
       updateBoats(s);
       updateBarges(s);
       updateWorkers(s);

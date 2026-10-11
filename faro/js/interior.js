@@ -36,7 +36,8 @@
     const DISH_D = DISH_R * DISH_R / (4 * FOCAL);                 // profundidad del paraboloide
     const FOCUS = new THREE.Vector3(0, MIR.y, -0.8);              // foco = centro de la hoguera
     const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
-    const NB = 12;                                                // burros
+    const NB = 20;                                                // burros
+    const BURRO_S = 1.6;                                          // escala de los burros
     const PLAT_MIN = 7, PLAT_MAX = 60;
 
     function yOf(q) { return Y0 + q * RISE; }
@@ -227,8 +228,8 @@
 
     // ---------- rampa: losas, muretes, bóvedas, tabiques, pisos y ventanas (piedra) ----------
     const stoneMerge = new Merge();
-    stoneMerge.add(sweep([[-DECK, 0, 0], [-LANE, 0, 0.25], [LANE, 0, 0.75], [DECK, 0, 1]], false), ID); // losa superior
-    stoneMerge.add(sweep([[DECK, -0.8, 1], [-DECK, -0.8, 0]], false), ID);                             // cara inferior
+    stoneMerge.add(sweep([[-LANE, 0, 0], [LANE, 0, 1]], false), ID);     // losa del carril (solo la rampa)
+    stoneMerge.add(sweep([[LANE, -0.5, 1], [-LANE, -0.5, 0]], false), ID); // cara inferior del carril
     // bóveda de cañón rebajada sobre el carril (con sus muretes): semitransparente con xray
     const vaultMerge = new Merge();
     vaultMerge.add(sweep([[-LANE - 0.2, 0, 0], [-LANE + 0.2, 0, 0.5], [-LANE + 0.2, 1.0, 0.5], [-LANE - 0.2, 1.0, 0]], true), ID);
@@ -253,8 +254,6 @@
       boxM(HOUT - HIN, th, 2 * HIN, -(HOUT + HIN) / 2, cy, 0, null, stoneMerge);
       boxM(HOUT - HIN, th, 2 * HIN, (HOUT + HIN) / 2, cy, 0, null, stoneMerge);
     }
-    floorRing(Y0 - 0.03);
-    floorRing(Y1 - 0.03);
 
     // ventanas en el muro exterior (una por lado y vuelta) con dintel y alféizar
     const winMerge = new Merge();
@@ -300,6 +299,7 @@
       }
     }
     platform.add(new THREE.Mesh(platMerge.geometry(), woodR));
+    platform.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(2.9, 2.6, 2.9)).translate(0, 1.3, 0), contourM));
     const ropeGeo = new THREE.BoxGeometry(0.07, 1, 0.07).translate(0, 0.5, 0);
     const rope = new THREE.Mesh(ropeGeo, ropeR);
     const rampStatic = new THREE.Group();
@@ -324,8 +324,8 @@
         _cprev.set(x, y, z); has = true;
       }
     }
-    polyline(HIN, 0); polyline(HOUT, 0);
-    polyline(HC - LANE, 1.0); polyline(HC + LANE, 1.0); polyline(HC, 3.4);
+    polyline(HC - LANE, 0); polyline(HC + LANE, 0);
+    polyline(HC - LANE, 1.0); polyline(HC + LANE, 1.0); polyline(HC, 3.4); polyline(HC, 0);
     {
       const s = SH, ys = [Y0, Y1];
       for (let c = 0; c < 4; c++) {
@@ -618,12 +618,12 @@
       labels.push({ sp: sp, mat: mat, ln: ln, lm: lm, lpos: lpos, anchor: anchor.clone(), aspect: cv.aspect, slot: slot });
     }
     // anclajes: rampa (lado este, q=21.5), pozo (centro), burros (lado sur, q=6.5); cada rótulo en su franja vertical
-    sqPt(21.5, HC, _cP); addLabel('RAMPA EN ESPIRAL', '10 VUELTAS · 6 m POR VUELTA', new THREE.Vector3(_cP.x, yOf(21.5), _cP.z), -0.02);
-    addLabel('POZO CENTRAL · MONTACARGAS', 'CUERDA, POLEA Y PLATAFORMA DE LEÑA', new THREE.Vector3(0, 44, 0), 0.17);
-    sqPt(6.5, HC, _cP); addLabel('BURROS CON LEÑA', 'SUBEN HASTA LA ALTURA CONSTRUIDA', new THREE.Vector3(_cP.x, yOf(6.5) + 1.5, _cP.z), -0.21);
+    sqPt(21.5, HC, _cP); addLabel('RAMPA EN ESPIRAL', '10 VUELTAS · 6 m POR VUELTA', new THREE.Vector3(_cP.x, yOf(21.5), _cP.z), -0.03);
+    addLabel('POZO CENTRAL · MONTACARGAS', 'CUERDA, POLEA Y PLATAFORMA DE LEÑA', new THREE.Vector3(0, 44, 0), 0.23);
+    sqPt(6.5, HC, _cP); addLabel('BURROS CON LEÑA', 'SUBEN HASTA LA ALTURA CONSTRUIDA', new THREE.Vector3(_cP.x, yOf(6.5) + 1.5, _cP.z), -0.28);
 
-    const BOX = { x0: -0.42, x1: 0.72, y0: -0.45, y1: 0.24 };   // zona libre del HUD (NDC)
-    const _ndc = new THREE.Vector3(), _lb = new THREE.Vector3();
+    const BOX = { x0: -0.42, x1: 0.72, y0: -0.45, y1: 0.3 };   // zona libre del HUD (NDC)
+    const _ndc = new THREE.Vector3(), _lb = new THREE.Vector3(); const _dir = new THREE.Vector3();
     const DEG_HALF = Math.tan(camera.fov * DEG / 2);
     function labelUpdate(L, alpha) {
       L.mat.opacity = alpha; L.lm.opacity = alpha * 0.7;
@@ -631,9 +631,12 @@
       _ndc.copy(L.anchor).project(camera);
       if (_ndc.z > 1) { L.mat.opacity = 0; L.lm.opacity = 0; return; }
       const cx = clamp(_ndc.x, BOX.x0, BOX.x1), cy = clamp(L.slot, BOX.y0, BOX.y1);
-      _lb.set(cx, cy, _ndc.z).unproject(camera);
-      const d = Math.max(1, camera.position.distanceTo(_lb));
-      let hgt = clamp(d * 0.055, 2, 12);
+      // punto por rayo a la distancia real del anclaje (evita la imprecisión de unproject con profundidad ~1)
+      const dA = Math.max(1, camera.position.distanceTo(L.anchor));
+      _dir.set(cx, cy, 0.5).unproject(camera).sub(camera.position).normalize();
+      _lb.copy(camera.position).addScaledVector(_dir, dA);
+      const d = dA;
+      let hgt = clamp(d * 0.045, 1.5, 9);
       hgt = Math.min(hgt, 0.5 * d * DEG_HALF * camera.aspect / L.aspect);
       L.sp.scale.set(hgt * L.aspect, hgt, 1);
       L.sp.position.copy(_lb);
@@ -664,10 +667,10 @@
         sqPt(q, HC, _p); _p.y = yy;
         _m.makeBasis(_x, UP, _f);
         _m.setPosition(_p.x, _p.y, _p.z);
-        _sc.makeScale(fade, fade, fade);
+        _sc.makeScale(fade * BURRO_S, fade * BURRO_S, fade * BURRO_S);
+        _cm.copy(_m).multiply(_ct).multiply(new THREE.Matrix4().makeScale(fade, fade, fade));
         _m.multiply(_sc);
         burroMesh.setMatrixAt(i, _m);
-        _cm.copy(_m).multiply(_ct);
         condMesh.setMatrixAt(i, _cm);
       }
       burroMesh.instanceMatrix.needsUpdate = true;
