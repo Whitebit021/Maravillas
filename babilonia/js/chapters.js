@@ -36,7 +36,7 @@
     // mapa holográfico del capítulo Nínive (en el suelo, al norte): escala 1 m = ~1 km
     map: { cx: 0, cz: -330, y: 1.5, babylon: [0, -100], nineveh: [-40, -560], scaleKmPerM: 1 },
     excavation: { x: 20, z: -60 },                   // donde excavó Koldewey (1899)
-    herodotus: { x: 0, y: 40, z: -48 }               // holograma del pergamino de Heródoto
+    herodotus: { x: 0, y: 34, z: -48 }               // holograma del pergamino de Heródoto
   };
 
   // Estructura: cinco terrazas escalonadas sobre bóvedas, ~120 m de lado, ~25 m de altura
