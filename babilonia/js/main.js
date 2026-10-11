@@ -71,7 +71,7 @@
     water:      [[110, 0], [116, 1]],                                   // agua subiendo: cangilones, cisterna, canales
     screw:      [[116, 0], [120, 1], [126, 1], [128, 0.3], [166, 0.3], [180, 1], [188, 1], [190, 0]], // tornillos (teoría)
     soil:       [[128, 0], [132, 1]],                                   // tierra fértil en las terrazas
-    plants:     [[130, 0], [144, 1]],                                   // palmeras, cipreses, enredaderas creciendo
+    plants:     [[130, 0], [144, 1], [212, 1], [222, 0.15]],                                   // palmeras, cipreses, enredaderas creciendo
     cascades:   [[136, 0], [142, 1], [210, 1], [214, 0]],
     amytis:     [[151, 0], [154, 1], [162, 1], [165, 0]],              // la reina Amitis fantasma mirando al norte
     herodotus:  [[168, 0], [171, 1], [176, 1], [178, 0]],              // pergamino de Heródoto con un hueco
