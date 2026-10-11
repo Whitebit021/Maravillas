@@ -125,6 +125,24 @@
   function inPlaza(x, z) {
     return Math.hypot(x, z) < 110 || Math.hypot(x - SITE.weapons.x, z - SITE.weapons.z) < 35;
   }
+  // camino de la caravana (franja de ~28 m de ancho, sin casas ni árboles)
+  function distSeg(px, pz, ax, az, bx, bz) {
+    const vx = bx - ax, vz = bz - az;
+    const t = clamp01(((px - ax) * vx + (pz - az) * vz) / (vx * vx + vz * vz));
+    return Math.hypot(px - (ax + vx * t), pz - (az + vz * t));
+  }
+  function inRoad(x, z) {
+    const P = SITE.caravan;
+    for (let i = 0; i < P.length - 1; i++) {
+      if (distSeg(x, z, P[i][0], P[i][1], P[i + 1][0], P[i + 1][1]) < 14) return true;
+    }
+    return false;
+  }
+  // rotación alrededor de Y (misma convención que las matrices de xf)
+  function rot2(lx, lz, a) {
+    const c = Math.cos(a), s = Math.sin(a);
+    return [lx * c + lz * s, -lx * s + lz * c];
+  }
 
   // ---------- GLSL ----------
   const COMMON_GLSL = 'vec3 toSRGB(vec3 c) { return pow(max(c, vec3(0.0)), vec3(1.0 / 2.2)); }';
@@ -451,12 +469,13 @@
     const tmpC = col();
     const cSand = col('#d2b07a'), cPale = col('#e6d3a0'), cGreen = col('#7f8a4c');
     const cRock = col('#8f8a80'), cWet = col('#9a8160'), cStreet = col('#9c8056');
-    const cLot = col('#dcc39b'), cBeach = col('#ead9ae'), cPlaza = col('#c7a878');
+    const cLot = col('#dcc39b'), cBeach = col('#ead9ae'), cPlaza = col('#c7a878'), cRoad = col('#c9a46a');
     function groundColor(x, z, h, slope, out) {
       out.copy(cSand).lerp(cPale, vnoise(x / 60, z / 60, 21));
       out.lerp(cGreen, sstep(5, 20, h) * (1 - sstep(0.2, 0.4, slope)) * 0.7);   // colinas con maleza
       out.lerp(cRock, sstep(0.2, 0.42, slope));                                  // laderas rocosas
       out.lerp(cBeach, sstep(-2.5, -0.5, h) * (1 - sstep(0.6, 2.0, h)));         // playa
+      if (inRoad(x, z)) out.lerp(cRoad, 0.9);                                    // camino de la caravana
       if (h < -1.5) out.lerp(cWet, 0.8);                                         // fondo marino
       if (inPlaza(x, z)) out.lerp(cPlaza, 0.9);                                  // tierra apisonada
       else if (x > CITY.xMin && x < CITY.xMax && z > CITY.zMin && z < CITY.zMax && h < 40) {
@@ -602,8 +621,13 @@
 
     // muralla este (x=330) con torres y almenas; su base se hunde en el fondo del mar
     const WX = SITE.walls.x, WZ0 = -40, WZ1 = 700;
-    addBox(SB, C_WALL, WX, 2, (WZ0 + WZ1) / 2, 12, 16, WZ1 - WZ0, 0);
+    // puerta abierta en z≈50 (paso de la caravana) con dintel encima
+    const GATE_Z0 = 38, GATE_Z1 = 62;
+    addBox(SB, C_WALL, WX, 2, (WZ0 + GATE_Z0) / 2, 12, 16, GATE_Z0 - WZ0, 0);
+    addBox(SB, C_WALL, WX, 2, (GATE_Z1 + WZ1) / 2, 12, 16, WZ1 - GATE_Z1, 0);
+    addBox(SB, C_WALL, WX, 9.5, (GATE_Z0 + GATE_Z1) / 2, 12, 5, GATE_Z1 - GATE_Z0, 0);
     for (let z = WZ0; z <= WZ1 + 0.1; z += 6) {
+      if (z > GATE_Z0 - 3 && z < GATE_Z1 + 3) continue;   // sin almenas en la puerta
       addBox(SB, C_WALL, WX - 5, 11, z, 3, 2, 2.4, 0);
       addBox(SB, C_WALL, WX + 5, 11, z, 3, 2, 2.4, 0);
     }
@@ -685,7 +709,8 @@
     const HOUSE_COLS = ['#f4efe6', '#f1ead9', '#ece6da', '#f7f2e8', '#e8dcc4', '#d9a35a', '#c98a55', '#d6b98a'].map(col);
     const ROOF_COLS = ['#b5573a', '#a64d32', '#c0603f', '#9c4a30', '#8a4a36'].map(col);
     function buildable(x, z) {
-      if (inlandAt(x, z) < 12 || inPlaza(x, z)) return false;
+      if (inlandAt(x, z) < 12 || inPlaza(x, z) || inRoad(x, z)) return false;
+      if (Math.hypot(x - 200, z - 140) < 40) return false;      // corredor de visión hacia el montón de armas
       for (const T of TEMPLES) {
         if (Math.abs(x - T.x) < T.L / 2 + 12 && Math.abs(z - T.z) < T.W / 2 + 12) return false;
       }
@@ -696,15 +721,19 @@
     const houses = [];
     for (let bx = CITY.xMin; bx < CITY.xMax; bx += 52) {
       for (let bz = CITY.zMin; bz < CITY.zMax; bz += 52) {
+        // algunas manzanas giradas (±14°) alrededor de su centro
+        const brot = rnd() < 0.35 ? (rnd() - 0.5) * 0.5 : 0;
+        const bcx = bx + 20, bcz = bz + 20;
         for (let i = 0; i < 2; i++) {
           for (let j = 0; j < 2; j++) {
             if (rnd() < 0.38) continue;
-            const cx = bx + 10 + i * 20 + (rnd() - 0.5) * 2;
-            const cz = bz + 10 + j * 20 + (rnd() - 0.5) * 2;
+            const pl = rot2(i * 20 - 10 + (rnd() - 0.5) * 2, j * 20 - 10 + (rnd() - 0.5) * 2, brot);
+            const cx = bcx + pl[0];
+            const cz = bcz + pl[1];
             if (cx > CITY.xMax || cz > CITY.zMax) continue;
             if (!buildable(cx, cz)) continue;
             houses.push({
-              x: cx, z: cz, y: groundH(cx, cz),
+              x: cx, z: cz, y: groundH(cx, cz), ry: brot, tint: 0.9 + rnd() * 0.14,
               w: 10 + rnd() * 6, d: 10 + rnd() * 6, H: 3.5 + rnd() * 9,
               col: HOUSE_COLS[Math.floor(rnd() * HOUSE_COLS.length)],
               roof: rnd() < 0.6, rh: 2.4 + rnd() * 2.2,
@@ -721,10 +750,11 @@
       if (rnd() < 0.45) {
         const ww = 6 + rnd() * 5, wd = 6 + rnd() * 4, wh = h.H * (0.45 + rnd() * 0.4);
         const sgn = rnd() < 0.5 ? -1 : 1;
-        extraBoxes.push({ x: h.x + sgn * (h.w / 2 + ww / 2 - 1.5), y: h.y - 1.5, z: h.z + (rnd() - 0.5) * (h.d - wd) * 0.6,
-          sx: ww, sy: wh + 1.5, sz: wd, c: h.col });
+        const wp = rot2(sgn * (h.w / 2 + ww / 2 - 1.5), (rnd() - 0.5) * (h.d - wd) * 0.6, h.ry);
+        extraBoxes.push({ x: h.x + wp[0], y: h.y - 1.5, z: h.z + wp[1],
+          sx: ww, sy: wh + 1.5, sz: wd, c: h.col, ry: h.ry });
       }
-      if (rnd() < 0.3) extraBoxes.push({ x: h.x, y: h.y + 0.05, z: h.z, sx: h.w + 6, sy: 0.5, sz: h.d + 6, c: patioCol });
+      if (rnd() < 0.3) extraBoxes.push({ x: h.x, y: h.y + 0.05, z: h.z, sx: h.w + 6, sy: 0.5, sz: h.d + 6, c: patioCol, ry: h.ry });
     }
     const houseMesh = new THREE.InstancedMesh(
       new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
@@ -734,28 +764,30 @@
     const winPos = new Float32Array(houses.length * 2 * 3), winSeed = new Float32Array(houses.length * 2);
     for (let k = 0; k < houses.length; k++) {
       const h = houses[k];
-      houseMesh.setMatrixAt(k, xf(h.x, h.y - 1.5, h.z, h.w, h.H + 1.5, h.d, 0));
-      houseMesh.setColorAt(k, h.col);
+      houseMesh.setMatrixAt(k, xf(h.x, h.y - 1.5, h.z, h.w, h.H + 1.5, h.d, h.ry));
+      houseMesh.setColorAt(k, col().copy(h.col).multiplyScalar(h.tint));   // paredes con tono propio
       for (let q = 0; q < 2; q++) {
         const wi = (k * 2 + q) * 3;
         const side = Math.floor(rnd() * 4);
-        let wx = h.x, wz = h.z;
-        if (side === 0) { wx += (rnd() - 0.5) * h.w * 0.7; wz -= h.d / 2 + 0.12; }
-        else if (side === 1) { wx += h.w / 2 + 0.12; wz += (rnd() - 0.5) * h.d * 0.7; }
-        else if (side === 2) { wx += (rnd() - 0.5) * h.w * 0.7; wz += h.d / 2 + 0.12; }
-        else { wx -= h.w / 2 + 0.12; wz += (rnd() - 0.5) * h.d * 0.7; }
+        let lx = 0, lz = 0;
+        if (side === 0) { lx = (rnd() - 0.5) * h.w * 0.7; lz = -h.d / 2 - 0.12; }
+        else if (side === 1) { lx = h.w / 2 + 0.12; lz = (rnd() - 0.5) * h.d * 0.7; }
+        else if (side === 2) { lx = (rnd() - 0.5) * h.w * 0.7; lz = h.d / 2 + 0.12; }
+        else { lx = -h.w / 2 - 0.12; lz = (rnd() - 0.5) * h.d * 0.7; }
+        const wpos = rot2(lx, lz, h.ry);
+        let wx = h.x + wpos[0], wz = h.z + wpos[1];
         winPos[wi] = wx; winPos[wi + 1] = h.y + 1.2 + rnd() * Math.max(0.5, h.H - 1.5); winPos[wi + 2] = wz;
         winSeed[k * 2 + q] = rnd();
       }
     }
     for (let e = 0; e < extraBoxes.length; e++) {
       const b = extraBoxes[e];
-      houseMesh.setMatrixAt(houses.length + e, xf(b.x, b.y, b.z, b.sx, b.sy, b.sz, 0));
+      houseMesh.setMatrixAt(houses.length + e, xf(b.x, b.y, b.z, b.sx, b.sy, b.sz, b.ry));
       houseMesh.setColorAt(houses.length + e, b.c);
     }
     for (let r = 0; r < roofs.length; r++) {
       const h = roofs[r];
-      roofMesh.setMatrixAt(r, xf(h.x, h.y + h.H - 0.1, h.z, h.w + 0.8, h.rh, h.d + 0.8, 0));
+      roofMesh.setMatrixAt(r, xf(h.x, h.y + h.H - 0.1, h.z, h.w + 0.8, h.rh, h.d + 0.8, h.ry));
       roofMesh.setColorAt(r, h.rc);
     }
     houseMesh.castShadow = true; houseMesh.receiveShadow = true;
@@ -791,7 +823,7 @@
     while (nCyp < CYP && tries < CYP * 40) {
       tries++;
       const x = -900 + rnd() * 1200, z = 0 + rnd() * 900;
-      if (inlandAt(x, z) < 25 || inPlaza(x, z) || groundH(x, z) > 30 || slopeAt(x, z) > 0.35) continue;
+      if (inlandAt(x, z) < 25 || inPlaza(x, z) || inRoad(x, z) || groundH(x, z) > 30 || slopeAt(x, z) > 0.35) continue;
       const sc1 = 0.8 + rnd() * 0.6;
       cypMesh.setMatrixAt(nCyp, xf(x, groundH(x, z) - 0.3, z, sc1, sc1 * (0.9 + rnd() * 0.4), sc1, rnd() * TAU));
       nCyp++;
@@ -801,7 +833,7 @@
     while (nBush < BUSH && tries < BUSH * 40) {
       tries++;
       const x = -900 + rnd() * 1300, z = rnd() * 1100;
-      if (inlandAt(x, z) < 25 || inPlaza(x, z) || groundH(x, z) > 60 || slopeAt(x, z) > 0.45) continue;
+      if (inlandAt(x, z) < 25 || inPlaza(x, z) || inRoad(x, z) || groundH(x, z) > 60 || slopeAt(x, z) > 0.45) continue;
       const sc1 = 1.2 + rnd() * 1.2;
       bushMesh.setMatrixAt(nBush, xf(x, groundH(x, z) - 0.2, z, sc1, sc1 * 0.7, sc1, rnd() * TAU));
       _c.set(['#6f7f4a', '#7d8c52', '#5e7044'][Math.floor(rnd() * 3)]);
@@ -822,7 +854,7 @@
         t++;
         const x = -900 + rnd() * 1300, z = rnd() * 1100;
         const h = groundH(x, z), sl = slopeAt(x, z);
-        if (inlandAt(x, z) < 25 || inPlaza(x, z) || h < hMin || h > hMax || sl < slMin || sl > slMax) continue;
+        if (inlandAt(x, z) < 25 || inPlaza(x, z) || inRoad(x, z) || h < hMin || h > hMax || sl < slMin || sl > slMax) continue;
         if (x > CITY.xMin && x < CITY.xMax && z > CITY.zMin && z < CITY.zMax) continue;
         fn(n, x, h, z); n++;
       }

@@ -40,6 +40,7 @@
       dust:    new THREE.PointsMaterial({ color: 0xd8c08a, size: 2.2, transparent: true, opacity: 0.4, depthWrite: false }),
       spark:   new THREE.PointsMaterial({ color: 0xffc070, size: 1.6, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }),
       molten:  new THREE.MeshBasicMaterial({ color: 0xff8a2a }),
+      glint:   new THREE.PointsMaterial({ color: 0xfff2c0, size: 2.6, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }),
       bronzeShine: new THREE.MeshStandardMaterial({ color: 0xe0a255, roughness: 0.25, metalness: 0.8, emissive: 0x3a2008, emissiveIntensity: 1 }),
       glow:    new THREE.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }),
       clay:    new THREE.MeshStandardMaterial({ color: 0xb9835a, roughness: 1, flatShading: true }),
@@ -362,13 +363,21 @@
     mbGeom(spMB, new THREE.CylinderGeometry(0.05, 0.05, 2.6, 5), new THREE.Matrix4(), new THREE.Color(0x8a6440));
     mbGeom(spMB, new THREE.ConeGeometry(0.1, 0.45, 5), new THREE.Matrix4().makeTranslation(0, 1.5, 0), new THREE.Color(0xb8b8c0));
     const spearIM = mkIM(mbGeo(spMB), MAT.vc, 150, true);
-    const shieldIM = mkIM(new THREE.CylinderGeometry(0.42, 0.42, 0.06, 14), MAT.ironPl, 70, true);
+    const shieldIM = mkIM(new THREE.CylinderGeometry(0.42, 0.42, 0.06, 14), MAT.bronzeShine, 70, true);
     const helmIM = mkIM(new THREE.SphereGeometry(0.3, 8, 5, 0, TAU, 0, Math.PI / 2), MAT.ironPl, 40, true);
     const plateIM = mkIM(new THREE.BoxGeometry(0.7, 0.04, 0.5), MAT.bronze, 70, true);
     const PILE_IMS = [catIM, spearIM, shieldIM, helmIM, plateIM];
     const PILE_N = [6, 150, 70, 40, 70];
     const PILE_SC = [3.1, 1.8, 2.3, 1.9, 1.9];
     weaponsG.add(catIM, spearIM, shieldIM, helmIM, plateIM);
+    // destellos metálicos: puntos aditivos que relampaguean sobre las piezas del montón
+    const NGL = 60, glPos = new Float32Array(NGL * 3), glSeed = [];
+    for (let i = 0; i < NGL; i++) glSeed.push(hash(i + 7000));
+    const glGeo = new THREE.BufferGeometry();
+    glGeo.setAttribute('position', new THREE.BufferAttribute(glPos, 3));
+    const glints = new THREE.Points(glGeo, MAT.glint);
+    glints.frustumCulled = false;
+    weaponsG.add(glints);
     const PILE = [];   // {im, idx, x, y, z, rx, ry, rz, sc, c, seed}
     (function buildPile() {
       const cols = [0xc8c8cc, 0xffffff, 0xb07a3c, 0x9a9ea6, 0xb87a3c];
@@ -413,6 +422,18 @@
         im.instanceMatrix.needsUpdate = true;
         if (im.instanceColor) im.instanceColor.needsUpdate = true;
       });
+      // destellos: cada punto aparece unos instantes sobre una pieza y se apaga (fuera de vista si se hunde)
+      const W = s.wall;
+      for (let i = 0; i < NGL; i++) {
+        const P = PILE[Math.floor(glSeed[i] * PILE.length) % PILE.length];
+        const fl = frac(W * (0.5 + glSeed[i]) + glSeed[i] * 7);
+        const on = fl < 0.12 && m < 0.5;
+        glPos[i * 3] = P.x + (glSeed[i] - 0.5) * 1.2;
+        glPos[i * 3 + 1] = on ? P.y + 0.8 : -50;
+        glPos[i * 3 + 2] = P.z + (hash(i + 7100) - 0.5) * 1.2;
+      }
+      glGeo.attributes.position.needsUpdate = true;
+      MAT.glint.opacity = 0.6 + 0.4 * Math.sin(W * 9);
     }
 
     // =====================================================================
@@ -1113,30 +1134,35 @@
 
     // =====================================================================
     // 9. CARAVANA DE CAMELLOS (654 d.C.) por SITE.caravan. 60 camellos = 900 (representación),
-    //    a 1.5x, en fila, con fardos de bronce brillante y arrieros. Posición en función de s.t.
-    //    El primer camello pasa por (120,250) hacia t=227 (fracción de ruta 0.302).
+    //    a 1.5x, en fila: en t=227 la cabeza llega a x≈200 y la cola a x≈60 (fracciones de ruta
+    //    0.3767 y 0.0667). Posición en función de s.t, sin acumular.
     // =====================================================================
-    const NCM = 60, CARAVAN_LEAD_F = 0.302, CAMEL_SPACING_F = 0.0026;
+    const NCM = 60, CARAVAN_LEAD_F = 0.3767, CAMEL_SPACING_F = 0.00525;
     const camelRoute = new THREE.CatmullRomCurve3(SITE.caravan.map(function (p) { return new THREE.Vector3(p[0], 0, p[1]); }), false, 'catmullrom');
     camelRoute.arcLengthDivisions = 400;
+    // camello en espacio local (cara +Z): cuerpo, joroba, cuello curvo y cabeza
     const camelBodyMB = MB();
     const cCam = new THREE.Color(0xc6a06a), cCamD = new THREE.Color(0x8a6440);
-    mbBox(camelBodyMB, 0, 1.6, 0, 1.0, 1.1, 2.2, cCam);
-    mbBox(camelBodyMB, 0, 2.3, 0.2, 0.8, 0.6, 0.8, cCam);                  // joroba
-    mbBox(camelBodyMB, 0, 2.1, 1.1, 0.35, 1.0, 0.35, cCam, 0, 0.5);       // cuello
-    mbBox(camelBodyMB, 0, 2.6, 1.6, 0.4, 0.4, 0.6, cCamD);                // cabeza
+    mbBox(camelBodyMB, 0, 2.9, 0, 1.0, 1.1, 2.4, cCam);                    // tronco
+    mbBox(camelBodyMB, 0, 3.75, 0.0, 0.8, 0.9, 0.9, cCam);                 // joroba
+    mbBox(camelBodyMB, 0, 3.3, 1.25, 0.42, 1.2, 0.42, cCam, 0, 0.45);      // cuello, primer tramo
+    mbBox(camelBodyMB, 0, 4.2, 1.85, 0.4, 1.0, 0.4, cCam, 0, 0.9);         // cuello, curva
+    mbBox(camelBodyMB, 0, 4.95, 2.3, 0.45, 0.45, 0.85, cCamD);             // cabeza
+    mbBox(camelBodyMB, 0, 4.7, 2.8, 0.3, 0.3, 0.3, cCamD, 0, 0.4);         // hocico
     const camelBodyIM = mkIM(mbGeo(camelBodyMB), MAT.camel, NCM, true);
-    const camelLegIM = mkIM(new THREE.BoxGeometry(0.25, 1.2, 0.25), MAT.camelD, NCM * 4, true);
-    const camelLoadIM = mkIM(new THREE.BoxGeometry(0.9, 0.7, 0.8), MAT.bronzeShine, NCM * 2, true);
+    // patas largas (2.1 m) con pivote en la cadera
+    const camelLegIM = mkIM(new THREE.BoxGeometry(0.26, 2.1, 0.26).translate(0, -1.05, 0), MAT.camelD, NCM * 4, true);
+    // fardos de bronce brillante sobre la joroba (uno a cada lado)
+    const camelLoadIM = mkIM(new THREE.BoxGeometry(1.1, 1.0, 1.1), MAT.bronzeShine, NCM * 2, true);
     const NDRV = 20;   // arrieros: uno de cada tres camellos
-    const drvTorsoIM = mkIM(new THREE.BoxGeometry(0.42, 0.7, 0.26), MAT.cloth, NDRV, true);
-    const drvHeadIM = mkIM(new THREE.SphereGeometry(0.17, 6, 4), MAT.skin, NDRV, false);
+    const drvTorsoIM = mkIM(new THREE.BoxGeometry(0.42, 0.75, 0.26), MAT.cloth, NDRV, true);
+    const drvHeadIM = mkIM(new THREE.SphereGeometry(0.19, 6, 4), MAT.skin, NDRV, false);
     const camelsG = new THREE.Group();
     root.add(camelsG);
     camelsG.add(camelBodyIM, camelLegIM, camelLoadIM, drvTorsoIM, drvHeadIM);
     const CAM = [];
     for (let i = 0; i < NCM; i++) CAM.push({ off: i * CAMEL_SPACING_F, ph: hash(i + 910) });
-    const _cmM = new THREE.Matrix4(), _rr4 = new THREE.Matrix4();
+    const _cmM = new THREE.Matrix4(), _rr4 = new THREE.Matrix4(), _pivot = new THREE.Matrix4();
     const _cdir = new THREE.Vector3(), _cpos = new THREE.Vector3();
     function updateCamels(s) {
       const A = clamp(s.camels, 0, 1);
@@ -1145,7 +1171,7 @@
       let nd = 0;
       for (let i = 0; i < NCM; i++) {
         const C = CAM[i];
-        // progreso en fila: el primero pasa por (120,250) en t=227 y llega al final hacia t=237
+        // progreso en fila: la cabeza llega a x≈200 en t=227 y la caravana avanza hasta ~t=234
         const q = clamp(CARAVAN_LEAD_F * (s.t - 223) / 4 - C.off, 0, 1);
         camelRoute.getPointAt(q, _cpos);
         camelRoute.getTangentAt(q, _cdir);
@@ -1157,26 +1183,27 @@
         _cmM.compose(_cpos.clone().setY(0), _q4, _s3);
         camelBodyIM.setMatrixAt(i, _cmM);
         const step = Math.sin(s.wall * 3.2 + C.ph * TAU);
+        // patas: pivote en la cadera (y=2.2), balanceo al andar
         for (let L = 0; L < 4; L++) {
-          const lx = (L % 2 ? 0.35 : -0.35), lz = (L < 2 ? 0.8 : -0.8);
-          const sw = (L % 3 === 0 ? 1 : -1) * 0.35 * step;
-          _t4.makeTranslation(lx, 0.6, lz);
+          const lx = (L % 2 ? 0.35 : -0.35), lz = (L < 2 ? 0.9 : -0.9);
+          const sw = (L % 3 === 0 ? 1 : -1) * 0.4 * step;
+          _pivot.makeTranslation(lx, 2.2, lz);
           _rr4.makeRotationX(sw);
-          _lm.copy(_cmM).multiply(_t4).multiply(_rr4);
+          _lm.copy(_cmM).multiply(_pivot).multiply(_rr4);
           camelLegIM.setMatrixAt(i * 4 + L, _lm);
         }
-        // fardos de bronce brillante, uno a cada lado de la joroba
+        // fardos de bronce brillante sobre la joroba, a cada lado
         for (let L = 0; L < 2; L++) {
-          _t4.makeTranslation(L ? 0.55 : -0.55, 3.0, -0.2);
+          _t4.makeTranslation(L ? 0.75 : -0.75, 4.5, -0.1);
           _lm.copy(_cmM).multiply(_t4);
           camelLoadIM.setMatrixAt(i * 2 + L, _lm);
         }
-        // arriero sobre cada tercer camello
+        // arriero sobre cada tercer camello, delante de la joroba
         if (i % 3 === 0) {
-          _t4.makeTranslation(0, 3.2, -0.3);
+          _t4.makeTranslation(0, 5.0, -0.2);
           _lm.copy(_cmM).multiply(_t4);
           drvTorsoIM.setMatrixAt(nd, _lm);
-          _t4.makeTranslation(0, 3.95, -0.3);
+          _t4.makeTranslation(0, 5.7, -0.2);
           _lm.copy(_cmM).multiply(_t4);
           drvHeadIM.setMatrixAt(nd, _lm);
           nd++;

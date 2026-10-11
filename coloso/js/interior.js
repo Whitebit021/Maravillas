@@ -399,28 +399,29 @@
       return { tex: tex, aspect: cv.width / cv.height };
     }
     const labels = [];
-    function label(text, sub, anchor, off) {
+    // ndc (opcional): posición fija en pantalla {x,y} en [-1,1]; la etiqueta se coloca a esa dirección
+    function label(text, sub, anchor, off, ndc) {
       const cv = makeCanvas(text, sub, CYAN);
       const mat = new THREE.SpriteMaterial({ map: cv.tex, transparent: true, opacity: 0, depthTest: false, depthWrite: false });
       const sprite = new THREE.Sprite(mat);
       sprite.renderOrder = 5;
-      const base = anchor.clone().add(off);
+      const base = off ? anchor.clone().add(off) : anchor.clone();
       sprite.position.copy(base);
       root.add(sprite);
       const lm = new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0, depthTest: false, depthWrite: false, blending: ADD });
       const geo = new THREE.BufferGeometry().setFromPoints([anchor.clone(), base.clone()]);
       const line = new THREE.Line(geo, lm);
       root.add(line);
-      labels.push({ sprite: sprite, mat: mat, line: line, lm: lm, geo: geo, aspect: cv.aspect, anchor: anchor.clone(), base: base });
+      labels.push({ sprite: sprite, mat: mat, line: line, lm: lm, geo: geo, aspect: cv.aspect, anchor: anchor.clone(), base: base, ndc: ndc || null });
     }
     label('ARMAZÓN DE HIERRO · ' + COL.ironTons.toFixed(1).replace('.', ',') + ' t', 'SEGÚN FILÓN · 300 TALENTOS',
-      V(-3.05, 9, -0.2), V(-14, 6, -4));
+      V(-3.05, 9, -0.2), null, { x: 0.6, y: -0.02 });
     label('COLUMNAS DE PIEDRA', 'FUSTES DE CALIZA · SILLARES',
       V(0, 22, 0.2), V(13, 9, -6));
     label('LASTRE DE PIEDRAS', 'PESO BAJO LAS PIERNAS',
       V(0, 4, 0), V(-13, -2, 10));
 
-    const _cp = camera.position, _wp = V(0, 0, 0), _nd = V(0, 0, 0);
+    const _cp = camera.position, _wp = V(0, 0, 0), _nd = V(0, 0, 0), _v = V(0, 0, 0), _cen = V(0, BASE + 16, 0);
     function updateLabels(xa) {
       camera.updateMatrixWorld();
       const halfTan = Math.tan(camera.fov * DEG / 2);
@@ -433,6 +434,12 @@
         L.sprite.visible = lvl > 0.001;
         L.line.visible = lvl > 0.001;
         if (lvl <= 0.001) continue;
+        if (L.ndc) {
+          // a media altura del armazón, en la dirección de pantalla indicada (a la derecha, fuera del rótulo central)
+          const dF = Math.max(3, _cp.distanceTo(_cen));
+          _v.set(L.ndc.x, L.ndc.y, 0.5).unproject(camera).sub(_cp).normalize().multiplyScalar(dF).add(_cp);
+          L.base.set(_v.x, _v.y - BASE, _v.z);
+        }
         _wp.set(L.base.x, L.base.y + BASE, L.base.z);
         const d = Math.max(1, _cp.distanceTo(_wp));
         let hgt = clamp(d * 0.06, 2, 10);

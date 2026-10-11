@@ -30,7 +30,8 @@
 #hud .ch .n{font-family:Consolas,'Courier New',monospace;font-size:clamp(10px,1.1vw,13px);letter-spacing:.5em;color:#d9a35a}
 #hud .ch .t{margin-top:6px;font-family:Georgia,'Times New Roman',serif;font-size:clamp(28px,5vw,68px);font-weight:normal;letter-spacing:.04em;color:#ffcf6a}
 #hud .ch .rule{height:2px;width:0;margin:10px auto 0;background:linear-gradient(90deg,transparent,#ffcf6a,transparent)}
-#hud .ch.mito .t{color:#ff3b30;text-shadow:0 0 18px rgba(255,59,48,.45),0 2px 16px #000}
+#hud .ch.mito .t{color:#ff5a4e;text-shadow:0 0 4px #000,0 0 14px #000,0 0 28px rgba(0,0,0,.9),0 2px 16px #000}
+#hud .ch.mito .n{text-shadow:0 0 6px #000,0 0 12px #000}
 #hud .ch.mito .n{color:#ff3b30}
 #hud .ch.mito .rule{background:linear-gradient(90deg,transparent,#ff3b30,transparent)}
 #hud .sub{position:absolute;left:50%;bottom:calc(var(--bar) + 16px);transform:translateX(-50%);z-index:4;width:min(900px,90vw);padding:12px 20px;text-align:center;font-size:clamp(17px,2.1vw,27px);line-height:1.35;color:#f5efe0;text-shadow:0 2px 4px #000,0 0 12px #000;background:radial-gradient(ellipse at center,rgba(0,0,0,.62),rgba(0,0,0,0) 72%);opacity:0;transition:opacity .45s ease;pointer-events:none}
