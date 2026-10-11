@@ -22,7 +22,7 @@
   const CUP_BASE_Y = 3.4;                   // base del holograma (la taza ampliada queda a ~4 m)
   const CAL = { x0: -19.5, x1: -8.5, z0: -5, z1: 5 };   // andamio alrededor de la estatua
   const CAL_HEAD = [ZX - 0.9, ZY + 11.0, 0];  // cabeza de la estatua (mundo): joints.head = (-0.9, 11, 0)
-  const RX = -6.0, RZ = -7.2;               // regla de medir (junto a la estatua, lado -Z)
+  const RX = -12.0, RZ = 4.0;               // regla de medir: junto al lado izquierdo de la estatua en pantalla (z+)
   const GRAV = 6.0;                         // gravedad estilizada de las piezas que caen (m/s^2)
 
   function clamp01(x) { return x < 0 ? 0 : (x > 1 ? 1 : x); }
@@ -696,14 +696,14 @@
     // silueta humana de 1,8 m para la escala
     const HUM = newB(), HUMT = newB();
     soldierB(HUMT, false);
-    placeB(HUM, HUMT, 0, -4.0, FLOOR, 6.0);
+    placeB(HUM, HUMT, 0, -8.0, FLOOR, 3.0);   // delante de la basa
     const humMat = ghostMat(CYAN, SILVER, 0.16, 0.8);
     const humMesh = new THREE.Mesh(fillGeo(HUM), humMat);
     root.add(humMesh);
-    const m12 = label('12 m', { lh: 0.7, color: '#ffd27a', pos: [RX - 1.2, YB + 11.0, RZ], fmax: 8 });
-    const mCeil = label('13 m · techo', { lh: 0.6, color: '#9fe9ff', pos: [-11.5, YC + 0.7, RZ], fmax: 8 });
-    const mBase = label('6,5 m de basa', { lh: 0.6, color: '#9fe9ff', pos: [BX + 1.0, BY + 0.7, 0.4], fmax: 8 });
-    const mHum = label('×6,7 (sentado)', { lh: 0.55, color: '#ffd27a', pos: [-2.0, FLOOR + 2.4, 7.4], fmax: 8 });
+    const m12 = label('12 m', { lh: 0.7, color: '#ffd27a', pos: [RX - 1.6, YB + 6.5, RZ], fmax: 8 });
+    const mCeil = label('13 m · techo', { lh: 0.6, color: '#9fe9ff', pos: [RX - 3.0, YC - 1.2, RZ], fmax: 8 });
+    const mBase = label('6,5 m de basa', { lh: 0.6, color: '#9fe9ff', pos: [BX + 1.0, BY + 0.7, -1.0], fmax: 8 });
+    const mHum = label('×6,7 (sentado)', { lh: 0.55, color: '#ffd27a', pos: [-8.0, 5.8, 3.0], fmax: 8 });
     [m12, mCeil, mBase, mHum].forEach(function (L) { root.add(L.sprite); });
 
     // ================= 5. fire: línea luminosa hacia Constantinopla =================
