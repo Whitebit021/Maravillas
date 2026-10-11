@@ -118,14 +118,13 @@
       // Alejandría: llano que sube ligeramente tierra adentro
       top = 2.4 + 0.5 * fbm(x / 200, z / 200, 3, 53) + 0.004 * Math.min(Math.max(-landD, 0), 400);
     }
-    const shoreW = sstep(-14, 14, landD);            // 1 tierra adentro, 0 en el mar
+    const shoreW = sstep(14, -14, landD);            // 1 tierra adentro, 0 en el mar
     const dd = Math.max(landD, 0);
-    const floor = SEA_Y - 1.8 - 4.5 * sstep(0, 450, dd) - 2.5 * sstep(450, 2200, dd);
+    const floor = SEA_Y - 2.0 - 5.0 * sstep(0, 140, dd) - 2.5 * sstep(140, 1500, dd);
     let h = floor + (top - floor) * shoreW;
     // islote bajo el faro: plataforma plana (y=0) en r<30 y laderas que caen al mar
-    const wI = 1 - sstep(36, 46, r);
-    const prof = r < 30 ? 0 : -(r - 30) * 0.45;
-    h += (prof - h) * wI;
+    const wI = 1 - sstep(30, 40, r);
+    h += (0 - h) * wI;
     // nada por encima de y=0 en |x|,|z|<30 (es de la torre)
     const cheb = Math.max(Math.abs(x), Math.abs(z));
     h -= Math.max(h, 0) * (1 - sstep(27, 31, cheb));
@@ -232,7 +231,7 @@
     '  float band = exp(-pow(dot(d, gn) / 0.07, 2.0));',
     '  float cloud = vnoise3(d * 7.0) * 0.6 + vnoise3(d * 16.0) * 0.4;',
     '  float mw = band * (0.25 + 0.75 * cloud);',
-    '  sky += vec3(0.55, 0.6, 0.8) * mw * 0.2 * uNight * smoothstep(-0.05, 0.1, h);',
+    '  sky += vec3(0.55, 0.6, 0.8) * mw * 0.1 * uNight * smoothstep(-0.05, 0.1, h);',
     '  gl_FragColor = vec4(toSRGB(sky), 1.0);',
     '}'
   ].join('\n');
@@ -508,15 +507,16 @@
     root.add(hemi);
 
     // ---------- terreno: rejilla con detalle en la isla, el faro y la costa de la ciudad ----------
-    const XS = gridAxis(HX0, HX1, [[-1000, -760, 20], [-760, -640, 4], [-640, -350, 20], [-350, 350, 8]], 100);
-    const ZS = gridAxis(HZ0, HZ1, [[-350, 350, 8], [1150, 1400, 8]], 100);
+    const XS = gridAxis(HX0, HX1, [[-1000, -760, 20], [-760, -640, 4], [-640, -350, 20], [-350, 350, 10]], 160);
+    const ZS = gridAxis(HZ0, HZ1, [[-350, 350, 10], [1150, 1400, 8]], 160);
     const NX = XS.length, NZ = ZS.length;
     const tPos = new Float32Array(NX * NZ * 3);
     const tCol = new Float32Array(NX * NZ * 3);
     const tUv = new Float32Array(NX * NZ * 2);
     const tmpC = col();
     const cSand = col('#d7b97f'), cPale = col('#e6d6a6'), cScrub = col('#7f8a4c');
-    const cRock = col('#8f8a80'), cBeach = col('#ead9ae'), cStreet = col('#c9ad80'), cLot = col('#e8dcc0');
+    const cRock = col('#a39a86'), cBeach = col('#ead9ae'), cStreet = col('#c9ad80'), cLot = col('#e8dcc0');
+    const cIslet = col('#c8bda5');
     const cSeabed = col('#cfbb8c'), cSeabedDark = col('#a99a72'), cAlgae = col('#6f8060');
     function groundColor(x, z, h, slope, ld, out) {
       const n1 = vnoise(x / 60, z / 60, 21), n2 = vnoise(x / 18, z / 18, 23);
@@ -535,7 +535,7 @@
         }
       }
       const rr = Math.hypot(x, z);
-      if (rr < 46) out.lerp(cRock, 1 - sstep(36, 46, rr));   // islote rocoso bajo el faro
+      if (rr < 46) out.lerp(cIslet, (1 - sstep(36, 46, rr)) * (0.75 + 0.25 * n2));   // islote rocoso bajo el faro
       return out;
     }
     for (let j = 0; j < NZ; j++) {
@@ -596,7 +596,7 @@
     hmTex.needsUpdate = true;
 
     // ---------- mar Mediterráneo ----------
-    const seaGeo = new THREE.PlaneGeometry(SEA_HALF * 2, SEA_HALF * 2, 96, 96);
+    const seaGeo = new THREE.PlaneGeometry(SEA_HALF * 2, SEA_HALF * 2, 64, 64);
     seaGeo.rotateX(-Math.PI / 2);
     seaGeo.translate(0, SEA_Y, 0);
     const waterU = {
@@ -660,7 +660,7 @@
 
     // Heptastadion: calzada de piedra recta desde la isla hasta la ciudad (sobre el fondo, con muros laterales)
     const HEP_TOP = 1.6, HEP_LEN = HEP.zTo - HEP.zFrom, HEP_Z = (HEP.zTo + HEP.zFrom) / 2;
-    addBox(SB, C_STONE, HEP.x, (HEP_TOP - 6) / 2, HEP_Z, HEP.width, HEP_TOP + 6, HEP_LEN, 0);
+    addBox(SB, C_STONE, HEP.x, (HEP_TOP - 10) / 2, HEP_Z, HEP.width, HEP_TOP + 10, HEP_LEN, 0);
     for (const sx of [-1, 1]) addBox(SB, C_MARBLE, HEP.x + sx * (HEP.width / 2 + 0.4), HEP_TOP + 0.5, HEP_Z, 0.9, 1.6, HEP_LEN, 0);
     for (let z = HEP.zFrom + 60; z < HEP.zTo - 40; z += 70) {
       for (const sx of [-1, 1]) addBox(SB, C_MARBLE, HEP.x + sx * (HEP.width / 2 - 0.8), HEP_TOP + 2.0, z, 0.5, 4, 0.5, 0);
@@ -780,7 +780,7 @@
       for (let bz = CITY.zMin; bz < CITY.zMax; bz += 52) {
         // densidad: núcleo urbano denso junto al puerto, casas dispersas hacia el oeste y el sur
         const dc = Math.hypot((bx - 200) / 800, (bz - 1500) / 600);
-        const dens = 0.9 * (1 - sstep(1.0, 2.6, dc)) + 0.12;
+        const dens = 0.5 * (1 - sstep(0.8, 1.9, dc)) + 0.03;
         const brot = rnd() < 0.35 ? (rnd() - 0.5) * 0.5 : 0;
         const bcx = bx + 20, bcz = bz + 20;
         for (let i = 0; i < 2; i++) {
@@ -794,7 +794,7 @@
               x: cx, z: cz, y: groundH(cx, cz), ry: brot, tint: 0.9 + rnd() * 0.14,
               w: 9 + rnd() * 5, d: 9 + rnd() * 5, H: 3.5 + rnd() * 8,
               col: HOUSE_COLS[Math.floor(rnd() * HOUSE_COLS.length)],
-              roof: rnd() < 0.6, rh: 2.4 + rnd() * 2.0,
+              roof: rnd() < 0.45, rh: 2.4 + rnd() * 2.0,
               rc: ROOF_COLS[Math.floor(rnd() * ROOF_COLS.length)]
             });
           }
@@ -805,13 +805,13 @@
     const patioCol = col('#c9b48c');
     const extraBoxes = [];
     for (const h of houses) {
-      if (rnd() < 0.45) {
+      if (rnd() < 0.2) {
         const ww = 6 + rnd() * 5, wd = 6 + rnd() * 4, wh = h.H * (0.45 + rnd() * 0.4);
         const sgn = rnd() < 0.5 ? -1 : 1;
         const wp = rot2(sgn * (h.w / 2 + ww / 2 - 1.5), (rnd() - 0.5) * (h.d - wd) * 0.6, h.ry);
         extraBoxes.push({ x: h.x + wp[0], y: h.y - 1.5, z: h.z + wp[1], sx: ww, sy: wh + 1.5, sz: wd, c: h.col, ry: h.ry });
       }
-      if (rnd() < 0.3) extraBoxes.push({ x: h.x, y: h.y + 0.05, z: h.z, sx: h.w + 6, sy: 0.5, sz: h.d + 6, c: patioCol, ry: h.ry });
+      if (rnd() < 0.08) extraBoxes.push({ x: h.x, y: h.y + 0.05, z: h.z, sx: h.w + 6, sy: 0.5, sz: h.d + 6, c: patioCol, ry: h.ry });
     }
     const houseMesh = new THREE.InstancedMesh(
       new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
@@ -1006,7 +1006,7 @@
     const dustGeo = new THREE.BufferGeometry();
     dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
     dustGeo.setAttribute('aSeed', new THREE.BufferAttribute(dustSeed, 1));
-    const dustU = { uTime: { value: 0 }, uQuake: { value: 0 }, uPx: { value: 70 }, uColor: { value: col('#c8a77a') } };
+    const dustU = { uTime: { value: 0 }, uQuake: { value: 0 }, uPx: { value: 170 }, uColor: { value: col('#c8a77a') } };
     const dustMat = new THREE.ShaderMaterial({
       uniforms: dustU, vertexShader: DUST_VS, fragmentShader: POINT_FS,
       transparent: true, depthWrite: false

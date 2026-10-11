@@ -335,7 +335,7 @@
     reefList.forEach(function (r) {
       const b0 = rPos.length / 3;
       [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]].forEach(function (c) {
-        rPos.push(r.x + c[0] * QH, SEA + 0.8, r.z + c[1] * QH);
+        rPos.push(r.x + c[0] * QH, SEA + 2.5, r.z + c[1] * QH);
         rUv.push(c[2], c[3]);
         rSeed.push(rr());
         rKind.push(r.kind);
@@ -351,7 +351,7 @@
     const reefMat = new THREE.ShaderMaterial({
       uniforms: { uWall: { value: 0 }, uOp: { value: 0 } },
       vertexShader: REEF_VS, fragmentShader: REEF_FS,
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false
+      transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, fog: false
     });
     const reefMesh = new THREE.Mesh(reefGeo, reefMat);
     reefG.add(reefMesh);
@@ -462,8 +462,8 @@
     burnG.add(fireGlow);
 
     // ¿UN ARMA DE LUZ? / Dicen: Arquímedes, Siracusa
-    const labArma = label('¿UN ARMA DE LUZ?', { lh: 7, color: '#ffd27a', pos: [-150, SEA + 3, BURN.z + 30] });
-    const labDicen = label('Dicen: Arquímedes, Siracusa', { lh: 3.6, color: '#ffe9a8', pos: [-150, SEA + 0.5, BURN.z + 30] });
+    const labArma = label('¿UN ARMA DE LUZ?', { lh: 7, color: '#ffd27a', pos: [-100, SEA + 14, BURN.z + 62] });
+    const labDicen = label('Dicen: Arquímedes, Siracusa', { lh: 3.6, color: '#ffe9a8', pos: [-100, SEA + 4, BURN.z + 62] });
     burnG.add(labArma.sprite, labDicen.sprite);
 
     // ================= 4. mythCross: aspa roja y etiqueta "¿MITO?" =================
@@ -494,7 +494,7 @@
     cross.renderOrder = 5;
     crossG.position.set(BURN.x, 100, BURN.z);
     crossG.add(cross);
-    const labMito = label('¿MITO? · 700 m · ningún espejo de bronce lo consigue', { lh: 5.5, color: '#ff8a7a', pos: [BURN.x, 150, BURN.z] });
+    const labMito = label('¿MITO? · 700 m · ningún espejo de bronce lo consigue', { lh: 5.5, color: '#ff8a7a', pos: [0, 54, 0] });
     crossG.add(labMito.sprite);
 
     // ================= 5. measure: regla de 0 a 124 m junto a la torre + anillo de 50 km =================
@@ -527,13 +527,13 @@
       { txt: '0 m', lh: 3.2, y: 0 },
       { txt: '60 m', lh: 4.6, y: 36 },
       { txt: '30 m', lh: 4.6, y: 81 },
-      { txt: '15 m', lh: 4.6, y: 103.5 },
-      { txt: 'LINTERNA 6 m', lh: 3.4, y: 112.5 },
+      { txt: '15 m', lh: 4.6, y: 103.5, left: true },
+      { txt: 'LINTERNA 6 m', lh: 3.4, y: 113.5, left: true },
       { txt: 'ESTATUA 7 m', lh: 3.4, y: 121 },
       { txt: '124 m', lh: 4.6, y: 129.5 }
     ].map(function (c) {
       const L = label(c.txt, { lh: c.lh, color: c.y > 110 ? '#ffe9a8' : '#9fe9ff', pos: [0, c.y, 0], mono: true });
-      L.y = c.y;
+      L.y = c.y; L.left = !!c.left;
       rulerG.add(L.sprite);
       return L;
     });
@@ -596,7 +596,7 @@
         // se desvanece si la cámara está dentro del haz (no tapar la imagen)
         const fade = ramp(distToSeg(camP, tmpA, tmpB), 6, 40);
         beamMatM.uniforms.uOp.value = 0.6 * bm * fade;
-        streak.position.set(tx, SEA + 0.4, tz);
+        streak.position.set(tx, SEA + 1.5, tz);
         streak.rotation.set(0, Math.PI / 2 - a, 0);
         streakMat.opacity = 0.42 * bm * fade;
         beamGlow.position.set(tx, SEA + 2, tz);
@@ -608,7 +608,10 @@
       if (burnG.visible) {
         const grow = ramp(bu, 0, 0.5);
         ray.scale.y = Math.max(0.001, grow);
-        rayMat.uniforms.uOp.value = 0.7 * ramp(bu, 0, 0.35);
+        // el rayo se desvanece cerca de la cámara para no quemar la imagen
+        tmpA.set(0, TOP, 0);
+        tmpB.set(BURN.x, SEA + 0.8, BURN.z);
+        rayMat.uniforms.uOp.value = 0.7 * ramp(bu, 0, 0.35) * ramp(distToSeg(camP, tmpA, tmpB), 10, 70);
         mirrorGlow.material.opacity = 0.85 * ramp(bu, 0, 0.35);
         fireGlow.material.opacity = 0.7 * ramp(bu, 0.4, 0.9);
         const fire = ramp(bu, 0.45, 1);
@@ -645,13 +648,14 @@
       if (rulerG.visible) {
         drawSegs(ruler, ramp(ms, 0, 0.6));
         rulerMat.opacity = 0.95 * ms;
-        // las cotas crecen con la distancia (1x cerca, hasta 2.4x desde la cámara alta) para seguir legibles
+        // las cotas crecen con la distancia (1x cerca, hasta 3.2x desde la cámara alta) para seguir legibles
         tmpA.set(RULER_X, 60, 0);
-        const fr = Math.max(1, Math.min(2.4, camP.distanceTo(tmpA) / 300));
+        const fr = Math.max(1, Math.min(3.2, camP.distanceTo(tmpA) / 300));
         for (let i = 0; i < cotas.length; i++) {
           const L = cotas[i];
           L.sprite.scale.set(L.w * fr, L.h * fr, 1);
-          L.sprite.position.set(RULER_X + 4 * fr + L.w * fr / 2, L.y, 0);
+          const side = L.left ? -1 : 1;   // etiquetas de linterna y 15 m al otro lado de la regla
+          L.sprite.position.set(RULER_X + side * (4 * fr + L.w * fr / 2), L.y, 0);
           L.mat.opacity = ramp(ms, 0.2 + 0.05 * i, 0.6 + 0.05 * i);
         }
         labRuler.sprite.scale.set(labRuler.w * fr, labRuler.h * fr, 1);
