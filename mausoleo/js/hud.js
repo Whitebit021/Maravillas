@@ -67,8 +67,8 @@
 #hud .head{position:absolute;top:4px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#e0b257;box-shadow:0 0 8px #e0b257;left:0}
 #hud .fade{position:absolute;inset:0;z-index:7;background:#000;opacity:0;pointer-events:none}
 #hud .endtxt{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);z-index:8;text-align:center;opacity:0;white-space:nowrap;pointer-events:none}
-#hud .endtxt h2{margin:0;font-weight:normal;font-size:clamp(34px,6vw,84px);letter-spacing:.08em;color:#e0b257;text-shadow:0 0 24px rgba(224,178,87,.35)}
-#hud .endtxt p{margin:14px 0 0;font-family:Consolas,'Courier New',monospace;font-size:clamp(11px,1.3vw,14px);letter-spacing:.12em;color:#9b8d6a}
+#hud .endtxt h2{margin:0;font-weight:normal;font-size:clamp(34px,6vw,84px);letter-spacing:.08em;color:#e0b257;text-shadow:0 0 24px rgba(224,178,87,.35),0 2px 12px #000}
+#hud .endtxt p{text-shadow:0 0 6px #000,0 2px 10px #000;margin:14px 0 0;font-family:Consolas,'Courier New',monospace;font-size:clamp(11px,1.3vw,14px);letter-spacing:.12em;color:#9b8d6a}
 #hud .again{position:absolute;left:50%;top:62%;transform:translate(-50%,-50%);z-index:9;padding:12px 26px;font-size:18px;letter-spacing:.14em;color:#e0b257;background:rgba(0,0,0,.4);border:1px solid #e0b257;opacity:0;pointer-events:none;transition:opacity .6s ease}
 #hud .again.on{opacity:1;pointer-events:auto}
 #hud .again:hover{background:rgba(224,178,87,.15)}
