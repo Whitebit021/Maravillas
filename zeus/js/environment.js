@@ -385,8 +385,8 @@
     const body = new THREE.LatheGeometry(pts, 12);
     const head = new THREE.SphereGeometry(0.075, 10, 8).translate(0, 0.95, 0);
     const neck = new THREE.CylinderGeometry(0.035, 0.04, 0.08, 10).translate(0, 0.88, 0);
-    const armL = new THREE.CapsuleGeometry(0.04, 0.3, 4, 10).rotateZ(0.25).translate(-0.17, 0.66, 0);
-    const armR = new THREE.CapsuleGeometry(0.04, 0.3, 4, 10).rotateZ(-0.25).translate(0.17, 0.66, 0);
+    const armL = new THREE.CylinderGeometry(0.04, 0.034, 0.3, 6).rotateZ(0.25).translate(-0.17, 0.66, 0);
+    const armR = new THREE.CylinderGeometry(0.04, 0.034, 0.3, 6).rotateZ(-0.25).translate(0.17, 0.66, 0);
     return mergeGeos(THREE, [{ g: body }, { g: head }, { g: neck }, { g: armL }, { g: armR }]);
   }
 
@@ -483,7 +483,7 @@
       while (v < 1800 - 1e-6) {
         axis.push(v);
         const a = Math.abs(v + 0.1);
-        v = Math.min(1800, v + (a < 320 ? 10 : (a < 900 ? 24 : 60)));
+        v = Math.min(1800, v + (a < 320 ? 12 : (a < 900 ? 30 : 60)));
       }
       axis.push(1800);
     }
@@ -722,7 +722,7 @@
       const sc = 0.7 + rnd() * 0.8;
       grassList.push({ x: x, y: s.h - 0.05, z: z, sx: sc, sy: sc, sz: sc, yaw: rnd() * TAU });
     }
-    const grassInst = mkInst(new THREE.ConeGeometry(0.14, 0.6, 3).translate(0, 0.3, 0),
+    const grassInst = mkInst(new THREE.ConeGeometry(0.14, 0.6, 3, 1, true).translate(0, 0.3, 0),
       new THREE.MeshStandardMaterial({ color: 0x6f8a38, roughness: 0.9 }), grassList, false);
 
     // ---------- estáticos del sitio: templo de Hera, muro del Altis, tesoros, altares, palestra ----------
