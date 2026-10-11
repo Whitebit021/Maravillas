@@ -1028,9 +1028,10 @@
     });
     colD.map(function (_, i) { return i; }).sort(function (a, b) { return COLPOS[a][0] - COLPOS[b][0]; })
       .forEach(function (idx, rank) { colD[idx].st = rank / NC * 0.3; });
-    const baseInst = new THREE.InstancedMesh(baseGeo, colMat, NC + 1);
-    const drumInst = new THREE.InstancedMesh(drumGeo, colMat, NC * 3 + 3 + 40);
-    const capInst = new THREE.InstancedMesh(capGeo, colMat, NC + 1);
+    const colInstMat = colMat.clone(); colInstMat.side = THREE.DoubleSide;
+    const baseInst = new THREE.InstancedMesh(baseGeo, colInstMat, NC + 1);
+    const drumInst = new THREE.InstancedMesh(drumGeo, colInstMat, NC * 3 + 3 + 40);
+    const capInst = new THREE.InstancedMesh(capGeo, colInstMat, NC + 1);
     [baseInst, drumInst, capInst].forEach(function (m) {
       m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
       templeGroup.add(m);
