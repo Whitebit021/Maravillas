@@ -44,7 +44,7 @@
   const WATER_Y = SITE.river.waterY;      // -1
   const SHIFT_X = -250;                   // desplazamiento hacia el oeste (riverShift)
   const NEW_X = RIV_X + SHIFT_X;          // -440: nuevo cauce
-  const EXT = 6000, SEG = 128;            // terreno (±3 km)
+  const EXT = 6000, SEG = 96;            // terreno (±3 km)
   const GROUND_PX = 1024;
   const WALL_R = SITE.walls.radius, WALL_IN = WALL_R - 38;
   const PAL = SITE.palace, ZIG = SITE.ziggurat, ISH = SITE.ishtar;
@@ -345,7 +345,8 @@
     '  float fres = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);',
     '  vec3 R = reflect(-V, n);',
     '  vec3 sky = mix(uHorizon, uZenith, smoothstep(0.0, 0.6, R.y));',
-    '  vec3 col = mix(uDeep, sky, clamp(fres * 1.3, 0.0, 1.0));',
+    '  vec3 col = mix(uDeep, sky, clamp(fres * 0.5, 0.0, 0.55));',
+    '  col = mix(col, uDeep * vec3(1.15, 1.0, 0.6), 0.3);',
     '  float st = 0.5 + 0.5 * sin(f2 * 1.3 + sin(p.x * 0.4) * 1.5);',
     '  col += vec3(0.06, 0.055, 0.03) * st * (1.0 - ndv) * 0.8;',
     '  float rl = max(dot(reflect(-L, n), V), 0.0);',
@@ -439,7 +440,7 @@
 
     // ---------- paleta / cielo ----------
     const MOON_COL = new THREE.Color('#6f8fe0');
-    const DEEP_DAY = new THREE.Color('#4a4a2c'), DEEP_NIGHT = new THREE.Color('#0c1214');
+    const DEEP_DAY = new THREE.Color('#6b5a34'), DEEP_NIGHT = new THREE.Color('#0e1012');
     const FOG_DAY = new THREE.Color('#d9c4a0');
     const HEM_GROUND_DAY = new THREE.Color('#8a6a44');
     const HEM_GROUND_NIGHT = new THREE.Color('#2a3050');
@@ -531,8 +532,7 @@
       uHorizon: { value: new THREE.Color() }, uZenith: { value: new THREE.Color() },
       uDeep: { value: new THREE.Color() }
     };
-    const WATER_VS_ = WATER_VS;
-    const waterMat = new THREE.ShaderMaterial({ uniforms: waterU, vertexShader: WATER_VS_, fragmentShader: WATER_FS });
+    const waterMat = new THREE.ShaderMaterial({ uniforms: waterU, vertexShader: WATER_VS, fragmentShader: WATER_FS });
     const riverWater = new THREE.Mesh(
       new THREE.PlaneGeometry(2 * (RIV_HW - 5), 2 * RIV_LEN).rotateX(-Math.PI / 2).translate(RIV_X, WATER_Y, 0), waterMat);
     const canalWater = new THREE.Mesh(
@@ -566,18 +566,17 @@
 
     // ---------- palmerales (grupos densos fuera de la ciudad, a lo largo del río) ----------
     const palms = [];
-    let tries = 0;
-    while (palms.length < 380 && tries < 6000) {
-      tries++;
-      const side = rnd() < 0.5 ? -1 : 1;
-      const gx = RIV_X + side * (150 + rnd() * 210);
-      const gz = (rnd() * 2 - 1) * (RIV_LEN - 200);
+    // grupos a lo largo de ambas orillas, fuera de las murallas (cinturón continuo de palmeras)
+    for (let zc = -2700; zc <= 2700; zc += 230) {
+      const side = (Math.round((zc + 2700) / 230) % 2 === 0) ? -1 : 1;
+      const gx = RIV_X + side * (175 + rnd() * 50);
+      const gz = zc + (rnd() - 0.5) * 80;
       if (Math.hypot(gx, gz) < WALL_R + 70) continue;
       if (Math.abs(gx) < 130 && Math.abs(gz) < 130) continue;
-      const n = 7 + Math.floor(rnd() * 6);
+      const n = 11 + Math.floor(rnd() * 6);
       for (let j = 0; j < n; j++) {
-        const ang = rnd() * TAU, rr = Math.sqrt(rnd()) * 38;
-        palms.push({ x: gx + Math.cos(ang) * rr, z: gz + Math.sin(ang) * rr, ry: rnd() * TAU, sc: 0.85 + rnd() * 0.45, rank: rnd() });
+        const ang = rnd() * TAU, rr = Math.sqrt(rnd()) * 26;
+        palms.push({ x: gx + Math.cos(ang) * rr, z: gz + Math.sin(ang) * rr, ry: rnd() * TAU, sc: 1.05 + rnd() * 0.45, rank: rnd() });
       }
     }
     const trunkMesh = new THREE.InstancedMesh(palmTrunkGeo(THREE),
@@ -710,8 +709,8 @@
         if (rnd() > 0.62) continue;
         const x = gx + 13 + (rnd() - 0.5) * 5, z = gz + 13 + (rnd() - 0.5) * 5;
         if (excl(x, z)) continue;
-        const w = 11 + rnd() * 4, d = 11 + rnd() * 4;
-        const h = rnd() < 0.25 ? 10 + rnd() * 4 : 5 + rnd() * 3;
+        const w = 9 + rnd() * 3, d = 9 + rnd() * 3;
+        const h = rnd() < 0.2 ? 7 + rnd() * 2 : 3.5 + rnd() * 2.5;
         houses.push({ x: x, z: z, w: w, d: d, h: h });
       }
     }

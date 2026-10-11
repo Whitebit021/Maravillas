@@ -267,7 +267,7 @@
       const sx = _ndc.x * 0.5 + 0.5, sy = 0.5 - _ndc.y * 0.5;
       // candidatos: sobre el ancla y, si choca, apiladas arriba o abajo
       const cands = [[sx, sy]];
-      for (let k = 1; k <= 4; k++) { cands.push([sx, sy - k * (lh + 0.015)]); cands.push([sx, sy + k * (lh + 0.015)]); }
+      for (let k = 1; k <= 14; k++) { cands.push([sx, sy - k * (lh + 0.015)]); cands.push([sx, sy + k * (lh + 0.015)]); }
       let best = null;
       for (let i = 0; i < cands.length && !best; i++) {
         const c = cands[i];
@@ -539,6 +539,8 @@
     const bodyMat = ghostMat(0xffe0a0, 0x7fe3f0, 0.4, 0.35);      // relleno ≈ 0.4 con rim cian
     const skinMat = ghostMat(0xfff1d6, 0xbfe9ff, 0.3, 0.3);
     const veilMat = ghostMat(0xf0e6ff, 0x9fe3ff, 0.2, 0.4);
+    // la figura se mezcla por opacidad (no aditiva): legible sobre el cielo claro y sobre la noche
+    bodyMat.blending = THREE.NormalBlending; skinMat.blending = THREE.NormalBlending; veilMat.blending = THREE.NormalBlending;
     const bodyM = new THREE.Mesh(fillGeo(QF.B), bodyMat);
     const skinM = new THREE.Mesh(fillGeo(QF.K), skinMat);
     bodyM.frustumCulled = false; skinM.frustumCulled = false;
@@ -549,6 +551,8 @@
     queenG.add(haloQ);
     const ringQ = new THREE.LineSegments(segGeo((function () { const S = { P: [] }; circleSeg(S, 0, 0.3, 0, 4.4, 72); return S; })()), lineMat(CYAN));
     queenG.add(ringQ);
+    // fantasma: se ve también a través de las terrazas y las casas (sin prueba de profundidad)
+    queenG.traverse(function (o) { if (o.material) { o.material.depthTest = false; o.renderOrder = 5; } });
     const labQ = label('AMITIS · añoraba las montañas\nde Media (leyenda)', { lh: 0.6, color: '#ffd27a', pos: [5.2, TOP_Y + 8.6, -1.0] });
     const anchQ = [AMY[0] + 5.2, TOP_Y + 8.6, AMY[2] - 1.0];
     root.add(labQ.sprite);
@@ -662,6 +666,9 @@
     const mapLabs = mapItems.map(function (it) { return it.L; });
     mapLabs.forEach(function (L) { root.add(L.sprite); });
 
+    // el holograma del mapa se proyecta por encima de las casas (no se oculta tras ellas)
+    mapG.traverse(function (o) { if (o.material) { o.material.depthTest = false; o.renderOrder = 2; } });
+
     // ================= 4. Cotas =================
     const measG = new THREE.Group();
     root.add(measG);
@@ -698,10 +705,11 @@
         mtnMat.uniforms.uOp.value = 0.9 * ua;
         mtnLines.material.opacity = 0.5 * ua;
       }
-      const items = [{ L: labQ, a: anchQ, op: ua }, { L: labH, a: anchH, op: hh }];
+      const items = [{ L: labQ, a: anchQ, op: ua }];
 
       // Heródoto
       const hh = clamp01(num(s.herodotus));
+      items.push({ L: labH, a: anchH, op: hh });
       herG.visible = hh > 0.001;
       if (herG.visible) {
         herG.scale.y = 0.12 + 0.88 * smooth(hh);                 // se despliega
