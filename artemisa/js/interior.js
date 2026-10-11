@@ -327,7 +327,7 @@
         const cx = (768 + k * 128) % 1024;
         [-w, 0, w].forEach(function (dx) {
           const x = cx + dx;
-          g.fillStyle = '#7b2a1f'; g.fillRect(x - 54, bandT + 12, 108, bandB - bandT - 24);
+          g.fillStyle = '#5a3520'; g.fillRect(x - 54, bandT + 12, 108, bandB - bandT - 24);
           g.strokeStyle = '#d9a84a'; g.lineWidth = 3; g.strokeRect(x - 54, bandT + 12, 108, bandB - bandT - 24);
           glyph(k % 3, x, midY);
         });
@@ -670,7 +670,11 @@
             L.sprite.position.copy(camP).addScaledVector(_dir, d);
             const hgt = 0.12 * d * tanH;               // ~6 % de la altura de pantalla
             L.sprite.scale.set(hgt * L.aspect, hgt, 1);
-            arr[i * 6] = L.sprite.position.x; arr[i * 6 + 1] = L.sprite.position.y; arr[i * 6 + 2] = L.sprite.position.z;
+            // la línea crece desde la cara de corte hasta la etiqueta al aparecer esta
+            const k = smooth(clamp01((t - 42 - i * 0.3) / 0.8));
+            arr[i * 6] = L.anchor.x + (L.sprite.position.x - L.anchor.x) * k;
+            arr[i * 6 + 1] = L.anchor.y + (L.sprite.position.y - L.anchor.y) * k;
+            arr[i * 6 + 2] = L.anchor.z + (L.sprite.position.z - L.anchor.z) * k;
             arr[i * 6 + 3] = L.anchor.x; arr[i * 6 + 4] = L.anchor.y; arr[i * 6 + 5] = L.anchor.z;
           }
           leadGeo.attributes.position.needsUpdate = true;

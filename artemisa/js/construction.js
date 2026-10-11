@@ -353,7 +353,7 @@
         const fade = sstep((u - 0.08) / 0.04) * sstep((0.98 - u) / 0.04);
         const sc = on ? Math.max(0.0001, fade) : 0.0001;
         const hd = headingOf(P[2], P[3]);
-        _TM.compose(_pp.set(P[0], 0, P[1]), _qq.setFromAxisAngle(_yAxis_, hd), _ss.set(sc, sc, sc));
+        _TM.compose(_pp.set(P[0], 0, P[1]), _qq.setFromAxisAngle(_yAxis, hd), _ss.set(sc, sc, sc));
         // el tambor rueda sin deslizar: giro = distancia / radio
         const spin = -(u * RL) / 0.9;
         frameIM.setMatrixAt(i, _TM);
@@ -396,7 +396,7 @@
         const fade = sstep((u - 0.08) / 0.04) * sstep((0.98 - u) / 0.04);
         const sc = on ? Math.max(0.0001, fade) : 0.0001;
         const P = ROUTE.at(u);
-        _TM.compose(_pp.set(P[0], 0, P[1]), _qq.setFromAxisAngle(_yAxis_, headingOf(P[2], P[3])), _ss.set(sc, sc, sc));
+        _TM.compose(_pp.set(P[0], 0, P[1]), _qq.setFromAxisAngle(_yAxis, headingOf(P[2], P[3])), _ss.set(sc, sc, sc));
         const bw = _pp.set(4.2, 0, 2.4).applyMatrix4(_TM);
         fSc = sc;
         const sway = 0.4 * Math.sin(W * 4 + i);
@@ -546,7 +546,191 @@
       postIM.instanceMatrix.needsUpdate = true; boardIM.instanceMatrix.needsUpdate = true;
     }
 
-    // @@REST
-    // @@END
+    // =====================================================================
+    // 5b. RAMPA DE SACOS DE ARENA junto a la esquina NO (x≈−55, z≈−25): sube hasta los capiteles (y≈21),
+    //     arquitrabe encima. En la segunda mitad de la pista se vacían los sacos de arriba (arena cayendo
+    //     en Points) y el bloque desciende suavemente sobre los capiteles.
+    // =====================================================================
+    const RB = { x: -88, y: 0 }, RT = { x: -58, y: 22.2 }, RZ = -25;
+    const RLEN = Math.hypot(RT.x - RB.x, RT.y - RB.y);
+    const RUX = (RT.x - RB.x) / RLEN, RUY = (RT.y - RB.y) / RLEN;   // dirección de la pendiente
+    const RNX = -RUY, RNY = RUX;                                    // normal (hacia arriba)
+    const RQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.atan2(RUY, RUX));
+    const RK = 37, RZN = 11, RM = 3, NSACK = RK * RZN * RM;
+    const sackIM = mkIM(new THREE.BoxGeometry(1.0, 0.6, 0.9), MAT.sack, NSACK, true);
+    const archBlock = new THREE.Mesh(new THREE.BoxGeometry(3.0, 1.2, 8.0), MAT.marble);
+    archBlock.castShadow = true; archBlock.receiveShadow = true; archBlock.frustumCulled = false;
+    root.add(sackIM, archBlock);
+    const SACK = [];   // [fracción a lo largo de la rampa, capa, z]
+    for (let k = 0; k < RK; k++) for (let zi = 0; zi < RZN; zi++) for (let m = 0; m < RM; m++) SACK.push([(k + 0.5) / RK, m, RZ + (zi - 5) * 0.9]);
+    const NSP = 220, spPos = new Float32Array(NSP * 3);
+    const spGeo = new THREE.BufferGeometry();
+    spGeo.setAttribute('position', new THREE.BufferAttribute(spPos, 3));
+    const sandPts = new THREE.Points(spGeo, MAT.sand);
+    sandPts.frustumCulled = false;
+    root.add(sandPts);
+    // la rampa se va cerrando desde arriba: 30% de su longitud se vacía en la segunda mitad
+    function updateSandRamp(s, t, W) {
+      const on = V(s.sandramp) > 0.01;
+      sackIM.visible = on; archBlock.visible = on;
+      if (!on) { sandPts.visible = false; return; }
+      const grow = sstep((t - 106) / 4);
+      const p = sstep((t - 116) / 10);
+      const cut = Math.min(grow, 1 - 0.3 * p);
+      for (let i = 0; i < NSACK; i++) {
+        const sk = SACK[i], f = sk[0];
+        const vis = f <= cut;
+        if (vis) {
+          _pp.set(RB.x + RUX * RLEN * f + RNX * (0.3 + sk[1] * 0.6), RB.y + RUY * RLEN * f + RNY * (0.3 + sk[1] * 0.6), sk[2]);
+          _ss.set(1, 1, 1);
+          _m.compose(_pp, RQ, _ss);
+        } else _m.copy(ZERO);
+        sackIM.setMatrixAt(i, _m);
+      }
+      sackIM.instanceMatrix.needsUpdate = true;
+      // el bloque: sobre la rampa al principio, desciende 1.2 m sobre los capiteles (y = 21 + 0.6)
+      archBlock.position.set(-56.5, 22.8 - 1.2 * p, -21.5);
+      archBlock.scale.set(1, 1, 1);
+      archBlock.rotation.set(0, 0, 0);
+      archBlock.updateMatrix();
+      // arena cayendo desde los sacos vaciados
+      sandPts.visible = p > 0.02;
+      if (p > 0.02) {
+        for (let i = 0; i < NSP; i++) {
+          const h = hash(i + 900), h2 = hash(i + 950);
+          const fs = clamp(cut - 0.1 * h2, 0.05, 1);
+          const sx = RB.x + RUX * RLEN * fs + RNX * 0.6, sy = RB.y + RUY * RLEN * fs + RNY * 0.6;
+          const sz = RZ + (h2 - 0.5) * 8;
+          const tau = frac((t - 116) * 0.7 + h) / 0.7;
+          const y = sy - 4.9 * tau * tau;
+          spPos[i * 3] = sx + 0.6 * tau;
+          spPos[i * 3 + 1] = y > 0.05 ? y : -200;
+          spPos[i * 3 + 2] = sz;
+        }
+        spGeo.attributes.position.needsUpdate = true;
+      }
+      // obreros cortando sacos sobre la rampa (hasta que se vacían)
+      const wOn = t < 122;
+      fSc = wOn ? 1 : 0.0001;
+      for (let j = 0; j < 8; j++) {
+        const i = 50 + j, h = hash(i + 700);
+        const f = clamp(0.15 + 0.7 * h, 0.05, cut - 0.03);
+        figRoot(RB.x + RUX * RLEN * f + RNX * 0.1, RB.y + RUY * RLEN * f + RNY * 0.1, RZ + (j - 3.5) * 1.6, Math.PI / 2);
+        setPose(0.1, -0.1, -0.5 + 0.4 * Math.sin(W * 4 + j), -0.8 + 0.7 * Math.cos(W * 4 + j), 0.5, 1);
+        drawFig(i);
+      }
+      fSc = 1;
+    }
+
+    // =====================================================================
+    // 6. PEREGRINOS (150) con antorchas y ofrendas que caminan en fila hacia el altar SITE.altar,
+    //    delante de la fachada oeste. Humo de incienso. u = fract(i/NP·0.9 + t·0.006).
+    // =====================================================================
+    const NP = 150;
+    const PATH = polyline([[-250, -40], [-190, -30], [-140, -14], [-100, -4], [SITE.altar.x, SITE.altar.z]]);
+    const pBody = mkIM(new THREE.CylinderGeometry(0.22, 0.5, 1.6, 8, 1), MAT.cloth, NP, true);
+    const pHead = mkIM(new THREE.SphereGeometry(0.14, 7, 5), MAT.skin, NP, false);
+    const pArm = mkIM(new THREE.BoxGeometry(0.1, 0.55, 0.1), MAT.skin, NP * 2, false);
+    const pTorch = mkIM(new THREE.CylinderGeometry(0.03, 0.03, 1.1, 5), MAT.wood, NP, false);
+    const pFlame = mkIM(new THREE.ConeGeometry(0.09, 0.26, 6), MAT.flame, NP, false);
+    const pOffer = mkIM(new THREE.BoxGeometry(0.34, 0.16, 0.34), MAT.marble, NP, false);
+    const pilgrimG = new THREE.Group(); root.add(pilgrimG);
+    pilgrimG.add(pBody, pHead, pArm, pTorch, pFlame, pOffer);
+    (function () {
+      const pal = [0xa8322a, 0x2a4d8f, 0xe0b257, 0xefebe0, 0x5d6b3a, 0x7a3c7a];
+      for (let i = 0; i < NP; i++) pBody.setColorAt(i, _c.setHex(pal[i % pal.length]));
+      pBody.instanceColor.needsUpdate = true;
+    })();
+    const _ee = new THREE.Euler(), _pq = new THREE.Quaternion();
+    function setLoc(x, y, z, rx, ry, rz, sc) {
+      _ee.set(rx || 0, ry || 0, rz || 0); _pq.setFromEuler(_ee);
+      const k = sc === undefined ? 1 : sc; _ss.set(k, k, k);
+      return _loc.compose(_pp.set(x, y, z), _pq, _ss);
+    }
+    function updatePilgrims(s, t, W) {
+      const on = V(s.pilgrims) > 0.02;
+      pilgrimG.visible = on;
+      if (!on) return;
+      for (let i = 0; i < NP; i++) {
+        const h = hash(i + 1200), lane = (i % 5) - 2;
+        const u = frac(i / NP * 0.9 + t * 0.006);
+        const fade = sstep((u - 0.02) / 0.03) * sstep((0.99 - u) / 0.03);
+        const sc = Math.max(0.0001, fade);
+        const P = PATH.at(u);
+        const dx = P[2], dz = P[3];
+        const lat = lane * 2.2 + (h - 0.5) * 1.2;
+        const x = P[0] - dz * lat, z = P[1] + dx * lat;
+        _TM.compose(_pp.set(x, 0, z), _qq.setFromAxisAngle(_yAxis, headingOf(dx, dz)), _ss.set(sc, sc, sc));
+        const bob = 0.04 * Math.sin(W * 6 + i);
+        const sw = 0.18 * Math.sin(W * 4 + i * 0.7);
+        put(pBody, i, _TM, setLoc(0, 0.8 + bob, 0));
+        put(pHead, i, _TM, setLoc(0, 1.85 + bob, 0));
+        put(pArm, 2 * i, _TM, setLoc(0, 1.45 + bob, 0.2, 0, 0, 0.7 + sw, 1).multiply(_tmp.makeTranslation(0, -0.27, 0)));
+        put(pArm, 2 * i + 1, _TM, setLoc(0, 1.45 + bob, -0.2, 0, 0, 0.7 - sw, 1).multiply(_tmp.makeTranslation(0, -0.27, 0)));
+        const torch = i % 3 === 0, offer = i % 3 === 1;
+        put(pTorch, i, _TM, torch ? setLoc(0.45, 1.6, -0.2, 0, 0, 0.25) : setLoc(0, 0, 0, 0, 0, 0, 0.0001));
+        put(pFlame, i, _TM, torch ? setLoc(0.5, 2.25, -0.2, 0, 0, 0.25, 0.8 + 0.2 * Math.sin(W * 14 + i)) : setLoc(0, 0, 0, 0, 0, 0, 0.0001));
+        put(pOffer, i, _TM, offer ? setLoc(0.45, 1.15 + bob, 0.1) : setLoc(0, 0, 0, 0, 0, 0, 0.0001));
+      }
+      pBody.instanceMatrix.needsUpdate = true; pHead.instanceMatrix.needsUpdate = true;
+      pArm.instanceMatrix.needsUpdate = true; pTorch.instanceMatrix.needsUpdate = true;
+      pFlame.instanceMatrix.needsUpdate = true; pOffer.instanceMatrix.needsUpdate = true;
+    }
+
+    // altar escalonado de mármol delante de la fachada oeste, con brasero y humo de incienso
+    const ALT = SITE.altar;
+    const altarMesh = (function () {
+      const mb = MB(), cM = new THREE.Color(0xefe6d6), cD = new THREE.Color(0xd8cdb8);
+      mbBox(mb, ALT.x, 0.4, ALT.z, 12, 0.8, 9, cM);
+      mbBox(mb, ALT.x, 1.2, ALT.z, 9, 0.8, 6.5, cD);
+      mbBox(mb, ALT.x, 2.0, ALT.z, 6, 0.8, 4, cM);
+      mbBox(mb, ALT.x, 2.6, ALT.z, 2.6, 0.6, 2.6, cD);
+      const m = new THREE.Mesh(mbGeo(mb), MAT.marbleVC);
+      m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
+      return m;
+    })();
+    const brazier = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.4, 8), MAT.flame);
+    brazier.position.set(ALT.x, 3.5, ALT.z);
+    root.add(altarMesh, brazier);
+    const NSM = 90, smPos = new Float32Array(NSM * 3);
+    const smGeo = new THREE.BufferGeometry();
+    smGeo.setAttribute('position', new THREE.BufferAttribute(smPos, 3));
+    const smokePts = new THREE.Points(smGeo, MAT.smoke);
+    smokePts.frustumCulled = false;
+    root.add(smokePts);
+    function updateAltar(s, t, W) {
+      const on = V(s.pilgrims) > 0.02;
+      altarMesh.visible = on; brazier.visible = on; smokePts.visible = on;
+      if (!on) return;
+      brazier.scale.set(1, 0.9 + 0.2 * Math.sin(W * 9), 1);
+      for (let i = 0; i < NSM; i++) {
+        const tau = frac(t * 0.12 + hash(i + 1500));
+        smPos[i * 3] = ALT.x + (hash(i + 1600) - 0.5) * 2 + tau * 1.5;
+        smPos[i * 3 + 1] = 3.6 + tau * 14;
+        smPos[i * 3 + 2] = ALT.z + (hash(i + 1700) - 0.5) * 2 + tau * 0.8 * (hash(i + 1800) - 0.5);
+      }
+      smGeo.attributes.position.needsUpdate = true;
+    }
+
+    // =====================================================================
+    // update: cada sección según su pista. Todo es función del estado (t); W solo anima.
+    // =====================================================================
+    function update(s) {
+      const W = V(s.wall), t = V(s.t), c = clamp(V(s.columns), 0, 1);
+      const yT = 3 + 18 * c;
+      quarryG.visible = V(s.quarry) > 0.01;
+      oxGroup.visible = V(s.oxen) > 0.01;
+      craneG.visible = V(s.cranes) > 0.002;
+      updateWorkers(s, W, yT, c);
+      updateOxen(s, t, W);
+      updateCranes(s, W);
+      updateScaffold(c, yT);
+      updateSandRamp(s, t, W);
+      updatePilgrims(s, t, W);
+      updateAltar(s, t, W);
+      flushFigs();
+    }
+
+    return { update: update, group: root };
   };
 })();

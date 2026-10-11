@@ -539,7 +539,7 @@
       for (let j = 0; j < NB; j++) {
         const B = beams[j];
         const u = clamp01((ar - B.S) / 0.18);
-        const dy = (1 - smooth(u)) * 7;                             // bajan sobre las columnas
+        const dy = (1 - smooth(u)) * 2.5;                           // bajan sobre las columnas
         const e = smooth(clamp01((rr - B.TB) / 0.25));              // la ruina las tira al suelo
         const keep = keepOf(dis, B.TD);
         if (u <= 0 || keep <= 0.001) { hide(beamInst, j); continue; }
