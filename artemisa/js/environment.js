@@ -70,7 +70,7 @@
   const HILL_R = [420, 380, 480, 440], HILL_A = [110, 90, 130, 100];
   const HILLS = SITE.hills.map(function (p, i) { return { x: p[0], z: p[1], r: HILL_R[i], a: HILL_A[i] }; });
   const WORLD = 1800;                                      // mitad del lado del terreno
-  const GRID = 160;                                        // celdas por lado (antes de los cortes)
+  const GRID = 140;                                      // celdas por lado (antes de los cortes)
   const SHADOW_DIST = 1200;
   const SUN_ELEV = 62 * Math.PI / 180;
   const EY = Math.sin(SUN_ELEV), EZ = Math.cos(SUN_ELEV);
@@ -302,7 +302,7 @@
     '  float fres = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);',
     '  vec3 R = reflect(-V, n);',
     '  vec3 sky = mix(uHorizon, uZenith, smoothstep(0.0, 0.6, R.y));',
-    '  vec3 col = mix(uDeep, sky, clamp(fres * 1.3, 0.0, 1.0));',
+    '  vec3 col = mix(uDeep, sky, clamp(fres * 0.8, 0.0, 1.0));',
     '  float rl = max(dot(reflect(-L, n), V), 0.0);',
     '  float spec = pow(rl, 90.0) * 1.2 + pow(rl, 8.0) * 0.06;',
     '  col += uLightCol * spec * uLightI * 1.5;',
@@ -422,7 +422,7 @@
       const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
       const n = fract(Math.sin(x * 7.13 + y * 19.7 + z * 31.1) * 9311.7);
       const k = 0.85 + 0.3 * n;
-      p.setXYZ(i, x * k, y * k * 0.7 + 1.0, z * k);
+      p.setXYZ(i, x * k, y * k * 0.7 + 4.2, z * k);     // copa a unos 4 m de altura, sobre el tronco
     }
     g.computeVertexNormals();
     return g;
@@ -506,7 +506,7 @@
     const root = new THREE.Group(); scene.add(root);
 
     const MOON_COL = new THREE.Color('#6f8fe0');
-    const DEEP_DAY = new THREE.Color('#34473a'), DEEP_NIGHT = new THREE.Color('#081018');
+    const DEEP_DAY = new THREE.Color('#2a3a2c'), DEEP_NIGHT = new THREE.Color('#081018');
     const FOG_DAY = new THREE.Color('#cfc7a8');
     const HEM_GROUND_DAY = new THREE.Color('#6d5a3a');
     const HEM_GROUND_NIGHT = new THREE.Color('#263046');
@@ -634,7 +634,7 @@
 
     // colores por vértice: marisma, tierra seca, olivar, roca de laderas, río, orillas, camino, piedra
     const cMud = new THREE.Color('#4b4a2c'), cGreen = new THREE.Color('#5f6d36');
-    const cShore = new THREE.Color('#3a3524'), cDry = new THREE.Color('#b79b6c');
+    const cShore = new THREE.Color('#3a3524'), cDry = new THREE.Color('#a99c6c');
     const cOlive = new THREE.Color('#7a7c40'), cRock = new THREE.Color('#8b7f6c');
     const cRiver = new THREE.Color('#40382b'), cRoad = new THREE.Color('#d6b984');
     const cStone = new THREE.Color('#d9cdb3'), cPale = new THREE.Color('#cdbda0');
@@ -670,7 +670,7 @@
       uTime: { value: 0 }, uLightDir: { value: new THREE.Vector3(0, 1, 0) },
       uLightCol: { value: sun.color }, uLightI: { value: 0 },
       uHorizon: { value: new THREE.Color() }, uZenith: { value: new THREE.Color() },
-      uDeep: { value: new THREE.Color('#34473a') },
+      uDeep: { value: new THREE.Color('#2a3a2c') },
       uQuake: { value: 0 }, uQT: { value: 0 }, uFlood: { value: 0 }
     };
     const waterMat = new THREE.ShaderMaterial({ uniforms: waterU, vertexShader: WATER_VS, fragmentShader: WATER_FS });
@@ -680,9 +680,10 @@
       const seg = 28, rr = P.r * 1.04;
       for (let k = 0; k < seg; k++) {
         const a0 = k / seg * TAU, a1 = (k + 1) / seg * TAU;
+        // orden antihorario visto desde arriba (la cara mira hacia el cielo)
         wPos.push(P.x, WL, P.z,
-          P.x + Math.cos(a0) * rr, WL, P.z + Math.sin(a0) * rr,
-          P.x + Math.cos(a1) * rr, WL, P.z + Math.sin(a1) * rr);
+          P.x + Math.cos(a1) * rr, WL, P.z + Math.sin(a1) * rr,
+          P.x + Math.cos(a0) * rr, WL, P.z + Math.sin(a0) * rr);
         for (let v = 0; v < 3; v++) wC.push(P.x, P.z, P.ph, P.flood);
       }
     });
@@ -735,12 +736,20 @@
     function placeOne(list, x, z, sc, inv) {
       list.push({ x: x, z: z, s: sc, inv: inv, y: sampleTerrain(x, z).h - 0.15, yaw: rnd() * TAU });
     }
-    // juncos por toda la marisma (más cerca de las charcas)
+    // juncos: sobre todo en las orillas de las charcas (densos) y algunos sueltos por la marisma
     let guard = 0;
-    while (junList.length < 3600 && guard < 80000) {
+    const nPonds = PONDS.filter(function (p) { return !p.flood; });
+    while (junList.length < 2600 && guard < 120000) {
       guard++;
-      const a = rnd() * TAU, rr = Math.sqrt(rnd()) * MR * 0.97;
-      const x = Math.cos(a) * rr, z = Math.sin(a) * rr;
+      let x, z;
+      if (junList.length < 2000) {
+        const P = nPonds[Math.floor(rnd() * nPonds.length)];
+        const a = rnd() * TAU, rr = P.r * (0.9 + rnd() * 1.1);
+        x = P.x + Math.cos(a) * rr; z = P.z + Math.sin(a) * rr;
+      } else {
+        const a = rnd() * TAU, rr = Math.sqrt(rnd()) * MR * 0.97;
+        x = Math.cos(a) * rr; z = Math.sin(a) * rr;
+      }
       if (inHole(x, z, 4)) continue;
       const s = sampleTerrain(x, z);
       if (s.h > 0.5 || s.quarry > 0.01) continue;
@@ -748,8 +757,7 @@
     }
     // cañas: en los bordes de las charcas
     guard = 0;
-    const nPonds = PONDS.filter(function (p) { return !p.flood; });
-    while (canList.length < 1000 && guard < 60000) {
+    while (canList.length < 700 && guard < 60000) {
       guard++;
       const P = nPonds[Math.floor(rnd() * nPonds.length)];
       const a = rnd() * TAU, rr = P.r * (0.9 + rnd() * 1.2);
@@ -761,7 +769,7 @@
     }
     // invasión: juncos que crecen alrededor de la columna de hoy (aparecen con s.today > 0.5)
     guard = 0; let inv = 0;
-    while (inv < 700 && guard < 60000) {
+    while (inv < 450 && guard < 60000) {
       guard++;
       const a = rnd() * TAU, rr = 40 + rnd() * 110;
       const x = TODAY.x + Math.cos(a) * rr, z = TODAY.z + Math.sin(a) * rr;
@@ -791,24 +799,24 @@
       root.add(mesh);
       return mesh;
     }
-    buildReedMesh(junList, junMat, 2, 0.05, junList.length);
-    buildReedMesh(canList, canMat, 3, 0.05, canList.length);
+    buildReedMesh(junList, junMat, 2, 0.1, junList.length);
+    buildReedMesh(canList, canMat, 2, 0.11, canList.length);
 
     // ---------- olivos, pinos y roca en las colinas y tierra seca ----------
     const trunkGeo = new THREE.CylinderGeometry(0.22, 0.4, 3.4, 6, 1, false).translate(0, 1.7, 0);
     const canopyGeo = makeCanopyGeometry(THREE);
-    const oliveTrunk = new THREE.InstancedMesh(trunkGeo, new THREE.MeshStandardMaterial({ color: 0x6b5233, roughness: 0.95 }), 130);
-    const oliveCanopy = new THREE.InstancedMesh(canopyGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true }), 130);
+    const oliveTrunk = new THREE.InstancedMesh(trunkGeo, new THREE.MeshStandardMaterial({ color: 0x6b5233, roughness: 0.95 }), 100);
+    const oliveCanopy = new THREE.InstancedMesh(canopyGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true }), 100);
     const pineTrunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.2, 0.3, 4, 6).translate(0, 2, 0),
-      new THREE.MeshStandardMaterial({ color: 0x5e4428, roughness: 0.95 }), 90);
+      new THREE.MeshStandardMaterial({ color: 0x5e4428, roughness: 0.95 }), 80);
     const pineCrown = new THREE.InstancedMesh(new THREE.ConeGeometry(2.4, 9, 7).translate(0, 8.5, 0),
-      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true }), 90);
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true }), 80);
     const rockGeo = makeRockGeometry(THREE, 1);
-    const rockMesh = new THREE.InstancedMesh(rockGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, flatShading: true }), 90);
+    const rockMesh = new THREE.InstancedMesh(rockGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, flatShading: true }), 70);
     const cOliveA = new THREE.Color('#5f7035'), cOliveB = new THREE.Color('#84904a'), cPine = new THREE.Color('#2f4a2c');
     const cRockA = new THREE.Color('#8f836e'), cRockB = new THREE.Color('#6e6458');
     let nOlive = 0, nPine = 0, nRock = 0, gTree = 0;
-    while ((nOlive < 130 || nPine < 90 || nRock < 90) && gTree < 60000) {
+    while ((nOlive < 100 || nPine < 80 || nRock < 70) && gTree < 60000) {
       gTree++;
       const x = (rnd() * 2 - 1) * 1500, z = (rnd() * 2 - 1) * 1500;
       if (Math.hypot(x, z) < 480 || inHole(x, z, 40)) continue;
@@ -822,7 +830,7 @@
                     Math.abs(sampleTerrain(x, z + e).h - sampleTerrain(x, z - e).h) / (2 * e);
       const sc = 0.85 + rnd() * 0.45;
       quat.setFromAxisAngle(yAxis, rnd() * TAU);
-      if (hgt > 22 && slope > 0.25 && nRock < 90) {
+      if (hgt > 22 && slope > 0.25 && nRock < 70) {
         // roca en laderas empinadas
         vPos.set(x, hgt - 0.6, z);
         vSc.set(2.2 + rnd() * 3.5, 1.4 + rnd() * 2.2, 2.2 + rnd() * 3.5);
@@ -830,7 +838,7 @@
         rockMesh.setMatrixAt(nRock, m4);
         rockMesh.setColorAt(nRock, rnd() < 0.5 ? cRockA : cRockB);
         nRock++;
-      } else if (hgt > 22 && nPine < 90 && rnd() < 0.5) {
+      } else if (hgt > 22 && nPine < 80 && rnd() < 0.5) {
         // pino de las colinas
         vPos.set(x, hgt, z); vSc.set(sc, sc, sc);
         m4.compose(vPos, quat, vSc);
@@ -838,7 +846,7 @@
         pineCrown.setMatrixAt(nPine, m4);
         pineCrown.setColorAt(nPine, cPine);
         nPine++;
-      } else if (hgt > 0.8 && hgt < 60 && nOlive < 130 && rnd() < 0.6) {
+      } else if (hgt > 0.8 && hgt < 60 && nOlive < 100 && rnd() < 0.6) {
         // olivo en las laderas y la tierra seca
         vPos.set(x, hgt, z); vSc.set(sc, sc * (0.9 + rnd() * 0.3), sc);
         m4.compose(vPos, quat, vSc);
@@ -861,7 +869,7 @@
 
     // ---------- cantera: cortes escalonados blancos en la ladera (el contenido lo hace construction) ----------
     const cutGeos = [];
-    const cutCol = new THREE.Color('#efe6d6');
+    const cutCol = new THREE.Color('#d6cab2');
     const cutA = Math.atan2(500, 700);       // los cortes miran hacia el templo
     for (let k = 1; k <= 4; k++) {
       const R = 14 * k;
@@ -870,7 +878,7 @@
       for (let i = 0; i < steps; i++) {
         const th = cutA - 1.1 + 2.2 * i / (steps - 1);
         const cx = Q.x + Math.cos(th) * R, cz = Q.z + Math.sin(th) * R;
-        const arc = 2 * Math.PI * R / 360 * 2.2 * 1.05;  // longitud del segmento
+        const arc = R * (2.2 / (steps - 1)) * 1.15;      // longitud del segmento (con solape)
         const hgt = Math.max(0.6, lvlOut - lvlIn);
         const cy = lvlIn + hgt / 2 + 0.4;
         const g = new THREE.BoxGeometry(arc, hgt, 0.9);
@@ -894,7 +902,7 @@
       const x = CITY.x + Math.cos(a) * rr, z = CITY.z + Math.sin(a) * rr;
       if (rr > CITY.r * 0.62 && rnd() < 0.6) continue;     // más densa en el centro
       const s = sampleTerrain(x, z);
-      houses.push({ x: x, z: z, y: s.h - 0.3, w: 6 + rnd() * 6, d: 6 + rnd() * 6, h: 5 + rnd() * 7, ry: Math.floor(rnd() * 4) * Math.PI / 2 * 0 + (rnd() - 0.5) * 0.3,
+      houses.push({ x: x, z: z, y: s.h - 0.3, w: 6 + rnd() * 6, d: 6 + rnd() * 6, h: 5 + rnd() * 7, ry: (rnd() - 0.5) * 0.3,
         col: [new THREE.Color('#e9dcc0'), new THREE.Color('#d7c6a3'), new THREE.Color('#c79a7c'), new THREE.Color('#f1ead9')][Math.floor(rnd() * 4)] });
     }
     const houseMesh = new THREE.InstancedMesh(houseGeo, houseMat, houses.length);
@@ -1014,8 +1022,8 @@
     storkGeos.push(paint(THREE, xf(THREE, new THREE.CylinderGeometry(0.06, 0.08, 0.9, 6), 0.35, 1.45, 0, 0, 0, -0.5), cWhite));
     storkGeos.push(paint(THREE, xf(THREE, new THREE.SphereGeometry(0.15, 8, 6), 0.55, 1.9, 0), cWhite));
     storkGeos.push(paint(THREE, xf(THREE, new THREE.ConeGeometry(0.05, 0.6, 6), 0.88, 1.86, 0, 0, 0, -Math.PI / 2), cBeak));
-    storkGeos.push(paint(THREE, xf(THREE, new THREE.CylinderGeometry(0.04, 0.04, 1.2, 5), -0.05, -0.05, 0.12), cLeg));
-    storkGeos.push(paint(THREE, xf(THREE, new THREE.CylinderGeometry(0.04, 0.04, 1.2, 5), -0.05, -0.05, -0.12), cLeg));
+    storkGeos.push(paint(THREE, xf(THREE, new THREE.CylinderGeometry(0.04, 0.04, 1.2, 5), -0.05, 0.5, 0.12), cLeg));
+    storkGeos.push(paint(THREE, xf(THREE, new THREE.CylinderGeometry(0.04, 0.04, 1.2, 5), -0.05, 0.5, -0.12), cLeg));
     storkGeos.push(paint(THREE, xf(THREE, new THREE.BoxGeometry(1.1, 0.08, 0.35), -0.2, 1.2, 0.28, 0.25, 0, 0.2), cBlack));
     storkGeos.push(paint(THREE, xf(THREE, new THREE.BoxGeometry(1.1, 0.08, 0.35), -0.2, 1.2, -0.28, -0.25, 0, -0.2), cBlack));
     const storkMesh = new THREE.Mesh(mergeGeos(THREE, storkGeos), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 }));
