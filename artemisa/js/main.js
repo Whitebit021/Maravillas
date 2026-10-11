@@ -61,7 +61,7 @@
     quakeDemo:  [[29, 0], [30, 1], [34, 1], [35, 0]],                   // temblor: la marisma amortigua
     pit:        [[38, 0], [41, 1], [58, 1], [62, 0]],                   // excavación del cimiento
     layers:     [[40, 0], [56, 1]],                                      // capas: arcilla, carbón, lana, carbón, losas
-    xray:       [[40, 0], [43, 0.9], [58, 0.9], [62, 0]],               // corte en sección del cimiento
+    xray:       [[40, 0], [43, 0.9], [56, 0.9], [58, 0]],               // corte en sección del cimiento
     platform:   [[56, 0], [66, 1]],                                      // gradas y estilóbato
     quarry:     [[58, 0], [62, 1], [80, 1], [84, 0]],
     oxen:       [[60, 0], [63, 1], [80, 1], [84, 0]],                   // tambores rodados como rodillos por bueyes
@@ -106,8 +106,8 @@
     [55,  [60, 20, -60],       [0, -1, 0]],
     // mármol: la cantera y las ruedas de Quersifrón
     [60,  [-780, 80, -400],    [-700, 10, -500]],
-    [66,  [-430, 18, -270],    [-380, 3, -220]],
-    [72,  [-260, 10, -180],    [-230, 3, -150]],
+    [66,  [-266, 8, -145],     [-251, 2, -165]],
+    [72,  [-226, 8, -115],     [-211, 2, -135]],
     [77,  [-120, 30, -90],     [-60, 2, -30]],
     // columnas
     [82,  [-150, 40, -100],    [0, 10, 0]],

@@ -216,6 +216,10 @@
       if (cw > 0) h += (Math.min(h, WL - 0.4) - h) * cw;
     }
 
+    // camino de los tambores: franja aplanada a y≈0 (los equipos de bueyes van a nivel 0)
+    const rdW = 1 - sstep(10, 24, routeDist(x, z));
+    if (rdW > 0) h += (0.02 - h) * rdW;
+
     // borde del hueco: suelo casi a nivel para que el piso del cimiento no deje escalón
     const hx = Math.max(HOLE.x0 - x, x - HOLE.x1, 0), hz = Math.max(HOLE.z0 - z, z - HOLE.z1, 0);
     const hd = Math.sqrt(hx * hx + hz * hz);
