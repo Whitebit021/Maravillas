@@ -228,7 +228,7 @@
     const glintMat = new THREE.MeshBasicMaterial({ map: glowTex, color: 0xfff0c0, transparent: true, opacity: 1,
       depthWrite: false, blending: THREE.AdditiveBlending });
     const dropMat = new THREE.MeshBasicMaterial({ color: 0xffc070, transparent: true, opacity: 0.95 });
-    const flameMat = new THREE.MeshBasicMaterial({ map: flameTex, color: 0xffa040, transparent: true, opacity: 0.85,
+    const flameMat = new THREE.MeshBasicMaterial({ map: flameTex, color: 0xffa040, transparent: true, opacity: 0.6,
       blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
     const smokeMat = new THREE.MeshBasicMaterial({ map: smokeTex, color: 0x2a211c, transparent: true, opacity: 0.5,
       depthWrite: false, side: THREE.DoubleSide });
@@ -843,7 +843,7 @@
 
       // llamas y humo que envuelven la estatua durante el incendio
       const fe = fire * fade * (1 - smooth((burn - 0.8) / 0.2));
-      flameMat.opacity = 0.85 * (fe > 0.001 ? 1 : 0);
+      flameMat.opacity = 0.6 * (fe > 0.001 ? 1 : 0);
       for (let i = 0; i < FL; i++) {
         const f = flames[i];
         if (fe <= 0.001) { setHidden(flameMesh, i); continue; }
