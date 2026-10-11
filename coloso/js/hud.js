@@ -32,6 +32,7 @@
 #hud .ch .rule{height:2px;width:0;margin:10px auto 0;background:linear-gradient(90deg,transparent,#ffcf6a,transparent)}
 #hud .ch.mito .t{color:#ff5a4e;text-shadow:0 0 4px #000,0 0 14px #000,0 0 28px rgba(0,0,0,.9),0 2px 16px #000}
 #hud .ch.mito .n{text-shadow:0 0 6px #000,0 0 12px #000}
+#hud .ch.mito{padding:22px 48px;background:radial-gradient(ellipse at center,rgba(0,0,0,.78),rgba(0,0,0,.45) 55%,rgba(0,0,0,0) 74%)}
 #hud .ch.mito .n{color:#ff3b30}
 #hud .ch.mito .rule{background:linear-gradient(90deg,transparent,#ff3b30,transparent)}
 #hud .sub{position:absolute;left:50%;bottom:calc(var(--bar) + 16px);transform:translateX(-50%);z-index:4;width:min(900px,90vw);padding:12px 20px;text-align:center;font-size:clamp(17px,2.1vw,27px);line-height:1.35;color:#f5efe0;text-shadow:0 2px 4px #000,0 0 12px #000;background:radial-gradient(ellipse at center,rgba(0,0,0,.62),rgba(0,0,0,0) 72%);opacity:0;transition:opacity .45s ease;pointer-events:none}
