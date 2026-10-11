@@ -103,9 +103,9 @@
 
     // ---------- columna jónica: basa con toros, fuste de 24 estrías con entasis, equino, ábaco y volutas grandes ----------
     function columnGeo() {
-      const shaft = [[0, 0], [0.8, 0], [0.84, 0.08], [0.74, 0.16], [0.66, 0.26], [0.6, 0.34]];
-      for (let i = 1; i <= 6; i++) {
-        const u = i / 6;
+      const shaft = [[0, 0], [0.8, 0], [0.8, 0.1], [0.66, 0.26], [0.6, 0.34]];
+      for (let i = 1; i <= 4; i++) {
+        const u = i / 4;
         shaft.push([0.6 - 0.1 * u + 0.025 * Math.sin(Math.PI * u), 0.34 + 10.26 * u]);
       }
       shaft.push([0.84, 10.7], [0.8, 10.98], [0, 10.98]);
@@ -126,7 +126,7 @@
           const th = i / 30 * Math.PI * 2.6, r = 0.44 * Math.exp(-0.17 * th) + 0.05;
           pts.push(new THREE.Vector3(cx + sg * Math.cos(th) * r, 10.75 + Math.sin(th) * r, 0.98));
         }
-        return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 36, 0.07, 6, false);
+        return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 20, 0.07, 4, false);
       }
       return mergeGeos([{ g: sh }, { g: ab }, { g: volute(-0.5, -1) }, { g: volute(0.5, 1) }]);
     }
@@ -606,7 +606,7 @@
         DRM.push({ x: p[0] + dx * along, z: p[1] + dz * along, q: qd, thr: COLFALL[i] + 0.6, thr2: COLTHR[i] });
       }
     });
-    const drumInst = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.6, 0.6, 0.9, 14), marbleMat, DRM.length);
+    const drumInst = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.6, 0.6, 0.9, 10), marbleMat, DRM.length);
     drumInst.castShadow = true; drumInst.frustumCulled = false;
     root.add(drumInst);
     // trozos de la cuadriga rota (un grupo que cae del suelo con la ruina)

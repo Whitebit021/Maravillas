@@ -323,26 +323,24 @@
     const cg = new THREE.Group(); root.add(cg);
     const W = CH.halfX, D = CH.halfZ, TH = 0.9, BT = 1.2;
     const K = 5, Hc = CH.y1 - CH.y0, hK = Hc / K;
-    const courses = [], cutCourses = [];
-    for (let k = 0; k < K; k++) {
-      const bk = CH.y0 + k * hK, s = new Soup(), c = new Soup();
-      const b = function (sol, x0, x1, ya, yb, z0, z1) { sol.box(x0, x1, ya - bk, yb - bk, z0, z1, BT); };
-      if (k === 0) b(s, -W, W, CH.y0, CH.y0 + 0.6, -D, D);              // solera
-      b(c, -W, W, bk, bk + hK, -D, -D + TH);                             // muro norte (se corta con rayos X)
-      b(s, -W, W, bk, bk + hK, D - TH, D);                               // muro sur
-      b(c, W - TH, W, bk, bk + hK, -D + TH, D - TH);                     // muro este (se corta con rayos X)
-      if (bk >= -3.8) b(s, -W, -W + TH, bk, bk + hK, -D + TH, D - TH);   // muro oeste (dintel encima)
-      else {                                                              // muro oeste con la entrada
-        b(s, -W, -W + TH, bk, bk + hK, -D + TH, -1.5);
-        b(s, -W, -W + TH, bk, bk + hK, 1.5, D - TH);
-      }
-      const mesh = new THREE.Mesh(s.geo(), M.block);
-      mesh.position.set(0, bk, 0); mesh.receiveShadow = true;
-      cg.add(mesh); courses.push(mesh);
-      const cut = new THREE.Mesh(c.geo(), M.block);
-      cut.position.set(0, bk, 0); cut.receiveShadow = true;
-      cg.add(cut); cutCourses.push(cut);
-    }
+    // muros de la cámara: cinco mallas (norte, este, sur, oeste con entrada y solera). Con rayos X se
+    // oculta el muro que mira a la cámara (corte en sección) y la cámara se ve por dentro.
+    const sides = [];
+    const mkSide = function (build, nx, nz) {
+      const sc = new Soup(); build(sc);
+      const m = new THREE.Mesh(sc.geo(), M.block);
+      m.position.set(0, CH.y0, 0); m.receiveShadow = true;
+      cg.add(m); sides.push({ mesh: m, nx: nx, nz: nz });
+    };
+    mkSide(function (sc) { sc.box(-W, W, 0, Hc, -D, -D + TH, BT); }, 0, -1);            // norte
+    mkSide(function (sc) { sc.box(W - TH, W, 0, Hc, -D + TH, D - TH, BT); }, 1, 0);     // este
+    mkSide(function (sc) { sc.box(-W, W, 0, Hc, D - TH, D, BT); }, 0, 1);               // sur
+    mkSide(function (sc) {                                                              // oeste con la entrada
+      sc.box(-W, -W + TH, 0, Hc, -D + TH, -1.5, BT);
+      sc.box(-W, -W + TH, 0, Hc, 1.5, D - TH, BT);
+      sc.box(-W, -W + TH, -3.7 - CH.y0, Hc, -1.5, 1.5, BT);                             // dintel
+    }, -1, 0);
+    mkSide(function (sc) { sc.box(-W, W, 0, 0.6, -D, D, BT); }, 0, 0);                  // solera
     // techo de losas (cuatro, de 2 m) que se cierran al final de la obra
     const roofS = new Soup();
     for (let i = 0; i < 4; i++) {
@@ -536,15 +534,16 @@
 
         // cámara: hilada a hilada, luego techo de losas
         cg.visible = ch > 0.001;
-        for (let k = 0; k < K; k++) {
-          const p = clamp01(ch * K - k);
-          courses[k].visible = p > 0.001;
-          courses[k].scale.y = Math.max(0.001, p);
-          cutCourses[k].visible = p > 0.001 && xr < 0.5;               // corte: sin muros norte y este
-          cutCourses[k].scale.y = Math.max(0.001, p);
+        const cam = ctx.camera.position;
+        const cl = Math.hypot(cam.x, cam.z) || 1, cdx = cam.x / cl, cdz = cam.z / cl;
+        const cutOn = xr > 0.5;
+        for (let i = 0; i < sides.length; i++) {
+          const sd = sides[i];
+          sd.mesh.visible = ch > 0.001 && !(cutOn && (sd.nx * cdx + sd.nz * cdz) > 0.25);
+          sd.mesh.scale.y = Math.max(0.001, ch);
         }
         const pr = clamp01((ch - 0.8) / 0.2);
-        roof.visible = pr > 0.001 && xr < 0.5;                         // sin techo con rayos X
+        roof.visible = pr > 0.001 && !cutOn;                           // sin techo con rayos X
         roof.scale.y = Math.max(0.001, pr);
 
         edges.visible = xr > 0.001;
