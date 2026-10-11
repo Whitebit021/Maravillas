@@ -784,6 +784,7 @@
     const HERO_HD = headingOf(HERO_P1[0] - HERO_P0[0], HERO_P1[1] - HERO_P0[1]);
     const heroG = new THREE.Group();
     root.add(heroG);
+    let heroOarR = null, heroOarL = null;
     (function buildHero() {
       const hMB = MB();
       const cW = new THREE.Color(0x6e4a2a), cIn = new THREE.Color(0x4f3519);
@@ -823,7 +824,6 @@
       heroOarL = mkIM(oarG, MAT.wood, 8, false);
       heroG.add(heroOarR, heroOarL);
     })();
-    let heroOarR = null, heroOarL = null;
     function updateHero(s) {
       const t = s.t, W = s.wall;
       const on = t >= 35 && t <= 58 && s.barges > 0.002;
