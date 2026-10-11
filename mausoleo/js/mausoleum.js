@@ -590,7 +590,7 @@
     for (let i = 0; i < NR; i++) {
       const a = rnd() * Math.PI * 2, r = 9 + 30 * rnd();
       const sx = 1.2 + 1.8 * rnd(), sy = 0.8 + 0.8 * rnd(), sz = 1.0 + 1.6 * rnd();
-      RUB.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, sx: sx, sy: sy, sz: sz, stack: i % 4 === 0 ? 1 : 0,
+      RUB.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, sx: sx, sy: sy, sz: sz, stack: (i % 4 === 0 && i > 0) ? 1 : 0,
         q: yawQ(rnd() * Math.PI), thr: 0.1 + 0.5 * rnd(), thr2: 0.4 + 0.5 * rnd() });
     }
     const rubInst = new THREE.InstancedMesh(unitBox, marbleMat, NR);
