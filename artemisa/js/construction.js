@@ -572,7 +572,14 @@
     function updateSandRamp(s, t, W) {
       const on = V(s.sandramp) > 0.01;
       coreIM.visible = on; sackIM.visible = on; archBlock.visible = on;
-      if (!on) { sandPts.visible = false; return; }
+      if (!on) {
+        sandPts.visible = false;
+        // ocultar también a los obreros de la rampa (si no, conservan su última posición al saltar en el tiempo)
+        fSc = 0.0001;
+        for (let j = 0; j < 8; j++) { figRoot(0, -50, 0, 0); drawFig(50 + j); }
+        fSc = 1;
+        return;
+      }
       const grow = sstep((t - 106) / 4);
       const p = sstep((t - 116) / 10);
       const cut = Math.min(grow, 1 - 0.3 * p);
