@@ -536,7 +536,7 @@
       // 64-83: cima de la obra, de pie en el borde a la altura actual (solo arco sur-oeste)
       const yt = clamp(s.build, 0, 1) * TOWER.H;
       // la cima se despeja al completarse la altura (la linterna ocupa ese sitio)
-      const topOn = s.build > 0.3 && s.build < 0.97 && yt > 8;
+      const topOn = s.build > 0.1 && s.build < 0.97 && yt > 8;
       for (let j = 0; j < 20; j++) {
         const i = 64 + j, h1 = hash(i + 500), h2 = hash(i + 600);
         if (!topOn) { wRoot(0, -50, 0, 0); }
@@ -648,7 +648,7 @@
     function updateCranes(s) {
       const W = s.wall, b = clamp(s.build, 0, 1);
       const yt = b * TOWER.H;
-      const topOn = b > 0.3 && b < 0.97 && s.cranes > 0.5 && yt > 8;
+      const topOn = b > 0.1 && b < 0.97 && s.cranes > 0.5 && yt > 8;
       // grúas de la cima
       TOPC.forEach(function (C, k) {
         const g = C.g;
