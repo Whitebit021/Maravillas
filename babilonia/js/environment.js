@@ -413,13 +413,13 @@
   }
   function palmCrownGeo(THREE) {
     const mb = new MB(THREE);
-    const L = 6.5, S = 6;
+    const L = 7.5, S = 6;
     for (let k = 0; k < 6; k++) {
       const a = k * TAU / 6 + (rnd() - 0.5) * 0.3;
       const ca = Math.cos(a), sa = Math.sin(a);
       const pr = [-sa, 0, ca];
       const P = function (t) { return [ca * L * t, 1.3 * t - 2.1 * t * t, sa * L * t]; };
-      const W = function (t) { return 0.9 * (1 - t) * (0.45 + 0.55 * Math.sin(Math.PI * Math.min(1, t * 1.1))) + 0.08; };
+      const W = function (t) { return 1.2 * (1 - t) * (0.45 + 0.55 * Math.sin(Math.PI * Math.min(1, t * 1.1))) + 0.1; };
       for (let i = 0; i < S; i++) {
         const t0 = i / S, t1 = (i + 1) / S;
         const p0 = P(t0), p1 = P(t1), w0 = W(t0), w1 = W(t1);
@@ -440,7 +440,7 @@
 
     // ---------- paleta / cielo ----------
     const MOON_COL = new THREE.Color('#6f8fe0');
-    const DEEP_DAY = new THREE.Color('#6b5a34'), DEEP_NIGHT = new THREE.Color('#0e1012');
+    const DEEP_DAY = new THREE.Color('#8a7a4a'), DEEP_NIGHT = new THREE.Color('#0e1012');
     const FOG_DAY = new THREE.Color('#d9c4a0');
     const HEM_GROUND_DAY = new THREE.Color('#8a6a44');
     const HEM_GROUND_NIGHT = new THREE.Color('#2a3050');
