@@ -100,7 +100,7 @@
     let h = H * Math.pow(p, 0.8);
     const terr = Math.floor(h / 9) * 9;
     h += (terr - h) * 0.5 * (1 - sstep(0.85, 0.97, p)) * sstep(0.05, 0.2, p);
-    const rough = (ridged(x / 45, z / 45, 3, sd + 5) - 0.3) * 16;
+    const rough = (ridged(x / 28, z / 28, 4, sd + 5) - 0.3) * 40 + (vnoise(x / 110, z / 110, sd + 9) - 0.5) * 20;
     h += rough * sstep(0.0, 0.08, p) * (1 - sstep(0.75, 0.95, p));
     return h;
   }
@@ -297,7 +297,7 @@
     'void main() {',
     '  vec4 mv = modelViewMatrix * vec4(position, 1.0);',
     '  gl_Position = projectionMatrix * mv;',
-    '  gl_PointSize = clamp(uPx / -mv.z, 3.0, 12.0);',
+    '  gl_PointSize = clamp(uPx / -mv.z, 4.0, 14.0);',
     '  float tw = 0.8 + 0.2 * sin(uTime * (1.0 + aSeed * 2.0) + aSeed * 40.0);',
     '  float on = step(0.3, fract(aSeed * 5.7));',
     '  vA = uNight * tw * on;',
@@ -765,7 +765,7 @@
     const winGeo = new THREE.BufferGeometry();
     winGeo.setAttribute('position', new THREE.BufferAttribute(winPos, 3));
     winGeo.setAttribute('aSeed', new THREE.BufferAttribute(winSeed, 1));
-    const winU = { uTime: { value: 0 }, uNight: { value: 0 }, uPx: { value: 140 }, uColor: { value: col('#ffd27a') } };
+    const winU = { uTime: { value: 0 }, uNight: { value: 0 }, uPx: { value: 260 }, uColor: { value: col('#ffd27a') } };
     const winMat = new THREE.ShaderMaterial({
       uniforms: winU, vertexShader: WIN_VS, fragmentShader: POINT_FS,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
