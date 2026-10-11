@@ -369,7 +369,10 @@
         const P = BARGE_ROUTE.at(u);
         const fade = Math.min(sstep(u / 0.04), sstep((1 - u) / 0.04)) * b;
         const bob = 0.08 * Math.sin(W * 1.2 + i * 2.0);
-        _p3.set(P[0], SEA + 0.3 + bob, P[1]);
+        // canal de navegación 45 m al este de la ruta (fuera de la línea de visión de la cámara de t=38-55)
+        let nx = -P[3], nz = P[2];
+        if (nx < 0) { nx = -nx; nz = -nz; }
+        _p3.set(P[0] + nx * 45, SEA + 0.3 + bob, P[1] + nz * 45);
         _q4.setFromAxisAngle(_yAxis, headingOf(P[2], P[3]));
         _hm.compose(_p3, _q4, _s3.set(fade, fade, fade));
         bargeIM.setMatrixAt(bi, _hm);
@@ -520,7 +523,8 @@
       }
       // 64-83: cima de la obra, de pie en el borde a la altura actual (solo arco sur-oeste)
       const yt = clamp(s.build, 0, 1) * TOWER.H;
-      const topOn = s.build > 0.3 && yt > 8;
+      // la cima se despeja al completarse la altura (la linterna ocupa ese sitio)
+      const topOn = s.build > 0.3 && s.build < 0.97 && yt > 8;
       for (let j = 0; j < 20; j++) {
         const i = 64 + j, h1 = hash(i + 500), h2 = hash(i + 600);
         if (!topOn) { wRoot(0, -50, 0, 0); }
@@ -632,7 +636,7 @@
     function updateCranes(s) {
       const W = s.wall, b = clamp(s.build, 0, 1);
       const yt = b * TOWER.H;
-      const topOn = b > 0.3 && yt > 8;
+      const topOn = b > 0.3 && b < 0.97 && s.cranes > 0.5 && yt > 8;
       // grúas de la cima
       TOPC.forEach(function (C, k) {
         const g = C.g;
