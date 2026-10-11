@@ -424,8 +424,10 @@
       limb(DB, dp(3.9, 9.1, s * 0.8), dp(4.5, 10.3, s * 1.5), 0.1, 0.05, 6, 2);
     });
     const dreamMat = ghostMat(CYAN, SILVER, 0.16, 0.85);
+    dreamMat.depthTest = false;   // aparición: se ve entera aunque la rampa de sacos la tape
     dreamG.add(new THREE.Mesh(fillGeo(DB), dreamMat));
     const dreamEdges = new THREE.LineSegments(segGeo(DE), vlineMat(0));
+    dreamEdges.material.depthTest = false;
     dreamG.add(dreamEdges);
     const dreamHalo = glowSprite('150,230,255', 30, [0, 12.2, 0]);
     dreamG.add(dreamHalo);

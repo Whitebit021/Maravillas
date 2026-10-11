@@ -544,7 +544,8 @@
     for (let i = 0; i < 18; i++) { span(-49.5 + 5.5 * i, -19, -49.5 + 5.5 * (i + 1), -19); span(-49.5 + 5.5 * i, 19, -49.5 + 5.5 * (i + 1), 19); }
     for (let k = 0; k < 5; k++) { const z0 = -19 + 38 * k / 5, z1 = -19 + 38 * (k + 1) / 5; span(-49.5, z0, -49.5, z1); span(49.5, z0, 49.5, z1); }
     const NB = beams.length;
-    const beamInst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), colMat, NB);
+    const beamMat = new THREE.MeshStandardMaterial({ color: 0xefe6d6, roughness: 0.45, envMap: env, envMapIntensity: 0.5 });
+    const beamInst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), beamMat, NB);
     beamInst.castShadow = true; beamInst.receiveShadow = true; beamInst.frustumCulled = false;
     root.add(beamInst);
     for (let j = 0; j < NB; j++) hide(beamInst, j);
@@ -813,6 +814,7 @@
       RUBD.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, q: yawQ(rnd() * Math.PI), thr: 0.1 + 0.6 * rnd(), thrD: 0.3 + 0.6 * rnd() });
     }
     const _lq = new THREE.Quaternion().setFromAxisAngle(ZA, Math.PI / 2);
+    const _rq = new THREE.Quaternion();
     function writeRubble(rr, dis) {
       for (let i = 0; i < NRB; i++) {
         const R0 = RUB[i];
