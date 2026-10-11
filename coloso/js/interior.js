@@ -32,7 +32,8 @@
     // Hierro oscuro (metalness 0.7, roughness 0.6) con óxido por instancia. Caliza clara. Juntas oscuras.
     const ironMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.7, roughness: 0.6, emissive: new THREE.Color(CYAN), emissiveIntensity: 0 });
     const stoneMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0, roughness: 0.92, emissive: new THREE.Color(CYAN), emissiveIntensity: 0 });
-    const jointMat = new THREE.MeshStandardMaterial({ color: 0x4a4640, metalness: 0, roughness: 1 });
+    // argamasa: junta clara entre sillares
+    const jointMat = new THREE.MeshStandardMaterial({ color: 0x8f897b, metalness: 0, roughness: 1 });
     const contourMat = new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0, blending: ADD, depthWrite: false });
     const IRON_PAL = [0x2e2c2a, 0x3a3733, 0x33302d, 0x3f3b36];
     const RUST_PAL = [0x8a3f22, 0x7a3a20, 0x9a4a28];
@@ -297,8 +298,10 @@
       const x = c[0], z = c[1], y0 = c[2], y1 = c[3], r = c[4];
       const n = Math.max(1, Math.ceil((y1 - y0) / 1.2)), h = (y1 - y0) / n;
       for (let k = 0; k < n; k++) {
-        DRUMS.push({ x: x, z: z, y0: y0 + k * h, y1: y0 + (k + 1) * h, r: r * (0.94 + 0.02 * rnd()) });
-        if (k > 0) JOINTS.push({ x: x, y: y0 + k * h, z: z, r: r });
+        // sillares irregulares: cada tambor se desplaza un poco y varía de radio
+        const jx = (rnd() - 0.5) * 0.12, jz = (rnd() - 0.5) * 0.12;
+        DRUMS.push({ x: x + jx, z: z + jz, y0: y0 + k * h, y1: y0 + (k + 1) * h, r: r * (0.92 + 0.06 * rnd()) });
+        if (k > 0) JOINTS.push({ x: x + jx, y: y0 + k * h, z: z + jz, r: r * (0.98 + 0.06 * rnd()) });
       }
     });
     // lastre: piedras irregulares amontonadas dentro de las piernas (entre y bajo las columnas)

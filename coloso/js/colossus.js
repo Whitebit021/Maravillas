@@ -164,7 +164,7 @@
     };
     const marble = new THREE.MeshStandardMaterial({ color: 0xffffff, map: marbleMap, roughness: 0.42, metalness: 0 });
     const coreMat = new THREE.MeshStandardMaterial({ color: 0x8f8373, roughness: 0.95 });
-    const goldMat = new THREE.MeshBasicMaterial({ color: 0xffd36a, transparent: true, opacity: 0.95 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xe9b64e, metalness: 1.0, roughness: 0.22, envMap: envTex, envMapIntensity: 1.3 });
 
     // ---------- PEDESTAL: hiladas de 1 m como InstancedMesh ----------
     const pedRoot = new THREE.Group(); scene.add(pedRoot);
@@ -458,7 +458,7 @@
 
     // manto con pliegues reales (superficie ondulada) desde el antebrazo izquierdo al pedestal
     function drapeGeo() {
-      const R = 40, C = 56, pos = [], uv = [];
+      const R = 60, C = 76, pos = [], uv = [];
       const TOP = [-7.6, 18.8, 0.3], BOT = [-5.6, 0.05, 1.6];
       for (let i = 0; i < R; i++) {
         const v = i / (R - 1);
@@ -470,8 +470,12 @@
           const z = lerp(TOP[2], BOT[2], v) + (u - 0.5) * W;
           // pliegues: ondas verticales que se separan hacia el suelo
           const amp = 0.4 + 0.9 * v;
-          x -= amp * (0.6 * Math.sin((u * 4.0 + 0.4 * Math.sin(v * 3.0)) * Math.PI * 2.0) +
-                      0.25 * Math.sin((u * 7.0 - v * 1.5) * Math.PI * 2.0));
+          const TP = Math.PI * 2.0;
+          x -= amp * (0.6 * Math.sin((u * 4.0 + 0.4 * Math.sin(v * 3.0)) * TP) +
+                      0.25 * Math.sin((u * 7.0 - v * 1.5) * TP) +
+                      0.18 * Math.sin((u * 11.0 + v * 4.0) * TP) * (0.3 + v) +
+                      0.1 * Math.sin((u * 17.0 - v * 6.0) * TP) * v);
+          x -= 0.25 * v * Math.sin(v * 9.0 + u * 2.0);                  // vuelo del borde en profundidad
           // remate ondulado en el borde inferior
           if (v > 0.9) y += 0.14 * Math.sin(u * Math.PI * 6) * ((v - 0.9) / 0.1);
           pos.push(x, y, z); uv.push(u, v * 2.0);
@@ -520,18 +524,18 @@
     TUBE(aHead, [[0, 27.3, 0], [0, 28.9, -0.1], [0, 30.2, -0.2]], [1.55, 1.25, 1.3], 12, 16, 1);   // cuello
 
     // rizos: esferas pequenas instanciadas sobre el craneo (en el rig de la cabeza)
-    const CURLS = 260;
+    const CURLS = 420;
     const curlGeo = new THREE.SphereGeometry(1, 10, 8);
     curlGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(curlGeo.attributes.position.count * 3).fill(1), 3));
     const curlMesh = new THREE.InstancedMesh(curlGeo, bronze, CURLS);
     curlMesh.castShadow = true; curlMesh.receiveShadow = true; curlMesh.frustumCulled = false;
     {
       let n = 0;
-      for (let i = 0; i < 1200 && n < CURLS; i++) {
-        const y = 1 - 2 * (i + 0.5) / 1200, r = Math.sqrt(Math.max(0, 1 - y * y)), ph = i * 2.39996;
+      for (let i = 0; i < 2600 && n < CURLS; i++) {
+        const y = 1 - 2 * (i + 0.5) / 2600, r = Math.sqrt(Math.max(0, 1 - y * y)), ph = i * 2.39996;
         const ux = r * Math.cos(ph), uy = y, uz = r * Math.sin(ph);
         if (hairVis(uy, uz) < 0.8 || uy < 0.35) continue;
-        const rad = 0.1 + rnd() * 0.06;
+        const rad = 0.075 + rnd() * 0.045;
         const rr = 2.22 + rad * 0.4, sx = ux * rr, sy = uy * rr * 1.08, sz = uz * rr * 1.04;
         M.compose(P.set(sx + HX, sy + HY - 27.5, sz + HZ), Q0, S.set(rad, rad * 1.1, rad));
         curlMesh.setMatrixAt(n, M);
@@ -617,16 +621,31 @@
     addPiece(aTor, pWaist, BASIS_BACK, [28.4, 0.6], 0.08, 2.0);           // torso
     const headRec = addPiece(aHead, pNeck, QYAW.clone().multiply(BASIS_BACK), [38.6, 3.0], 0.18, 3.0,
       function (rig) { rig.add(curlMesh); });                              // cabeza con rizos
-    addPiece(aArmL, pShL, BASIS_BACK, [21.6, -9.6], 0.12, 2.0);           // brazo izquierdo y manto
-    addPiece(aArmR, pShR, BASIS_BACK, [33.5, -11.0], 0.2, 2.5);           // brazo derecho
+    const glints = [];
+    function makeGlint(parent, pos, phase) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: glowMap, color: 0xfff0c0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending
+      }));
+      sp.position.set(pos[0], pos[1], pos[2]);
+      sp.scale.set(0.9, 0.9, 1);
+      parent.add(sp);
+      glints.push({ sp: sp, phase: phase });
+    }
+    addPiece(aArmL, pShL, BASIS_BACK, [21.6, -9.6], 0.12, 2.0, function (rig) { makeGlint(rig, [0, 1.6, -1.6], 0.0); });   // brazo izquierdo y manto
+    addPiece(aArmR, pShR, BASIS_BACK, [33.5, -11.0], 0.2, 2.5, function (rig) { makeGlint(rig, [0, 1.6, -1.6], 2.1); });   // brazo derecho
 
     // ---- corona solar: 12 rayos en abanico sobre la cabeza (en el rig de la cabeza) ----
     const rayG = new THREE.Group();
     rayG.position.set(HX, HY - pNeck[1], HZ);
     headRec.rig.add(rayG);
     const RAYS = 12, RAY_LEN = 2.4, RAY_R = 2.3;
-    const coneGeo = new THREE.ConeGeometry(0.34, 1, 6, 1);
+    const coneGeo = new THREE.ConeGeometry(0.2, 1, 4, 1);          // punta piramidal afilada
     coneGeo.translate(0, 0.5, 0);
+    const diadem = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.13, 8, 48), goldMat);
+    diadem.geometry.rotateX(Math.PI / 2);
+    diadem.scale.set(1, 1, 1.05);
+    diadem.position.set(0, 0.45, 0);
+    rayG.add(diadem);
     const rays = new THREE.InstancedMesh(coneGeo, goldMat, RAYS);
     rays.frustumCulled = false;
     rayG.add(rays);
@@ -635,6 +654,8 @@
     }));
     glow.scale.set(9, 9, 1);
     rayG.add(glow);
+    makeGlint(rayG, [1.3, 1.9, -2.0], 4.0);
+    makeGlint(rayG, [-1.5, 1.3, -2.1], 5.5);
 
     // ---- fragmentos de marmol de la rodilla rota (ruinas) ----
     const rubbleG = new THREE.Group();
@@ -656,7 +677,7 @@
     for (let k = 0; k < RAYS; k++) {
       const th = Math.PI * k / (RAYS - 1);
       const dir = new THREE.Vector3(Math.cos(th), Math.sin(th), 0);
-      RAY_Q.push({ base: dir.clone().multiplyScalar(RAY_R), q: new THREE.Quaternion().setFromUnitVectors(UP, dir) });
+      RAY_Q.push({ base: dir.clone().multiplyScalar(RAY_R).add(new THREE.Vector3(0, 0.45, 0)), q: new THREE.Quaternion().setFromUnitVectors(UP, dir) });
     }
 
     function update(s) {
@@ -722,6 +743,14 @@
       rays.instanceMatrix.needsUpdate = true;
       glow.material.opacity = crown * 0.55;
       glow.visible = crown > 0.001;
+
+      // destellos del bronce pulido: parpadean con wall, sin quemar (aditivos pequenos y tenues)
+      for (let k = 0; k < glints.length; k++) {
+        const g = glints[k];
+        const w = Math.max(0, 0.5 + 0.5 * Math.sin(wall * 4.7 + g.phase) * Math.sin(wall * 2.3 + g.phase * 1.7));
+        g.sp.material.opacity = shine * Math.pow(w, 3) * 0.6;
+        g.sp.visible = shine > 0.01;
+      }
     }
 
     return { update: update, root: statue };
