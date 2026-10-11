@@ -557,11 +557,11 @@
     ashG.position.set(ASH.x, 0, ASH.z);
     root.add(ashG);
     const FBs = buildArtemisia(), FB = FBs[0], SK = FBs[1];
-    const bodyMat = ashMat(0.12, 0.8);
+    const bodyMat = ashMat(0.2, 1.0);   // relleno translúcido con rim (silueta) marcado
     const body = new THREE.Mesh(fillGeo(FB), bodyMat);
     body.frustumCulled = false;
     ashG.add(body);
-    const skinMat = ashMat(0.2, 0.6, 0xe9dcff, 0xfff1d6);
+    const skinMat = ashMat(0.3, 0.7, 0xe9dcff, 0xfff1d6);
     const skin = new THREE.Mesh(fillGeo(SK), skinMat);
     skin.frustumCulled = false;
     ashG.add(skin);
@@ -572,6 +572,9 @@
     ashG.add(ringLine);
     const cupGlow = glowSprite('255,220,160', 7, CUP);
     ashG.add(cupGlow);
+    // halo suave detrás de la figura (+Z: lado opuesto a la cámara del norte)
+    const ashHalo = glowSprite('190,120,255', 22, [0, 6.5, 2.5]);
+    ashG.add(ashHalo);
     // cenizas: 260 puntos aditivos que suben en espiral desde el borde de la copa
     const aRnd = seeded(211);
     const NA = 170;
@@ -710,9 +713,10 @@
       // 2. cenizas: la reina fantasma con la copa
       ashG.visible = ash > 0.001;
       if (ashG.visible) {
-        bodyMat.uniforms.uOp.value = 0.6 * ash;
-        skinMat.uniforms.uOp.value = 0.75 * ash;
-        figLines.material.opacity = 0.45 * ash;
+        bodyMat.uniforms.uOp.value = 0.5 * ash;
+        skinMat.uniforms.uOp.value = 0.7 * ash;
+        figLines.material.opacity = 0.7 * ash;
+        ashHalo.material.opacity = 0.32 * ash;
         ringLine.material.opacity = (0.45 + 0.2 * Math.sin(wall * 1.7)) * ash;
         cupGlow.visible = ash > 0.001;
         cupGlow.material.opacity = (0.5 + 0.15 * Math.sin(wall * 2.3)) * ash;
