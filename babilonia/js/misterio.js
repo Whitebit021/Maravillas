@@ -399,17 +399,17 @@
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const g = cv.getContext('2d');
     const bg = g.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, 'rgba(34,26,44,0.94)'); bg.addColorStop(1, 'rgba(14,10,24,0.94)');
+    bg.addColorStop(0, 'rgb(246,226,170)'); bg.addColorStop(0.5, 'rgb(236,208,140)'); bg.addColorStop(1, 'rgb(214,178,112)');
     g.fillStyle = bg; g.fillRect(0, 0, W, H);
-    g.strokeStyle = 'rgba(255,210,122,0.9)'; g.lineWidth = 12; g.strokeRect(40, 40, W - 80, H - 80);
-    g.strokeStyle = 'rgba(127,227,240,0.5)'; g.lineWidth = 3; g.strokeRect(70, 70, W - 140, H - 140);
+    g.strokeStyle = 'rgb(120,64,20)'; g.lineWidth = 14; g.strokeRect(40, 40, W - 80, H - 80);
+    g.strokeStyle = 'rgba(150,90,40,0.6)'; g.lineWidth = 3; g.strokeRect(70, 70, W - 140, H - 140);
     g.textBaseline = 'middle';
     g.textAlign = 'center';
-    g.fillStyle = '#ffd27a'; g.font = 'bold 60px Georgia, "Times New Roman", serif';
+    g.fillStyle = '#6b2a10'; g.font = 'bold 60px Georgia, "Times New Roman", serif';
     g.fillText('ΗΡΟΔΟΤΟΥ ἱστορίη', W / 2, 165);
     // dos columnas de texto (la misma frase tres veces, como un pergamino copiado)
     g.font = '40px Georgia, "Times New Roman", serif';
-    g.fillStyle = 'rgba(243,227,181,0.95)';
+    g.fillStyle = 'rgba(42,24,10,0.95)';
     g.textAlign = 'left';
     const lines = wrapText(g, [HERO_TXT, HERO_TXT, HERO_TXT].join('  ·  '), 780);
     const cols = [150, 1110], lineH = 58, y0 = 262, yMax = H - 130;
@@ -418,7 +418,7 @@
       for (let y = y0; y <= yMax && li < lines.length; y += lineH, li++) g.fillText(lines[li], cx, y);
     });
     // hueco: tinta borrada en el centro y, dentro, un resplandor rojo
-    g.fillStyle = 'rgba(10,8,16,1)';
+    g.fillStyle = 'rgb(120,40,20)';
     g.beginPath(); g.arc(W / 2, H / 2, 118, 0, TAU); g.fill();
     const hg = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, 240);
     hg.addColorStop(0, 'rgba(255,250,240,1)');
@@ -580,11 +580,12 @@
     const scrollMat = new THREE.MeshBasicMaterial({
       map: scrollTex(), transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, fog: false
     });
-    const scroll = new THREE.Mesh(new THREE.PlaneGeometry(16, 10), scrollMat);
+    scrollMat.color.setScalar(1.15);   // sin iluminación: el pergamino se ve claro y cálido
+    const scroll = new THREE.Mesh(new THREE.PlaneGeometry(20, 12.5), scrollMat);
     herG.add(scroll);
     const rollMat = new THREE.MeshBasicMaterial({ color: 0xc9a477, transparent: true, opacity: 0, fog: false });
-    [5.2, -5.2].forEach(function (y) {
-      const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 16.6, 20), rollMat);
+    [6.45, -6.45].forEach(function (y) {
+      const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 20.6, 20), rollMat);
       roll.rotation.z = Math.PI / 2; roll.position.set(0, y, 0);
       herG.add(roll);
     });
@@ -596,7 +597,7 @@
     hole.scale.set(9, 9, 1); hole.position.set(0, 0, 0.4);
     hole.renderOrder = 2;
     herG.add(hole);
-    const anchH = [HER.x, HER.y - 6.8, HER.z + 1];
+    const anchH = [HER.x, HER.y - 9.2, HER.z + 1];
     const labH = label('HERÓDOTO:\nni una palabra sobre los jardines', { lh: 0.8, color: '#ff9a8a', pos: anchH });
     root.add(labH.sprite);
 
