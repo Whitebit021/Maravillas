@@ -1,6 +1,7 @@
 // Coloso de Rodas (Helios): pedestal de marmol por hiladas + estatua de bronce en piezas.
-// Piel con corte por plano (borde incandescente), rayos X, corona, bronce pulido, temblor,
-// caida por las rodillas y ruinas. Todo procedural. Estado s = funcion pura (sin acumulacion).
+// Superficies continuas (tubos y mallas de secciones), bronce con envMap PMREM, placas solo como bump.
+// Piel con corte por plano (borde incandescente), rayos X, corona, pulido, temblor, caida y ruinas.
+// Todo procedural. Estado s = funcion pura (sin acumulacion).
 (function () {
   'use strict';
   const G = window.GIZA;
@@ -29,11 +30,11 @@
     const IDM = new THREE.Matrix4();
     const Q0 = new THREE.Quaternion();
     const UP = new THREE.Vector3(0, 1, 0);
-    const DARK = [0.12, 0.1, 0.08];
+    const DARK = [0.16, 0.12, 0.09];
 
     if (renderer) renderer.localClippingEnabled = true;
 
-    // ---------- utilidades de texturas ----------
+    // ---------- texturas ----------
     function canvasTex(w, h, draw, srgb) {
       const c = document.createElement('canvas'); c.width = w; c.height = h;
       draw(c.getContext('2d'), w, h);
@@ -60,48 +61,43 @@
       g.strokeStyle = '#8a8377'; g.lineWidth = 7; g.strokeRect(0, 0, w, h);   // junta del sillar
     }, true);
 
-    function drawPlates(g, w, h, bump) {
+    // pátina: manchas verdeazuladas y oscuras muy suaves (solo color, multiplica al bronce)
+    const patinaMap = canvasTex(512, 512, function (g, w, h) {
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
+      const r = rng(31);
+      for (let i = 0; i < 60; i++) {
+        g.fillStyle = 'rgba(120,170,150,' + (0.03 + r() * 0.06).toFixed(3) + ')';
+        g.beginPath(); g.ellipse(r() * w, r() * h, 20 + r() * 80, 10 + r() * 40, r() * 3, 0, Math.PI * 2); g.fill();
+      }
+      for (let i = 0; i < 80; i++) {
+        g.fillStyle = 'rgba(70,45,22,' + (0.03 + r() * 0.05).toFixed(3) + ')';
+        g.beginPath(); g.ellipse(r() * w, r() * h, 10 + r() * 30, 8 + r() * 20, r() * 3, 0, Math.PI * 2); g.fill();
+      }
+    }, true);
+
+    // placas finas y remaches pequenos, solo como bumpMap (sin geometria)
+    const plateBump = canvasTex(512, 512, function (g, w, h) {
       const r = rng(9);
-      g.fillStyle = bump ? '#808080' : '#f4ecdc'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#7c7c7c'; g.fillRect(0, 0, w, h);
       const rows = 4, cols = 4, ph = h / rows, pw = w / cols;
       for (let j = 0; j < rows; j++) {
         const off = (j % 2) * pw * 0.5;
         for (let i = -1; i <= cols; i++) {
           const x = i * pw + off, y = j * ph;
-          if (!bump) {                                     // tono por placa y pátina
-            g.fillStyle = 'rgba(' + (r() > 0.5 ? '255,240,215,' : '70,50,30,') + (0.04 + r() * 0.06).toFixed(3) + ')';
-            g.fillRect(x + 6, y + 6, pw - 12, ph - 12);
-          }
-          g.strokeStyle = bump ? '#303030' : '#6a4a2c'; g.lineWidth = 3;
+          g.strokeStyle = '#2a2a2a'; g.lineWidth = 2;
           g.strokeRect(x, y, pw, ph);
-          const pts = [[x + 12, y + 12], [x + pw - 12, y + 12], [x + 12, y + ph - 12], [x + pw - 12, y + ph - 12]];
-          for (let k = 0; k < 4; k++) {                    // remaches
-            const px = pts[k][0], py = pts[k][1];
-            g.beginPath(); g.arc(px, py, 5, 0, Math.PI * 2);
-            g.fillStyle = bump ? '#ffffff' : '#c79c5e'; g.fill();
-            g.strokeStyle = bump ? '#303030' : '#4a3420'; g.lineWidth = 1.5; g.stroke();
-            if (!bump) { g.beginPath(); g.arc(px - 1.5, py - 1.5, 1.6, 0, Math.PI * 2); g.fillStyle = '#fff3d6'; g.fill(); }
+          const px = [x + 14, x + pw - 14], py = [y + 14, y + ph - 14];
+          for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) {
+            g.beginPath(); g.arc(px[a], py[b], 2.4, 0, Math.PI * 2);
+            g.fillStyle = '#e8e8e8'; g.fill();
           }
         }
       }
-      if (!bump) {
-        for (let i = 0; i < 40; i++) {                     // pátina verdeazulada
-          g.fillStyle = 'rgba(110,165,140,' + (0.05 + r() * 0.08).toFixed(3) + ')';
-          g.beginPath(); g.ellipse(r() * w, r() * h, 18 + r() * 50, 12 + r() * 30, r() * 3, 0, Math.PI * 2); g.fill();
-        }
-        for (let i = 0; i < 300; i++) {                    // suciedad oscura
-          g.fillStyle = 'rgba(60,40,20,' + (0.03 + r() * 0.05).toFixed(3) + ')';
-          g.fillRect(r() * w, r() * h, 2 + r() * 4, 2 + r() * 4);
-        }
-      } else {
-        for (let i = 0; i < 300; i++) {
-          g.fillStyle = r() > 0.5 ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-          g.fillRect(r() * w, r() * h, 3, 3);
-        }
+      for (let i = 0; i < 260; i++) {
+        g.fillStyle = r() > 0.5 ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+        g.fillRect(r() * w, r() * h, 3, 3);
       }
-    }
-    const plateMap = canvasTex(512, 512, function (g, w, h) { drawPlates(g, w, h, false); }, true);
-    const plateBump = canvasTex(512, 512, function (g, w, h) { drawPlates(g, w, h, true); }, false);
+    }, false);
 
     const plaqueMap = canvasTex(1024, 320, function (g, w, h) {
       g.fillStyle = '#3b2716'; g.fillRect(0, 0, w, h);
@@ -121,26 +117,27 @@
       g.fillStyle = gr; g.fillRect(0, 0, w, h);
     }, true);
 
-    // ---------- entorno procedural para el reflejo del bronce pulido ----------
+    // ---------- entorno PMREM: cielo degradado con contraste (el bronce necesita oscuros y brillos) ----------
     let envTex = null;
     try {
       const envScene = new THREE.Scene();
       const skyTex = canvasTex(512, 256, function (g, w, h) {
         const gr = g.createLinearGradient(0, 0, 0, h);
-        gr.addColorStop(0, '#6f9fd6'); gr.addColorStop(0.5, '#f2e4c4');
-        gr.addColorStop(0.56, '#d8b680'); gr.addColorStop(1, '#4a3c2e');
+        gr.addColorStop(0, '#3f6fa8'); gr.addColorStop(0.44, '#a9c6e4');
+        gr.addColorStop(0.5, '#f4e3c0'); gr.addColorStop(0.56, '#6a5034');
+        gr.addColorStop(1, '#1d160f');
         g.fillStyle = gr; g.fillRect(0, 0, w, h);
       }, true);
       envScene.add(new THREE.Mesh(new THREE.SphereGeometry(50, 32, 16),
         new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide })));
-      const sun = new THREE.Mesh(new THREE.PlaneGeometry(14, 10),
-        new THREE.MeshBasicMaterial({ color: new THREE.Color(7, 6, 4), side: THREE.DoubleSide }));
-      sun.position.set(-30, 30, 25); sun.lookAt(0, 0, 0); envScene.add(sun);
-      const fill = new THREE.Mesh(new THREE.PlaneGeometry(30, 12),
-        new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.7, 2.0), side: THREE.DoubleSide }));
-      fill.position.set(35, 12, -30); fill.lookAt(0, 0, 0); envScene.add(fill);
+      const sun = new THREE.Mesh(new THREE.PlaneGeometry(10, 7),
+        new THREE.MeshBasicMaterial({ color: new THREE.Color(9, 7.5, 4.5), side: THREE.DoubleSide }));
+      sun.position.set(-30, 32, 22); sun.lookAt(0, 0, 0); envScene.add(sun);
+      const rim = new THREE.Mesh(new THREE.PlaneGeometry(40, 5),
+        new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.0, 1.7), side: THREE.DoubleSide }));
+      rim.position.set(38, 14, -20); rim.lookAt(0, 0, 0); envScene.add(rim);
       const pm = new THREE.PMREMGenerator(renderer);
-      envTex = pm.fromScene(envScene, 0.04).texture;
+      envTex = pm.fromScene(envScene, 0.03).texture;
       pm.dispose();
     } catch (e) { envTex = null; }
 
@@ -148,9 +145,9 @@
     const cutPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1e5);   // conserva y <= constante
     const cutU = { value: -1e5 }, hotU = { value: 0 };
     const bronze = new THREE.MeshStandardMaterial({
-      color: 0xb07a3c, vertexColors: true, metalness: 0.85, roughness: 0.35,
-      map: plateMap, bumpMap: plateBump, bumpScale: 0.35,
-      envMap: envTex, envMapIntensity: 0.6,
+      color: 0x9a6430, vertexColors: true, metalness: 0.9, roughness: 0.36,
+      map: patinaMap, bumpMap: plateBump, bumpScale: 0.5,
+      envMap: envTex, envMapIntensity: 1.1,
       emissive: new THREE.Color(0xffb24a), emissiveIntensity: 0,
       side: THREE.DoubleSide, transparent: true, depthWrite: true,
       clippingPlanes: [cutPlane], clipShadows: true
@@ -158,7 +155,7 @@
     bronze.onBeforeCompile = function (sh) {
       sh.uniforms.uCut = cutU; sh.uniforms.uHot = hotU;
       sh.vertexShader = 'varying float vWY;\n' + sh.vertexShader.replace('#include <project_vertex>',
-        '#include <project_vertex>\n  vWY = (modelMatrix * vec4(transformed, 1.0)).y;');
+        '#include <project_vertex>\n  { vec4 wpi = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\n    wpi = instanceMatrix * wpi;\n#endif\n    vWY = (modelMatrix * wpi).y; }');
       sh.fragmentShader = 'uniform float uCut; uniform float uHot;\nvarying float vWY;\n' +
         sh.fragmentShader.replace('#include <color_fragment>',
           '#include <color_fragment>\n  if (!gl_FrontFacing) diffuseColor.rgb *= vec3(0.32, 0.24, 0.18);').replace('#include <emissivemap_fragment>',
@@ -297,18 +294,25 @@
       }
       return idx;
     }
-    function buildGeo(pos, uv, idx) {
+    function buildGeo(pos, uv, idx, col) {
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      if (col) g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
       g.setIndex(idx);
       g.computeVertexNormals();
       return g;
     }
 
-    // tubo de radio variable a lo largo de una curva Catmull-Rom
+    // Catmull-Rom 1D para radios (continuo entre articulaciones)
+    function crRad(rads, k) {
+      const n = rads.length, i = Math.min(n - 2, Math.floor(k)), u = k - i;
+      const p0 = rads[Math.max(0, i - 1)], p1 = rads[i], p2 = rads[i + 1], p3 = rads[Math.min(n - 1, i + 2)];
+      return 0.5 * ((2 * p1) + (-p0 + p2) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u * u + (-p0 + 3 * p1 - 3 * p2 + p3) * u * u * u);
+    }
+
+    // un miembro = UN tubo continuo con muchos segmentos y radio suave
     function tubeGeo(pts, rads, seg, R, uk) {
-      const n = pts.length;
       const curve = new THREE.CatmullRomCurve3(pts.map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); }));
       const pos = [], uv = [];
       const T = new THREE.Vector3(), Nn = new THREE.Vector3(), B = new THREE.Vector3(), Pp = new THREE.Vector3(), ref = new THREE.Vector3();
@@ -317,8 +321,7 @@
         const u = i / seg;
         curve.getPoint(u, Pp);
         curve.getTangent(u, T);
-        const k = u * (n - 1), i0 = Math.min(n - 2, Math.floor(k)), f = smooth(k - i0);
-        const r = lerp(rads[i0], rads[i0 + 1], f);
+        const r = crRad(rads, u * (rads.length - 1));
         if (prev) len += Pp.distanceTo(prev);
         prev = Pp.clone();
         if (Math.abs(T.y) > 0.9) ref.set(1, 0, 0); else ref.set(0, 1, 0);
@@ -333,7 +336,7 @@
       return buildGeo(pos, uv, gridIdx(seg + 1, R, true));
     }
 
-    // torso: secciones elipticas interpoladas desde COL.torso (suave) + deformacion muscular
+    // torso: secciones elipticas interpoladas desde COL.torso + deformacion muscular suave
     function torsoSemi(y) {
       const T = [[14.6, 2.9, 2.0]].concat(COL.torso);
       if (y <= T[0][0]) return [T[0][1], T[0][2]];
@@ -350,14 +353,18 @@
       const front = Math.max(0, -uz);
       const ax = Math.abs(x);
       let d = 0;
-      d -= 0.65 * gss((y - 24.2) / 1.5) * gss((ax - 2.1) / 1.35) * Math.pow(front, 0.7);   // pectorales
-      d += 0.28 * gss(ax / 0.28) * gss((y - 24.2) / 3.2) * front;                          // surco esternal
-      let ab = 0; const YC = [18.1, 19.9, 21.7];
-      for (let k = 0; k < 3; k++) ab += gss((y - YC[k]) / 0.6);
-      d -= 0.36 * Math.min(1, ab) * gss((ax - 0.62) / 0.42) * gss((y - 19.9) / 3.4) * Math.pow(front, 0.5);   // abdominales
-      d += 0.14 * gss(ax / 0.14) * gss((y - 19.9) / 3.4) * front;                          // linea alba
-      d -= 0.2 * gss((ax - 2.6) / 1.0) * gss((y - 27.0) / 0.8) * front;                    // clavicula
-      if (uz > 0) d += 0.22 * gss((ax - 1.8) / 1.2) * gss((y - 23.5) / 2.2) * uz;          // escapulas
+      d -= 0.6 * gss((y - 24.2) / 1.6) * gss((ax - 2.0) / 1.5) * Math.pow(front, 0.7);       // pectorales
+      d += 0.24 * gss(ax / 0.3) * gss((y - 23.8) / 3.0) * front;                              // surco esternal
+      d -= 0.22 * gss((ax - 2.9) / 0.7) * gss((y - 20.0) / 2.4) * Math.pow(front, 0.6);       // oblicuos/serrato
+      let ab = 0; const YC = [18.0, 19.8, 21.6];
+      for (let k = 0; k < 3; k++) ab += gss((y - YC[k]) / 0.75);
+      d -= 0.3 * Math.min(1, ab) * gss((ax - 0.62) / 0.5) * gss((y - 19.8) / 3.6) * Math.pow(front, 0.5);   // abdominales
+      d += 0.12 * gss(ax / 0.16) * gss((y - 19.8) / 3.6) * front;                             // linea alba
+      d -= 0.16 * gss((ax - 2.6) / 1.0) * gss((y - 27.0) / 0.9) * front;                      // clavicula
+      if (uz > 0) {                                                                           // espalda
+        d += 0.2 * gss((ax - 1.4) / 1.0) * gss((y - 23.0) / 2.6) * uz;                        // escapulas
+        d += 0.1 * gss(ax / 0.3) * gss((y - 22.0) / 5.0) * uz;                                // columna
+      }
       return d;
     }
     function loft(y0, y1, rows, segs) {
@@ -377,19 +384,21 @@
       return buildGeo(pos, uv, gridIdx(rows, segs, true));
     }
 
-    // esfera parametrica (polos incluidos; normales de polo corregidas)
-    function sphereGrid(R, C, fn) {
-      const pos = [], uv = [];
+    // esfera parametrica (polos incluidos); colorFn opcional -> [r,g,b] por vertice
+    function sphereGrid(R, C, fn, colorFn) {
+      const pos = [], uv = [], col = colorFn ? [] : null;
       for (let i = 0; i < R; i++) {
         const th = Math.PI * i / (R - 1), st = Math.sin(th), ct = Math.cos(th);
         for (let j = 0; j < C; j++) {
           const ph = 2 * Math.PI * j / C;
-          const p = fn(st * Math.cos(ph), ct, st * Math.sin(ph));
+          const ux = st * Math.cos(ph), uy = ct, uz = st * Math.sin(ph);
+          const p = fn(ux, uy, uz);
           pos.push(p[0], p[1], p[2]);
           uv.push(j / C, i / (R - 1));
+          if (col) { const c = colorFn(ux, uy, uz); col.push(c[0], c[1], c[2]); }
         }
       }
-      const g = buildGeo(pos, uv, gridIdx(R, C, true));
+      const g = buildGeo(pos, uv, gridIdx(R, C, true), col);
       const N = g.attributes.normal;
       for (let j = 0; j < C; j++) {
         N.setXYZ(j, 0, 1, 0);
@@ -401,54 +410,71 @@
 
     // ---------- cabeza ----------
     const HX = 0, HY = 30.7, HZ = -0.2, HR = 2.1;
+    const EYE_L = [0.72, 30.98, -2.1], EYE_R = [-0.72, 30.98, -2.1];
     function skullPt(ux, uy, uz) {
       const px = ux * HR, py = uy * HR, pz = uz * HR;
       let x = px, y = py * 1.08, z = pz * 1.04;
       const nx = x / HR, ny = y / HR, nz = z / HR;
       const front = Math.max(0, -nz);
       const low = smooth((0.05 - ny) / 0.9);
-      x *= 1 - 0.2 * low;                                                                  // mandibula estrecha
-      z -= 0.1 * low * front;                                                              // mandibula adelantada
-      z -= 0.22 * gss(nx / 0.33) * gss((ny + 0.82) / 0.22) * front;                        // menton
-      z -= 0.1 * gss((ny - 0.4) / 0.14) * front * (1 - 0.4 * Math.abs(nx));                // arcada
-      x += 0.1 * Math.sign(nx) * gss((ny + 0.08) / 0.2) * gss((Math.abs(nx) - 0.72) / 0.2) * front; // pomulos
-      z += 0.05 * gss((ny - 0.12) / 0.12) * gss((Math.abs(nx) - 0.4) / 0.16) * front;      // cuencas
+      x *= 1 - 0.18 * low;                                                                  // mandibula
+      z -= 0.1 * low * front;
+      z -= 0.2 * gss(nx / 0.33) * gss((ny + 0.82) / 0.25) * front;                          // menton
+      z -= 0.1 * gss((ny - 0.4) / 0.14) * front * (1 - 0.4 * Math.abs(nx));                 // arcada
+      z -= 0.22 * gss(nx / 0.1) * gss((ny - 0.08) / 0.32) * front;                          // nariz
+      x += 0.1 * Math.sign(nx) * gss((ny + 0.08) / 0.22) * gss((Math.abs(nx) - 0.72) / 0.22) * front; // pomulos
+      z += 0.05 * gss((ny - 0.12) / 0.14) * gss((Math.abs(nx) - 0.4) / 0.18) * front;       // cuencas
+      z += 0.03 * gss((ny + 0.3) / 0.12) * gss(nx / 0.22) * front;                          // surco labial
       return [x + HX, y + HY, z + HZ];
     }
-    function hairPt(ux, uy, uz) {
-      const th = Math.atan2(uz, ux), ph = Math.acos(Math.max(-1, Math.min(1, uy)));
-      const curl = 0.5 + 0.5 * Math.cos(th * 15 + 0.6 * Math.sin(ph * 5)) * Math.cos(ph * 9);
-      const bump = 0.13 * curl * curl;
+    function skullColor(ux, uy, uz) {
+      const hx = (ux * HR), hy = uy * HR * 1.08, hz = uz * HR * 1.04;
+      const dl = Math.hypot(hx - EYE_L[0], hy - (EYE_L[1] - HY), hz - (EYE_L[2] - HZ));
+      const dr = Math.hypot(hx + 0.72, hy - (EYE_R[1] - HY), hz - (EYE_R[2] - HZ));
+      const de = Math.min(dl, dr);
+      const dark = 0.5 * gss(de / 0.42) * (uz < 0 ? 1 : 0);
+      const lip = 0.45 * gss((hy + 0.9) / 0.1) * gss(hx / 0.5) * (uz < 0 ? 1 : 0);
+      const k = 1 - Math.min(0.85, dark + lip);
+      return [k, k * 0.92, k * 0.85];
+    }
+    function hairVis(uy, uz) {
       const top = smooth((uy - 0.25) / 0.3), front = smooth((-uz - 0.25) / 0.45), low = smooth((uy + 0.42) / 0.3);
-      const vis = Math.max(top, 1 - front) * low;
-      const r = lerp(1.9, 2.2 + bump, vis);
+      return Math.max(top, 1 - front) * low;
+    }
+    function hairPt(ux, uy, uz) {
+      const vis = hairVis(uy, uz);
+      const r = lerp(1.9, 2.22, vis);
       return [ux * r + HX, uy * r * 1.08 + HY, uz * r * 1.04 + HZ];
     }
 
     // ---------- ensamblado de piezas ----------
-    const SPH = new THREE.SphereGeometry(1, 20, 14);
-    function ell(acc, c, s, tint) {
+    const SPH = new THREE.SphereGeometry(1, 24, 16);
+    const SPHB = new THREE.SphereGeometry(1, 40, 28);
+    function ell(acc, c, s, tint, geo) {
       M.compose(P.set(c[0], c[1], c[2]), Q0, S.set(s[0], s[1], s[2]));
-      acc.add(SPH, M, tint);
+      acc.add(geo || SPH, M, tint);
     }
-    const fingerTube = function (acc, pts, rads, tint) { acc.add(tubeGeo(pts, rads, 6, 8, 1), IDM, tint); };
+    const TUBE = function (acc, pts, rads, seg, R, uk) { acc.add(tubeGeo(pts, rads, seg, R, uk), IDM); };
 
-    // drapeado del manto: cae del antebrazo izquierdo hasta el pedestal, con pliegues
+    // manto con pliegues reales (superficie ondulada) desde el antebrazo izquierdo al pedestal
     function drapeGeo() {
-      const R = 26, C = 36, pos = [], uv = [];
+      const R = 40, C = 56, pos = [], uv = [];
       const TOP = [-7.6, 18.8, 0.3], BOT = [-5.6, 0.05, 1.6];
       for (let i = 0; i < R; i++) {
         const v = i / (R - 1);
         for (let j = 0; j < C; j++) {
           const u = j / (C - 1);
-          const W = 2.7 * (0.7 + 0.6 * v);
-          let x = lerp(TOP[0], BOT[0], v) - 0.8 * Math.sin(Math.PI * v);
+          const W = 2.8 * (0.7 + 0.6 * v);
+          let x = lerp(TOP[0], BOT[0], v) - 0.7 * Math.sin(Math.PI * v);
           let y = lerp(TOP[1], BOT[1], v);
           const z = lerp(TOP[2], BOT[2], v) + (u - 0.5) * W;
-          const fold = Math.sin((u * 5.0 + 0.35 * Math.sin(v * 3.0)) * Math.PI * 2.0);
-          x -= 0.42 * (0.35 + 0.65 * v) * fold * (0.6 + 0.4 * Math.sin(Math.PI * v));
-          if (v > 0.9) y += 0.12 * Math.sin(u * Math.PI * 6) * ((v - 0.9) / 0.1);
-          pos.push(x, y, z); uv.push(u * 1.0, v * 2.0);
+          // pliegues: ondas verticales que se separan hacia el suelo
+          const amp = 0.25 + 0.55 * v;
+          x -= amp * (0.6 * Math.sin((u * 4.0 + 0.4 * Math.sin(v * 3.0)) * Math.PI * 2.0) +
+                      0.25 * Math.sin((u * 7.0 - v * 1.5) * Math.PI * 2.0));
+          // remate ondulado en el borde inferior
+          if (v > 0.9) y += 0.14 * Math.sin(u * Math.PI * 6) * ((v - 0.9) / 0.1);
+          pos.push(x, y, z); uv.push(u, v * 2.0);
         }
       }
       return buildGeo(pos, uv, gridIdx(R, C, false));
@@ -457,68 +483,83 @@
     // ---- piezas estaticas: espinillas, tobillos y pies (sobre el pedestal) ----
     const aLow = new Acc();
     [-1, 1].forEach(function (s) {
-      aLow.add(tubeGeo([[s * 2.0, 9.0, -0.2], [s * 1.95, 5.2, 0.35], [s * 1.9, 1.6, 0.0]], [1.5, 1.72, 1.0], 12, 14, 1), IDM);
-      ell(aLow, [s * 1.9, 1.2, 0.0], [1.0, 1.0, 1.0]);                 // tobillo
-      ell(aLow, [s * 1.9, 0.8, -1.2], [1.15, 0.75, 2.5]);              // pie
-      ell(aLow, [s * 1.9, 0.6, -3.5], [1.05, 0.5, 0.5]);               // dedos
-      ell(aLow, [s * 2.0, 9.0, -0.95], [1.25, 1.3, 0.75]);             // rotula
+      TUBE(aLow, [[s * 2.0, 9.0, -0.2], [s * 1.97, 6.6, 0.1], [s * 1.95, 4.0, 0.3], [s * 1.92, 2.0, 0.1], [s * 1.9, 1.5, 0.0]],
+        [1.5, 1.72, 1.76, 1.3, 1.0], 24, 24, 1.2);                              // gemelo y espinilla
+      TUBE(aLow, [[s * 1.9, 1.5, 0.0], [s * 1.9, 0.95, -1.0], [s * 1.9, 0.75, -2.4], [s * 1.9, 0.62, -3.2]],
+        [1.0, 0.98, 0.86, 0.6], 12, 20, 1.0);                                    // pie
+      for (let k = 0; k < 4; k++) ell(aLow, [s * (1.9 + (k - 1.5) * 0.42), 0.55, -3.45 + (k === 0 ? 0.05 : 0)], [0.2, 0.2, 0.22] ? [0.22, 0.2, 0.22] : null);  // dedos
+      ell(aLow, [s * 2.0, 9.0, -0.95], [1.25, 1.3, 0.75], undefined, SPHB);    // rotula
     });
 
     // ---- pelvis y muslos (pivote: rodillas) ----
     const aPel = new Acc();
     [-1, 1].forEach(function (s) {
-      aPel.add(tubeGeo([[s * 2.2, 16.2, 0.0], [s * 2.15, 12.6, -0.3], [s * 2.0, 9.0, -0.2]], [2.0, 2.15, 1.5], 12, 16, 1.4), IDM);
-      ell(aPel, [s * 2.2, 16.0, 0.0], [2.0, 2.0, 2.0]);                // cadera
+      TUBE(aPel, [[s * 2.25, 16.6, 0.0], [s * 2.25, 14.0, -0.1], [s * 2.15, 11.4, -0.3], [s * 2.0, 9.0, -0.2]],
+        [2.1, 2.2, 2.05, 1.5], 24, 24, 1.2);                                    // muslo
+      ell(aPel, [s * 2.2, 16.0, 0.0], [2.3, 2.3, 2.3], undefined, SPHB);       // cadera
     });
-    aPel.add(loft(14.6, 19.5, 20, 40), IDM);
+    aPel.add(loft(14.6, 19.5, 24, 48), IDM);
 
     // ---- torso (pivote: cintura) ----
     const aTor = new Acc();
-    aTor.add(loft(19.5, 28.6, 30, 40), IDM);
+    aTor.add(loft(19.5, 28.6, 36, 48), IDM);
     [-1, 1].forEach(function (s) {
-      aTor.add(tubeGeo([[0, 27.6, -1.2], [s * 2.8, 27.5, -1.45], [s * 4.5, 27.0, -0.9]], [0.42, 0.4, 0.5], 8, 10, 1), IDM);
+      TUBE(aTor, [[0, 27.6, -1.2], [s * 2.8, 27.5, -1.45], [s * 4.4, 27.0, -0.9]], [0.42, 0.4, 0.5], 10, 10, 1);   // clavicula
     });
 
-    // ---- cabeza y cuello (pivote: base del cuello) ----
+    // ---- cabeza, cuello y pelo (pivote: base del cuello) ----
     const aHead = new Acc();
-    aHead.add(sphereGrid(40, 48, function (ux, uy, uz) { return skullPt(ux, uy, uz); }), IDM);
-    aHead.add(sphereGrid(44, 56, hairPt), IDM);                         // pelo rizado
-    [-1, 1].forEach(function (s) {
-      ell(aHead, [s * 0.72, 30.98, -2.12], [0.36, 0.2, 0.2], DARK);     // ojos hundidos
-      ell(aHead, [s * 0.74, 31.36, -2.1], [0.55, 0.14, 0.2]);           // cejas
-      ell(aHead, [s * 0.17, 30.2, -2.3], [0.1, 0.08, 0.1], DARK);       // fosas nasales
-      ell(aHead, [s * 2.02, 30.65, -0.15], [0.3, 0.55, 0.42]);          // orejas
-    });
-    aHead.add(tubeGeo([[0, 31.1, -2.25], [0, 30.5, -2.5], [0, 30.25, -2.35]], [0.2, 0.3, 0.24], 10, 10, 1), IDM);   // nariz
-    ell(aHead, [0, 29.55, -2.12], [0.45, 0.05, 0.07], DARK);            // boca
-    aHead.add(tubeGeo([[0, 27.3, 0], [0, 28.9, -0.1], [0, 30.2, -0.2]], [1.55, 1.25, 1.3], 10, 14, 1), IDM);     // cuello
+    aHead.add(sphereGrid(48, 60, skullPt, skullColor), IDM);
+    aHead.add(sphereGrid(44, 56, hairPt), IDM);
+    TUBE(aHead, [[0, 27.3, 0], [0, 28.9, -0.1], [0, 30.2, -0.2]], [1.55, 1.25, 1.3], 12, 16, 1);   // cuello
+
+    // rizos: esferas pequenas instanciadas sobre el craneo (en el rig de la cabeza)
+    const CURLS = 170;
+    const curlGeo = new THREE.SphereGeometry(1, 10, 8);
+    const curlMesh = new THREE.InstancedMesh(curlGeo, bronze, CURLS);
+    curlMesh.castShadow = true; curlMesh.receiveShadow = true; curlMesh.frustumCulled = false;
+    {
+      let n = 0;
+      for (let i = 0; i < 600 && n < CURLS; i++) {
+        const y = 1 - 2 * (i + 0.5) / 600, r = Math.sqrt(Math.max(0, 1 - y * y)), ph = i * 2.39996;
+        const ux = r * Math.cos(ph), uy = y, uz = r * Math.sin(ph);
+        if (hairVis(uy, uz) < 0.7) continue;
+        const rad = 0.2 + rnd() * 0.12;
+        const sx = ux * (HR + 0.1 + rad * 0.5), sy = uy * (HR + 0.1 + rad * 0.5) * 1.08, sz = uz * (HR + 0.1 + rad * 0.5) * 1.04;
+        M.compose(P.set(sx + HX, sy + HY, sz + HZ), Q0, S.set(rad, rad * 1.1, rad));
+        curlMesh.setMatrixAt(n, M);
+        curlMesh.setColorAt(n, new THREE.Color(1, 1, 1));
+        n++;
+      }
+      for (let k = n; k < CURLS; k++) { M.compose(ZS, Q0, ZS); curlMesh.setMatrixAt(k, M); curlMesh.setColorAt(k, new THREE.Color(1, 1, 1)); }
+      curlMesh.instanceMatrix.needsUpdate = true;
+      if (curlMesh.instanceColor) curlMesh.instanceColor.needsUpdate = true;
+    }
 
     // ---- brazo izquierdo caido (pivote: hombro izquierdo) ----
     const aArmL = new Acc();
-    aArmL.add(tubeGeo([[-4.6, 27.0, 0], [-5.9, 24.0, 0.1], [-6.0, 21.5, 0.4]], [1.5, 1.62, 1.15], 12, 16, 1.4), IDM);
-    aArmL.add(tubeGeo([[-6.0, 21.5, 0.4], [-6.25, 19.0, 0.1], [-6.4, 16.6, -0.4]], [1.15, 1.28, 0.85], 12, 16, 1.4), IDM);
-    ell(aArmL, [-4.6, 26.7, 0], [1.85, 1.9, 1.8]);                       // deltoides
-    ell(aArmL, [-6.0, 21.5, 0.4], [1.2, 1.2, 1.2]);                       // codo
-    ell(aArmL, [-6.45, 15.9, -0.4], [0.8, 1.05, 0.6]);                    // palma
+    ell(aArmL, [-4.5, 26.8, 0], [2.15, 2.15, 2.1], undefined, SPHB);     // hombro redondeado
+    TUBE(aArmL, [[-4.5, 26.9, 0], [-5.6, 24.3, 0.05], [-6.0, 21.5, 0.4], [-6.2, 19.0, 0.1], [-6.4, 16.6, -0.4]],
+      [1.5, 1.62, 1.2, 1.3, 0.85], 28, 24, 1.2);                          // brazo: bicep, codo, antebrazo
+    TUBE(aArmL, [[-6.4, 16.5, -0.4], [-6.5, 15.4, -0.45], [-6.5, 14.7, -0.4]], [0.85, 0.92, 0.8], 6, 16, 1);   // palma
     for (let k = 0; k < 4; k++) {
       const z = -0.4 + [-0.62, -0.2, 0.22, 0.64][k];
-      fingerTube(aArmL, [[-6.5, 15.4, z], [-6.5, 14.7, z - 0.12], [-6.5, 14.2, z - 0.32]], [0.2, 0.19, 0.16]);
+      TUBE(aArmL, [[-6.5, 14.9, z], [-6.5, 14.2, z - 0.12], [-6.5, 13.6, z - 0.3]], [0.2, 0.19, 0.15], 6, 10, 1);   // dedos
     }
-    fingerTube(aArmL, [[-6.1, 16.0, -1.0], [-6.3, 15.2, -1.2], [-6.4, 14.7, -1.1]], [0.24, 0.22, 0.19]);   // pulgar
+    TUBE(aArmL, [[-6.1, 15.8, -1.0], [-6.3, 15.0, -1.2], [-6.4, 14.5, -1.1]], [0.24, 0.22, 0.18], 6, 10, 1);       // pulgar
     aArmL.add(drapeGeo(), IDM, [0.93, 0.98, 0.95]);
 
     // ---- brazo derecho en visera (pivote: hombro derecho) ----
     const aArmR = new Acc();
-    aArmR.add(tubeGeo([[4.6, 27.0, 0], [5.9, 28.3, -0.7], [7.0, 29.6, -1.4]], [1.5, 1.6, 1.15], 12, 16, 1.4), IDM);
-    aArmR.add(tubeGeo([[7.0, 29.6, -1.4], [4.8, 30.6, -2.0], [2.5, 31.3, -2.4]], [1.15, 1.25, 0.85], 12, 16, 1.4), IDM);
-    ell(aArmR, [4.6, 26.7, 0], [1.85, 1.9, 1.8]);                        // deltoides
-    ell(aArmR, [7.0, 29.6, -1.4], [1.2, 1.2, 1.2]);                       // codo
-    ell(aArmR, [2.2, 31.5, -2.5], [0.95, 0.45, 0.62]);                    // palma en visera
-    [0.14, 0.05, -0.05, -0.14].forEach(function (dy) {
-      fingerTube(aArmR, [[2.0, 31.5 + dy, -2.5], [1.1, 31.52 + dy, -2.5], [0.25, 31.5 + dy, -2.45]], [0.22, 0.21, 0.19]);
+    ell(aArmR, [4.5, 26.8, 0], [2.15, 2.15, 2.1], undefined, SPHB);      // hombro redondeado
+    TUBE(aArmR, [[4.5, 26.9, 0], [5.7, 28.2, -0.6], [7.0, 29.6, -1.4], [4.8, 30.6, -2.0], [2.6, 31.3, -2.4]],
+      [1.5, 1.6, 1.2, 1.3, 0.85], 28, 24, 1.2);
+    TUBE(aArmR, [[2.6, 31.3, -2.4], [2.0, 31.5, -2.5], [1.4, 31.6, -2.55]], [0.8, 0.85, 0.8], 6, 16, 1);       // palma en visera
+    [0.14, 0.05, -0.05, -0.14].forEach(function (dy) {                       // dedos hacia la frente
+      TUBE(aArmR, [[1.5, 31.6 + dy, -2.55], [0.9, 31.62 + dy, -2.55], [0.25, 31.6 + dy, -2.5]], [0.22, 0.21, 0.18], 6, 10, 1);
     });
 
-    // ---------- rigs con pivote y pose de reposo (caida hacia +X, boca arriba) ----------
+    // ---------- rigs con pivote y pose de reposo (caida hacia +X, de espaldas) ----------
     const statue = new THREE.Group();
     statue.position.set(0, BASE, 0);
     scene.add(statue);
@@ -548,7 +589,7 @@
     }
 
     const pieces = [];
-    function addPiece(acc, pivot, q, target, delay, arcH) {
+    function addPiece(acc, pivot, q, target, delay, arcH, extra) {
       const geo = acc.geometry();
       geo.translate(-pivot[0], -pivot[1], -pivot[2]);
       const rest = restPose(geo, q, target[0], target[1]);
@@ -557,16 +598,18 @@
       const rig = new THREE.Group();
       rig.position.set(pivot[0], pivot[1], pivot[2]);
       rig.add(mesh);
+      if (extra) extra(rig, pivot);
       statue.add(rig);
       const rec = { rig: rig, p0: new THREE.Vector3(pivot[0], pivot[1], pivot[2]), pos: rest.pos, q: rest.q, delay: delay, arcH: arcH };
       pieces.push(rec);
       return rec;
     }
-    const pKnee = [0, 9.0, -0.1], pWaist = [0, 19.5, 0], pNeck = [0, 27.5, 0];
-    const pShL = [-4.6, 27.0, 0], pShR = [4.6, 27.0, 0];
+    const pKnee = [0, 9.0, -0.2], pWaist = [0, 19.5, 0], pNeck = [0, 27.5, 0];
+    const pShL = [-4.5, 26.9, 0], pShR = [4.5, 26.9, 0];
     addPiece(aPel, pKnee, BASIS_BACK, [16.6, -0.6], 0.0, 1.2);            // muslos y pelvis
     addPiece(aTor, pWaist, BASIS_BACK, [28.4, 0.6], 0.08, 2.0);           // torso
-    const headRec = addPiece(aHead, pNeck, QYAW.clone().multiply(BASIS_BACK), [38.6, 3.0], 0.18, 3.0);  // cabeza
+    const headRec = addPiece(aHead, pNeck, QYAW.clone().multiply(BASIS_BACK), [38.6, 3.0], 0.18, 3.0,
+      function (rig) { rig.add(curlMesh); });                              // cabeza con rizos
     addPiece(aArmL, pShL, BASIS_BACK, [21.6, -9.6], 0.12, 2.0);           // brazo izquierdo y manto
     addPiece(aArmR, pShR, BASIS_BACK, [33.5, -11.0], 0.2, 2.5);           // brazo derecho
 
@@ -652,12 +695,11 @@
       lowerRig.visible = keep > 0.001;
       rubbleG.position.y = -sink;
       rubbleG.visible = fall > 0.9 && keep > 0.001;
-      rubble.visible = true;
 
       // opacidad, rayos X y brillo del bronce
       bronze.opacity = keep * (1 - 0.8 * xray);
       bronze.depthWrite = xray < 0.05;
-      bronze.envMapIntensity = 0.55 + 0.9 * shine;
+      bronze.envMapIntensity = 0.9 + 0.5 * shine;
       bronze.emissiveIntensity = 0.05 * shine;
 
       // corona: rayos que aparecen uno a uno

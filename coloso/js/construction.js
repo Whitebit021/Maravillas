@@ -39,7 +39,8 @@
       smoke:   new THREE.PointsMaterial({ color: 0xcfc8ba, size: 6.0, transparent: true, opacity: 0.45, depthWrite: false }),
       dust:    new THREE.PointsMaterial({ color: 0xd8c08a, size: 2.2, transparent: true, opacity: 0.4, depthWrite: false }),
       spark:   new THREE.PointsMaterial({ color: 0xffc070, size: 1.6, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }),
-      molten:  new THREE.MeshBasicMaterial({ color: 0xff9a3a }),
+      molten:  new THREE.MeshBasicMaterial({ color: 0xff8a2a }),
+      bronzeShine: new THREE.MeshStandardMaterial({ color: 0xe0a255, roughness: 0.25, metalness: 0.8, emissive: 0x3a2008, emissiveIntensity: 1 }),
       glow:    new THREE.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }),
       clay:    new THREE.MeshStandardMaterial({ color: 0xb9835a, roughness: 1, flatShading: true }),
       rubble:  new THREE.MeshStandardMaterial({ color: 0x8a7a64, roughness: 1, flatShading: true }),
@@ -337,66 +338,71 @@
     }
 
     // =====================================================================
-    // 2. MONTÓN DE ARMAS abandonadas en SITE.weapons (radio 22)
-    //    Al bajar la pista (s.weapons 1 -> 0) el montón se hunde y se tiñe de naranja.
+    // 2. MONTÓN DE ARMAS abandonadas en SITE.weapons (radio 22, ~15 m de alto)
+    //    Catapultas rotas, lanzas, escudos, cascos y placas. Al bajar la pista
+    //    (s.weapons 1 -> 0) el montón se hunde y se tiñe de naranja incandescente.
     // =====================================================================
     const WP = SITE.weapons;
     const weaponsG = new THREE.Group();
     weaponsG.position.set(WP.x, 0, WP.z);
     root.add(weaponsG);
-    // piezas por tipo: catapulta rota (fusionada), lanza, escudo, casco, placa
+    // catapulta rota (fusionada): marco, brazo partido, cuchara y ruedas
     const catMB = MB();
     const cCat = new THREE.Color(0x6b4a2c), cCatI = new THREE.Color(0x3c3d40);
     mbBox(catMB, 0, 0.5, 0, 3.6, 0.3, 1.0, cCat, 0.3);
     mbBox(catMB, -1.2, 0.9, 0.2, 0.2, 1.4, 0.2, cCat, 0.3, 0.5);
     mbBox(catMB, 1.2, 0.8, -0.2, 0.2, 1.2, 0.2, cCat, 0.3, -0.7);
     mbBox(catMB, 0.4, 1.4, 0.0, 2.6, 0.18, 0.18, cCat, 0.3, 0.9);
+    mbBox(catMB, -0.6, 1.1, -0.9, 1.0, 1.0, 0.25, cCatI, 0.4, 0.2);   // cuchara
     mbBox(catMB, 0.0, 0.5, 0.3, 0.6, 0.6, 0.6, cCatI, 0.1);
     mbBox(catMB, 0.9, 0.3, 0.9, 1.4, 0.2, 0.25, cCat, 1.1, 0.2);
-    const catGeo = mbGeo(catMB);
-    const catIM = mkIM(catGeo, MAT.vc, 6, true);
-    const spearIM = mkIM(new THREE.CylinderGeometry(0.035, 0.035, 2.6, 4), MAT.wood, 150, false);
-    const spearTipIM = mkIM(new THREE.ConeGeometry(0.09, 0.4, 4), MAT.ironPl, 150, false);
-    const shieldIM = mkIM(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 12), MAT.ironPl, 70, false);
-    const helmIM = mkIM(new THREE.SphereGeometry(0.3, 8, 5, 0, TAU, 0, Math.PI / 2), MAT.ironPl, 40, false);
-    const plateIM = mkIM(new THREE.BoxGeometry(0.7, 0.04, 0.5), MAT.bronze, 70, false);
-    const PILE_IMS = [catIM, spearIM, spearTipIM, shieldIM, helmIM, plateIM];
-    PILE_IMS.forEach(function (im) { weaponsG.add(im); });
-    const PILE = [];   // {im, idx, x, y, z, rx, ry, rz, base color}
+    const catIM = mkIM(mbGeo(catMB), MAT.vc, 6, true);
+    // lanza: asta de madera + punta de hierro fusionadas
+    const spMB = MB();
+    mbGeom(spMB, new THREE.CylinderGeometry(0.05, 0.05, 2.6, 5), new THREE.Matrix4(), new THREE.Color(0x8a6440));
+    mbGeom(spMB, new THREE.ConeGeometry(0.1, 0.45, 5), new THREE.Matrix4().makeTranslation(0, 1.5, 0), new THREE.Color(0xb8b8c0));
+    const spearIM = mkIM(mbGeo(spMB), MAT.vc, 150, true);
+    const shieldIM = mkIM(new THREE.CylinderGeometry(0.42, 0.42, 0.06, 14), MAT.ironPl, 70, true);
+    const helmIM = mkIM(new THREE.SphereGeometry(0.3, 8, 5, 0, TAU, 0, Math.PI / 2), MAT.ironPl, 40, true);
+    const plateIM = mkIM(new THREE.BoxGeometry(0.7, 0.04, 0.5), MAT.bronze, 70, true);
+    const PILE_IMS = [catIM, spearIM, shieldIM, helmIM, plateIM];
+    const PILE_N = [6, 150, 70, 40, 70];
+    const PILE_SC = [2.4, 1.4, 1.8, 1.5, 1.5];
+    weaponsG.add(catIM, spearIM, shieldIM, helmIM, plateIM);
+    const PILE = [];   // {im, idx, x, y, z, rx, ry, rz, sc, c, seed}
     (function buildPile() {
-      const counts = [6, 150, 150, 70, 40, 70];
-      const cols = [0xc8c8cc, 0x8a6440, 0xb8b8c0, 0xb07a3c, 0x9a9ea6, 0xb87a3c];
+      const cols = [0xc8c8cc, 0xffffff, 0xb07a3c, 0x9a9ea6, 0xb87a3c];
       let seed = 0;
       for (let k = 0; k < PILE_IMS.length; k++) {
-        const im = PILE_IMS[k];
-        for (let i = 0; i < counts[k]; i++) {
-          const a = hash(seed + 1) * TAU, r = Math.sqrt(hash(seed + 2)) * WP.radius * 0.85;
-          const hgt = Math.max(0, 6 * (1 - r / WP.radius)) * (0.5 + 0.5 * hash(seed + 3));
-          const x = Math.cos(a) * r, z = Math.sin(a) * r;
-          const y = 0.3 + hgt;
-          const ry = hash(seed + 4) * TAU, rx = (hash(seed + 5) - 0.5) * 1.2, rz = (hash(seed + 6) - 0.5) * 1.2;
-          PILE.push({ im: im, idx: i, x: x, y: y, z: z, rx: rx, ry: ry, rz: rz, c: _c3.setHex(cols[k]).clone(), k: k, seed: seed });
-          seed += 7;
+        for (let i = 0; i < PILE_N[k]; i++) {
+          seed += 1;
+          const a = hash(seed * 3.1 + k) * TAU, u = Math.sqrt(hash(seed * 1.7 + k));
+          const r = u * WP.radius * 0.9;
+          // montón cónico: ~15 m en el centro
+          const hgt = 15 * Math.pow(Math.max(0, 1 - r / WP.radius), 1.2) * (0.35 + 0.65 * hash(seed * 2.3 + k));
+          PILE.push({
+            im: PILE_IMS[k], idx: i,
+            x: Math.cos(a) * r, y: 0.3 + hgt * 0.9 + hash(seed * 5.9) * 1.0, z: Math.sin(a) * r,
+            rx: (hash(seed * 7.1) - 0.5) * 1.4, ry: hash(seed * 9.3) * TAU, rz: (hash(seed * 4.4) - 0.5) * 1.4,
+            sc: PILE_SC[k] * (0.85 + 0.3 * hash(seed * 6.6)), c: new THREE.Color(cols[k]), seed: seed
+          });
         }
-        im.setColorAt(0, _c3.setHex(0xffffff));
       }
-      // colores base: se fijan por pieza
-      PILE.forEach(function (P, n) { P.im.setColorAt(P.idx, P.c); });
-      PILE_IMS.forEach(function (im) { if (im.instanceColor) im.instanceColor.needsUpdate = true; });
+      PILE.forEach(function (P) { P.im.setColorAt(P.idx, P.c); });
+      PILE_IMS.forEach(function (im) { im.instanceColor.needsUpdate = true; });
     })();
-    // cada pieza es una instancia; catapultas (6) se orientan por índice
-    catIM.material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: true });
     const _pe = new THREE.Euler();
     const _pc = new THREE.Color(), _pOr = new THREE.Color(0xff6a1a);
     function updatePile(s) {
       const m = clamp(1 - s.weapons, 0, 1);   // 0 = intacto, 1 = fundido
-      const sink = m * 1.6;
       weaponsG.visible = s.weapons > 0.002;
+      if (!weaponsG.visible) return;
+      const sink = m * 3.0;
       for (let n = 0; n < PILE.length; n++) {
         const P = PILE[n];
         _p3.set(P.x, P.y - sink * (0.6 + 0.4 * hash(P.seed)), P.z);
         _q4.setFromEuler(_pe.set(P.rx, P.ry, P.rz, 'XYZ'));
-        _s3.set(1, 1, 1);
+        _s3.set(P.sc, P.sc, P.sc);
         _m4.compose(_p3, _q4, _s3);
         P.im.setMatrixAt(P.idx, _m4);
         // tinte naranja incandescente al fundirse
@@ -487,7 +493,8 @@
     const _fO = new THREE.Vector3();
     function updateFoundry(s) {
       const f = clamp(s.foundry, 0, 1), W = s.wall;
-      foundryG.visible = f > 0.002;
+      // con el terraplén por encima de 0.4 los hornos quedan ocultos (los crisoles pasan a la cima)
+      foundryG.visible = f > 0.002 && s.mound <= 0.4;
       // apaga/enciende el brillo con la pista
       furnLights.forEach(function (L, i) { L.intensity = 2.2 * f * (0.85 + 0.15 * Math.sin(W * 7 + i * 2)); L.visible = f > 0.002; });
       mouthMat.opacity = 0.35 + 0.6 * f * (0.85 + 0.15 * Math.sin(W * 9));
@@ -662,6 +669,20 @@
         const x = hash(i + 50) * w, y = hash(i + 60) * h;
         g.beginPath(); g.moveTo(x, y); g.lineTo(x + (hash(i + 70) - 0.5) * 30, y + 6 + hash(i + 80) * 10); g.stroke();
       }
+      // surcos de arado: curvas oscuras paralelas
+      g.globalAlpha = 0.45; g.strokeStyle = '#3e2a16'; g.lineWidth = 2;
+      for (let y = 0; y < h; y += 16) {
+        g.beginPath();
+        for (let x = 0; x <= w; x += 8) g.lineTo(x, y + Math.sin(x * 0.05 + y) * 2.5);
+        g.stroke();
+      }
+      // piedras: guijarros grises con brillo
+      for (let i = 0; i < 110; i++) {
+        const x = hash(i + 300) * w, y = hash(i + 400) * h, r = 1.5 + hash(i + 500) * 3.5;
+        g.globalAlpha = 0.8;
+        g.fillStyle = '#8f8a80'; g.beginPath(); g.ellipse(x, y, r, r * 0.7, 0, 0, TAU); g.fill();
+        g.fillStyle = '#c9c4b8'; g.beginPath(); g.ellipse(x - r * 0.3, y - r * 0.3, r * 0.4, r * 0.25, 0, 0, TAU); g.fill();
+      }
       g.globalAlpha = 1;
     });
     earthTex.wrapS = THREE.RepeatWrapping; earthTex.wrapT = THREE.RepeatWrapping;
@@ -675,8 +696,8 @@
     function innerR(h) { return COL.halfWidthAt(Math.max(0, h - COL.baseY)) + 1; }
     function outerR(h, yt, Rb, Rtop) { const u = clamp(h / yt, 0, 1); return Rb * (1 - u) + Rtop * u; }
     function setMoundGeometry(m) {
-      const yt = 15 + m * COL.height - 1;          // cima del terraplén
-      const Rb = 25 + 55 * m;
+      const yt = 15 + m * COL.height - 5;          // cima: 5 m bajo el bronce ya fundido
+      const Rb = 25 + 70 * m;
       const Ri_top = innerR(yt);
       const Rtop = Ri_top + 7;
       MD.ytop = yt; MD.Rb = Rb; MD.Rtop = Rtop;
@@ -709,7 +730,7 @@
     // ----- rampa en espiral: planchas que siguen la superficie exterior -----
     const RAMP_K = 2.4, RAMP_TH0 = 0.8;   // vueltas de la espiral y ángulo de inicio
     const NPL = 420;                      // planchas de la rampa
-    const plankIM = mkIM(new THREE.BoxGeometry(2.8, 0.3, 1.7), MAT.stone, NPL, true);
+    const plankIM = mkIM(new THREE.BoxGeometry(3.6, 0.35, 1.7), MAT.stone, NPL, true);
     moundG.add(plankIM);
     const _dummy = new THREE.Object3D();
     const _rA = new THREE.Vector3(), _rB = new THREE.Vector3();
@@ -730,7 +751,8 @@
     }
     // piedras de la rampa: tono de tierra y mampostería
     (function () {
-      for (let i = 0; i < NPL; i++) plankIM.setColorAt(i, _c3.setHex(i % 3 === 0 ? 0xbca07a : (i % 3 === 1 ? 0x9c7c52 : 0xa98c60)));
+      // losas de piedra clara con juntas oscuras: la espiral se lee desde lejos
+      for (let i = 0; i < NPL; i++) plankIM.setColorAt(i, _c3.setHex(i % 3 === 0 ? 0xd6c39a : (i % 3 === 1 ? 0xb89c6c : 0xc9b080)));
       plankIM.instanceColor.needsUpdate = true;
     })();
 
@@ -888,7 +910,8 @@
       for (let j = 0; j < TOP_N; j++) {
         const i = HAMMER_N + WALK_N + RAMP_W_N + j, C = WORK_CYC[i];
         const yt = MD.ytop || 15;
-        const a = (j / TOP_N) * TAU + C.h1 * 0.3;
+        // sólo en el arco opuesto a la cámara de t=130-136 (no tapan la corona)
+        const a = 1.2 + (j / TOP_N) * 3.0 + C.h1 * 0.2;
         const active = MD.ytop > 0 && m > 0.3;
         const r = active ? (innerR(yt) + 2.5 + C.h2 * 2.5) : 0;
         const x = Math.cos(a) * r, z = Math.sin(a) * r;
@@ -901,95 +924,116 @@
     }
 
     // =====================================================================
-    // 7. VERTIDO de bronce fundido (s.pour): crisoles en la cima del terraplén,
-    //    chorro brillante hacia la estatua a la altura de la construcción, chispas y moldes.
+    // 7. VERTIDO de bronce fundido (s.pour): crisoles volcándose sobre andamios en la cima
+    //    del terraplén, a la altura de la construcción (yp = 15 + build*33). Chorro grueso,
+    //    resplandor aditivo, chispas y moldes de arcilla.
     // =====================================================================
     const pourG = new THREE.Group();
     root.add(pourG);
-    const NCR = 3;
-    const crucibleIM = mkIM(new THREE.CylinderGeometry(1.1, 0.8, 1.3, 10, 1, true), MAT.iron, NCR, true);
-    const crucGlowIM = mkIM(new THREE.CircleGeometry(1.0, 10).rotateX(-Math.PI / 2), MAT.glow, NCR, false);
-    const NSTR = 12;
-    const streamIM = mkIM(new THREE.CylinderGeometry(0.16, 0.12, 1, 6), MAT.molten, NSTR, false);
+    const NCR = 3, NSTR = 8;
+    const crucibleIM = mkIM(new THREE.CylinderGeometry(1.0, 0.7, 1.2, 10, 1, true), MAT.iron, NCR, true);
+    const crucLiqIM = mkIM(new THREE.CircleGeometry(0.9, 10).rotateX(-Math.PI / 2), MAT.molten, NCR, false);
+    const scafIM = mkIM(new THREE.BoxGeometry(0.35, 1, 0.35), MAT.wood, NCR * 4, true);
+    const streamIM = mkIM(new THREE.CylinderGeometry(0.24, 0.18, 1, 8).rotateX(Math.PI / 2), MAT.molten, NCR * NSTR, false);
+    const streamGlowIM = mkIM(new THREE.CylinderGeometry(0.6, 0.45, 1, 8).rotateX(Math.PI / 2), MAT.glow, NCR * NSTR, false);
     const moldIM = mkIM(new THREE.BoxGeometry(1.6, 0.9, 1.0), MAT.clay, 6, true);
     const moltenRing = new THREE.Mesh(new THREE.RingGeometry(0.4, 3.2, 24).rotateX(-Math.PI / 2), MAT.glow);
     moltenRing.frustumCulled = false;
-    const NSP = 140, sparkPos = new Float32Array(NSP * 3), sparkA = [], sparkB = [];
+    const NSP = 160, sparkPos = new Float32Array(NSP * 3), sparkA = [], sparkB = [];
     for (let i = 0; i < NSP; i++) { sparkA.push(hash(i + 2000)); sparkB.push(hash(i + 2100)); }
     const sparkGeo = new THREE.BufferGeometry();
     sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
     const sparks = new THREE.Points(sparkGeo, MAT.spark);
     sparks.frustumCulled = false;
-    pourG.add(crucibleIM, crucGlowIM, streamIM, moldIM, moltenRing, sparks);
-    const _pt = new THREE.Vector3(), _ps = new THREE.Vector3();
+    pourG.add(crucibleIM, crucLiqIM, scafIM, streamIM, streamGlowIM, moldIM, moltenRing, sparks);
+    const _pd = new THREE.Object3D();
+    const _pmat = new THREE.Matrix4();
+    const _tgt = [];
+    for (let k = 0; k < NCR; k++) _tgt.push({ x: 0, y: 0, z: 0 });
+    const POUR_ANG = [0.55, 0.85, 1.15];
     function updatePour(s) {
-      const p = clamp(s.pour, 0, 1), W = s.wall, m = clamp(s.mound, 0, 1);
+      const p = clamp(s.pour, 0, 1), W = s.wall, b = clamp(s.build, 0, 1);
       pourG.visible = p > 0.002 && MD.ytop > 0;
       if (!pourG.visible) return;
       const yt = MD.ytop;
-      const Rc = innerR(yt) + 2.2;
-      // altura de la construcción (sobre la estatua): y mundo = 15 + build*33
-      const yp = 15 + clamp(s.build, 0, 1) * COL.height;
-      const yl = Math.max(0.5, yp - COL.baseY);
-      const rT = COL.halfWidthAt(Math.min(yl, COL.height - 0.5)) * 0.7;
-      const ang = [0.55, 0.85, 1.15];
+      const yp = 15 + b * COL.height;               // superficie del bronce fundido
+      const yc = yp + 2.2;                           // labios de los crisoles, por encima del bronce
+      const yl = clamp(yp - COL.baseY, 0.5, COL.height - 0.5);
+      const hw = COL.halfWidthAt(yl);
+      const Rc = innerR(yt) + 2.4;                   // crisoles sobre el borde del hueco
+      MAT.glow.opacity = 0.35 + 0.5 * p * (0.9 + 0.1 * Math.sin(W * 6));
       for (let k = 0; k < NCR; k++) {
-        const a = ang[k];
+        const a = POUR_ANG[k];
         const cx = Math.cos(a) * Rc, cz = Math.sin(a) * Rc;
+        const dx = -Math.cos(a), dz = -Math.sin(a);   // dirección hacia el centro
+        const yaw = Math.atan2(-dz, dx);
         const tilt = (k === 0 ? p : 0.6 * p) * 0.9 * (0.9 + 0.1 * Math.sin(W * 4 + k));
-        _p3.set(cx, yt + 0.7, cz);
-        // se inclinan hacia el centro (vuelcan el metal dentro del hueco)
-        _q4.setFromEuler(_e3.set(0, -a + Math.PI / 2, tilt, 'YXZ'));
-        _m4.compose(_p3, _q4, _s3.set(1, 1, 1));
-        crucibleIM.setMatrixAt(k, _m4);
-        _p3.set(cx, yt + 1.36, cz);
-        _m4.compose(_p3, _q4, _s3.set(1, 1, 1));
-        crucGlowIM.setMatrixAt(k, _m4);
+        // andamio: 4 postes desde la cima hasta el labio del crisol
+        for (let q = 0; q < 4; q++) {
+          const y0 = yt - 0.5;
+          _pd.position.set(cx + ((q & 1) ? 0.9 : -0.9), (y0 + yc) / 2, cz + ((q & 2) ? 0.9 : -0.9));
+          _pd.rotation.set(0, 0, 0); _pd.scale.set(1, yc - y0, 1);
+          _pd.updateMatrix();
+          scafIM.setMatrixAt(k * 4 + q, _pd.matrix);
+        }
+        // crisol: cuenco volcándose hacia el centro
+        _pd.position.set(cx, yc, cz);
+        _pd.rotation.set(0, yaw, -tilt, 'YXZ'); _pd.scale.set(1, 1, 1);
+        _pd.updateMatrix();
+        crucibleIM.setMatrixAt(k, _pd.matrix);
+        _pmat.makeTranslation(0, 0.45, 0).premultiply(_pd.matrix);
+        crucLiqIM.setMatrixAt(k, _pmat);
+        // chorro: desde el labio hasta el borde del bronce
+        const sx = cx + dx * 1.0, sy = yc - 0.5, sz = cz + dz * 1.0;
+        const tr = hw * 0.55;
+        const tx = Math.cos(a) * tr, ty = yp, tz = Math.sin(a) * tr;
+        _tgt[k].x = tx; _tgt[k].y = ty; _tgt[k].z = tz;
+        for (let j = 0; j < NSTR; j++) {
+          const f0 = j / NSTR, f1 = (j + 1) / NSTR;
+          const x0 = sx + (tx - sx) * f0, y0 = sy + (ty - sy) * f0, z0 = sz + (tz - sz) * f0;
+          const x1 = sx + (tx - sx) * f1, y1 = sy + (ty - sy) * f1, z1 = sz + (tz - sz) * f1;
+          const len = Math.hypot(x1 - x0, y1 - y0, z1 - z0) + 0.02;
+          _pd.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+          _pd.lookAt(x1, y1, z1);
+          const pk = p * (k === 0 ? 1 : 0.8);
+          _pd.scale.set(Math.max(pk, 0.0001), Math.max(pk, 0.0001), Math.max(len * pk, 0.0001));
+          _pd.updateMatrix();
+          streamIM.setMatrixAt(k * NSTR + j, _pd.matrix);
+          _pd.scale.set(Math.max(pk * 2.4, 0.0001), Math.max(pk * 2.4, 0.0001), Math.max(len * pk, 0.0001));
+          _pd.updateMatrix();
+          streamGlowIM.setMatrixAt(k * NSTR + j, _pd.matrix);
+        }
       }
+      scafIM.instanceMatrix.needsUpdate = true;
       crucibleIM.instanceMatrix.needsUpdate = true;
-      crucGlowIM.instanceMatrix.needsUpdate = true;
-      // chorro: segmentos desde el labio del crisol (k=0) hasta la estatua
-      const sx = Math.cos(ang[0]) * Rc, sy = yt + 1.5, sz = Math.sin(ang[0]) * Rc;
-      const tx = Math.cos(ang[0]) * rT, ty = yp, tz = Math.sin(ang[0]) * rT;
-      for (let j = 0; j < NSTR; j++) {
-        const f0 = j / NSTR, f1 = (j + 1) / NSTR;
-        const x0 = sx + (tx - sx) * f0, y0 = sy + (ty - sy) * f0 - 2.5 * f0 * (1 - f0), z0 = sz + (tz - sz) * f0;
-        const x1 = sx + (tx - sx) * f1, y1 = sy + (ty - sy) * f1 - 2.5 * f1 * (1 - f1), z1 = sz + (tz - sz) * f1;
-        _ps.set(x0, y0, z0); _pt.set(x1, y1, z1);
-        const len = _ps.distanceTo(_pt) + 0.05;
-        _p3.copy(_ps).add(_pt).multiplyScalar(0.5);
-        _m4.lookAt(_ps, _pt, new THREE.Vector3(0, 1, 0));
-        _m4.setPosition(_p3);
-        _sc4.makeScale(p, p * len, p);
-        _lm.copy(_m4).multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2)).multiply(_sc4);
-        streamIM.setMatrixAt(j, _lm);
-      }
+      crucLiqIM.instanceMatrix.needsUpdate = true;
       streamIM.instanceMatrix.needsUpdate = true;
-      // anillo incandescente en el borde de la construcción (la superficie fundida)
+      streamGlowIM.instanceMatrix.needsUpdate = true;
+      // anillo incandescente en la superficie del bronce
       moltenRing.position.set(0, yp + 0.05, 0);
-      moltenRing.scale.set(COL.halfWidthAt(Math.min(yl, COL.height - 0.5)) / 3.2, 1, COL.halfWidthAt(Math.min(yl, COL.height - 0.5)) / 3.2);
-      MAT.glow.opacity = 0.5 + 0.4 * p * (0.9 + 0.1 * Math.sin(W * 6));
+      moltenRing.scale.set(hw / 3.2, 1, hw / 3.2);
       // moldes de arcilla en la cima, fuera del hueco
       for (let k = 0; k < 6; k++) {
         const a = k / 6 * TAU + 0.3;
-        _p3.set(Math.cos(a) * (Rc + 1), yt + 0.45, Math.sin(a) * (Rc + 1));
-        _q4.setFromEuler(_e3.set(0, a, 0, 'XYZ'));
-        _m4.compose(_p3, _q4, _s3.set(p, p, p));
-        moldIM.setMatrixAt(k, _m4);
+        _pd.position.set(Math.cos(a) * (Rc + 1.5), yt + 0.45, Math.sin(a) * (Rc + 1.5));
+        _pd.rotation.set(0, a, 0); _pd.scale.set(p, p, p);
+        _pd.updateMatrix();
+        moldIM.setMatrixAt(k, _pd.matrix);
       }
       moldIM.instanceMatrix.needsUpdate = true;
-      // chispas: parten del punto de impacto y caen
+      // chispas: nacen en el impacto y caen
       for (let i = 0; i < NSP; i++) {
         const age = frac(W * 1.6 + sparkA[i]);
+        const T = _tgt[i % NCR];
         const ang2 = sparkB[i] * TAU;
-        const rr = (sparkA[i] - 0.5) * 3 * age;
-        sparkPos[i * 3] = tx + Math.cos(ang2) * rr;
-        sparkPos[i * 3 + 1] = ty + age * 4.0 - 6.0 * age * age;
-        sparkPos[i * 3 + 2] = tz + Math.sin(ang2) * rr;
+        const rr = (sparkA[i] - 0.5) * 3.0 * age;
+        sparkPos[i * 3] = T.x + Math.cos(ang2) * rr;
+        sparkPos[i * 3 + 1] = T.y + age * 4.0 - 6.0 * age * age;
+        sparkPos[i * 3 + 2] = T.z + Math.sin(ang2) * rr;
       }
       sparkGeo.attributes.position.needsUpdate = true;
       sparks.visible = p > 0.05;
-      MAT.spark.opacity = 0.9 * p;
+      MAT.spark.opacity = 0.95 * p;
     }
 
     // =====================================================================
@@ -1068,12 +1112,13 @@
     }
 
     // =====================================================================
-    // 9. CARAVANA DE CAMELLOS (654 d.C.) por SITE.caravan. 60 camellos = 900 (representación).
-    //    Posición a lo largo de la ruta en función de s.t (no acumulativa).
+    // 9. CARAVANA DE CAMELLOS (654 d.C.) por SITE.caravan. 60 camellos = 900 (representación),
+    //    a 1.5x, en fila, con fardos de bronce brillante y arrieros. Posición en función de s.t.
+    //    El primer camello pasa por (120,250) hacia t=227 (fracción de ruta 0.302).
     // =====================================================================
-    const NCM = 60;
+    const NCM = 60, CARAVAN_LEAD_F = 0.302, CAMEL_SPACING_F = 0.0026;
     const camelRoute = new THREE.CatmullRomCurve3(SITE.caravan.map(function (p) { return new THREE.Vector3(p[0], 0, p[1]); }), false, 'catmullrom');
-    camelRoute.arcLengthDivisions = 300;
+    camelRoute.arcLengthDivisions = 400;
     const camelBodyMB = MB();
     const cCam = new THREE.Color(0xc6a06a), cCamD = new THREE.Color(0x8a6440);
     mbBox(camelBodyMB, 0, 1.6, 0, 1.0, 1.1, 2.2, cCam);
@@ -1082,48 +1127,66 @@
     mbBox(camelBodyMB, 0, 2.6, 1.6, 0.4, 0.4, 0.6, cCamD);                // cabeza
     const camelBodyIM = mkIM(mbGeo(camelBodyMB), MAT.camel, NCM, true);
     const camelLegIM = mkIM(new THREE.BoxGeometry(0.25, 1.2, 0.25), MAT.camelD, NCM * 4, true);
-    const camelLoadIM = mkIM(new THREE.BoxGeometry(0.7, 0.5, 0.6), MAT.bronze, NCM * 2, false);
+    const camelLoadIM = mkIM(new THREE.BoxGeometry(0.9, 0.7, 0.8), MAT.bronzeShine, NCM * 2, true);
+    const NDRV = 20;   // arrieros: uno de cada tres camellos
+    const drvTorsoIM = mkIM(new THREE.BoxGeometry(0.42, 0.7, 0.26), MAT.cloth, NDRV, true);
+    const drvHeadIM = mkIM(new THREE.SphereGeometry(0.17, 6, 4), MAT.skin, NDRV, false);
     const camelsG = new THREE.Group();
     root.add(camelsG);
-    camelsG.add(camelBodyIM, camelLegIM, camelLoadIM);
+    camelsG.add(camelBodyIM, camelLegIM, camelLoadIM, drvTorsoIM, drvHeadIM);
     const CAM = [];
-    for (let i = 0; i < NCM; i++) CAM.push({ off: i * 0.0055 + hash(i + 900) * 0.002, ph: hash(i + 910) });
-    const _cmM = new THREE.Matrix4();
+    for (let i = 0; i < NCM; i++) CAM.push({ off: i * CAMEL_SPACING_F, ph: hash(i + 910) });
+    const _cmM = new THREE.Matrix4(), _rr4 = new THREE.Matrix4();
     const _cdir = new THREE.Vector3(), _cpos = new THREE.Vector3();
     function updateCamels(s) {
       const A = clamp(s.camels, 0, 1);
       camelsG.visible = A > 0.002;
       if (!camelsG.visible) return;
+      let nd = 0;
       for (let i = 0; i < NCM; i++) {
         const C = CAM[i];
-        // progreso a lo largo de la ruta: entra por la base y sale por la cima de la ruta
-        const q = clamp((s.t - 223) / 14 - C.off, 0, 1);
+        // progreso en fila: el primero pasa por (120,250) en t=227 y llega al final hacia t=237
+        const q = clamp(CARAVAN_LEAD_F * (s.t - 223) / 4 - C.off, 0, 1);
         camelRoute.getPointAt(q, _cpos);
         camelRoute.getTangentAt(q, _cdir);
         const hd = Math.atan2(_cdir.x, _cdir.z);
-        const sc = A * (q > 0.001 && q < 0.999 ? 1 : 0);
-        const step = Math.sin(s.wall * 3.2 + C.ph * TAU);
-        // cuerpo y cabeza con el mismo rumbo
-        const cs = sc * 1.4;   // camellos a escala legible desde la cámara
-        _cmM.compose(_cpos.clone().setY(0), _q4.setFromEuler(_e3.set(0, hd, 0, 'YXZ')), _s3.set(cs, cs, cs));
+        const vis = A * (q > 0.001 && q < 0.999 ? 1 : 0);
+        const cs = vis * 1.5;                       // camellos a 1.5x
+        _s3.set(cs, cs, cs);
+        _q4.setFromEuler(_e3.set(0, hd, 0, 'YXZ'));
+        _cmM.compose(_cpos.clone().setY(0), _q4, _s3);
         camelBodyIM.setMatrixAt(i, _cmM);
+        const step = Math.sin(s.wall * 3.2 + C.ph * TAU);
         for (let L = 0; L < 4; L++) {
           const lx = (L % 2 ? 0.35 : -0.35), lz = (L < 2 ? 0.8 : -0.8);
           const sw = (L % 3 === 0 ? 1 : -1) * 0.35 * step;
           _t4.makeTranslation(lx, 0.6, lz);
-          _wE.set(sw, 0, 0, 'XYZ'); _sc4.makeRotationFromEuler(_wE);
-          _lm.copy(_cmM).multiply(_t4).multiply(_sc4);
+          _rr4.makeRotationX(sw);
+          _lm.copy(_cmM).multiply(_t4).multiply(_rr4);
           camelLegIM.setMatrixAt(i * 4 + L, _lm);
         }
+        // fardos de bronce brillante, uno a cada lado de la joroba
         for (let L = 0; L < 2; L++) {
-          _t4.makeTranslation(L ? 0.2 : -0.2, 3.1, -0.4 + L * 0.2);
-          _lm.copy(_cmM).multiply(_t4).multiply(new THREE.Matrix4().makeScale(sc, sc, sc));
+          _t4.makeTranslation(L ? 0.55 : -0.55, 3.0, -0.2);
+          _lm.copy(_cmM).multiply(_t4);
           camelLoadIM.setMatrixAt(i * 2 + L, _lm);
+        }
+        // arriero sobre cada tercer camello
+        if (i % 3 === 0) {
+          _t4.makeTranslation(0, 3.2, -0.3);
+          _lm.copy(_cmM).multiply(_t4);
+          drvTorsoIM.setMatrixAt(nd, _lm);
+          _t4.makeTranslation(0, 3.95, -0.3);
+          _lm.copy(_cmM).multiply(_t4);
+          drvHeadIM.setMatrixAt(nd, _lm);
+          nd++;
         }
       }
       camelBodyIM.instanceMatrix.needsUpdate = true;
       camelLegIM.instanceMatrix.needsUpdate = true;
       camelLoadIM.instanceMatrix.needsUpdate = true;
+      drvTorsoIM.instanceMatrix.needsUpdate = true;
+      drvHeadIM.instanceMatrix.needsUpdate = true;
     }
 
     // =====================================================================

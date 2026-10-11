@@ -75,15 +75,34 @@
   // línea de costa norte irregular (±~15 m) y costa oriental (±10 m)
   function coastZ(x) { return CZ + 13 * (2 * vnoise(x / 110, 0.37, 41) - 1) + 6 * (2 * vnoise(x / 38, 1.9, 43) - 1); }
   function eastX(z) { return EX + 10 * (2 * vnoise(z / 120, 3.1, 47) - 1); }
-  // altura de la isla (tierra): llanura plana alrededor del origen, colinas al sur, acrópolis al SO
+  // acrópolis (SO) y una loma junto a la ciudad: meseta a ACR_TOP, laderas en terrazas
+  const ACR_TOP = 92;
+  const LOMA = { x: -140, z: 640, R0: 125, H: 58, sd: 79 };
+  // altura de la isla (tierra): llanura plana alrededor del origen, colinas al sur, lomas al SO
   function landE(x, z) {
     const dO = Math.sqrt(x * x + z * z);
     const flat = sstep(62, 160, dO);
     const rise = 26 * sstep(150, 1400, z);
     const nz = 9 * fbm(x / 230, z / 230, 4, 3) - 3.5;
     const e = (rise + nz) * flat;
-    const dA = Math.hypot(x - ACR.x, z - ACR.z);
-    return Math.max(e, 110 * sstep(200, 60, dA));
+    return Math.max(e, hillH(x, z, ACR.x, ACR.z, 165, ACR_TOP, 71),
+      hillH(x, z, LOMA.x, LOMA.z, LOMA.R0, LOMA.H, LOMA.sd));
+  }
+  // loma rocosa irregular: contorno con ruido, meseta plana, laderas en escalones y crestas de roca
+  function hillH(x, z, cx, cz, R0, H, sd) {
+    const dx = x - cx, dz = z - cz;
+    const dd = Math.sqrt(dx * dx + dz * dz);
+    if (dd > R0 * 1.6) return 0;
+    const ang = Math.atan2(dz, dx);
+    const n = vnoise(Math.cos(ang) * 1.3 + 4, Math.sin(ang) * 1.3 + 4, sd);
+    const R = R0 * (0.8 + 0.5 * n);
+    const p = 1 - sstep(0.3, 1.0, dd / R);
+    let h = H * Math.pow(p, 0.8);
+    const terr = Math.floor(h / 9) * 9;
+    h += (terr - h) * 0.5 * (1 - sstep(0.85, 0.97, p)) * sstep(0.05, 0.2, p);
+    const rough = (ridged(x / 45, z / 45, 3, sd + 5) - 0.3) * 16;
+    h += rough * sstep(0.0, 0.08, p) * (1 - sstep(0.75, 0.95, p));
+    return h;
   }
   // altura del terreno: tierra (z>costa, x<costa este), mar con fondo suave, bajío junto a la muralla
   function groundH(x, z) {
@@ -91,9 +110,7 @@
     const Lm = sstep(-10, 12, dIn);
     const off = -4 - 0.012 * Math.min(Math.max(-dIn, 0), 250);
     let h = off * (1 - Lm) + landE(x, z) * Lm;
-    // bajío con la torre de asedio (sobre el mar)
-    const dH = Math.hypot(x - HELE.x, z - HELE.z);
-    h += (0.8 - h) * sstep(45, 22, dH);
+    // (la torre de asedio ya cae en tierra: no hace falta bajío)
     // bordes del mundo: se hunden para que no quede un escalón visible en el horizonte
     const fe = Math.max(sstep(-3300, -3800, x), sstep(3300, 3900, z), sstep(-900, -1000, z));
     return h + (-8 - h) * fe;
@@ -194,7 +211,7 @@
   const WATER_FS = [
     'uniform float uTime; uniform float uQuake; uniform vec3 uLightDir; uniform vec3 uLightCol; uniform float uLightI;',
     'uniform vec3 uHorizon; uniform vec3 uZenith; uniform vec3 uDeep; uniform vec3 uShallow; uniform vec3 uFogC;',
-    'uniform vec3 uFoam; uniform sampler2D uHeight; uniform float uHalf;',
+    'uniform vec3 uFoam; uniform sampler2D uHeight; uniform float uHalf; uniform float uMoonF;',
     'varying vec3 vW;',
     COMMON_GLSL,
     'void main() {',
@@ -234,6 +251,8 @@
     '  float rl = max(dot(reflect(-L, n), V), 0.0);',
     '  float spec = pow(rl, 120.0) * 1.2 + pow(rl, 12.0) * 0.05;',
     '  col += uLightCol * spec * clamp(uLightI, 0.0, 2.5) * 0.35;',
+    // camino de la luna sobre el mar (solo de noche)
+    '  col += uLightCol * pow(rl, 40.0) * 0.6 * uMoonF;',
     // niebla del horizonte para que el mar se funda con el cielo
     '  float dist = length(vW - cameraPosition);',
     '  col = mix(col, uFogC, smoothstep(2500.0, 6500.0, dist));',
@@ -278,10 +297,10 @@
     'void main() {',
     '  vec4 mv = modelViewMatrix * vec4(position, 1.0);',
     '  gl_Position = projectionMatrix * mv;',
-    '  gl_PointSize = clamp(uPx / -mv.z, 2.0, 9.0);',
+    '  gl_PointSize = clamp(uPx / -mv.z, 3.0, 12.0);',
     '  float tw = 0.8 + 0.2 * sin(uTime * (1.0 + aSeed * 2.0) + aSeed * 40.0);',
     '  float on = step(0.3, fract(aSeed * 5.7));',
-    '  vA = uNight * tw * on * 0.85;',
+    '  vA = uNight * tw * on;',
     '}'
   ].join('\n');
 
@@ -427,12 +446,12 @@
     const tUv = new Float32Array(NX * NZ * 2);
     const tmpC = col();
     const cSand = col('#d2b07a'), cPale = col('#e6d3a0'), cGreen = col('#7f8a4c');
-    const cRock = col('#8c7d68'), cWet = col('#9a8160'), cStreet = col('#b59a6e');
+    const cRock = col('#8f8a80'), cWet = col('#9a8160'), cStreet = col('#9c8056');
     const cLot = col('#dcc39b'), cBeach = col('#ead9ae');
     function groundColor(x, z, h, slope, out) {
       out.copy(cSand).lerp(cPale, vnoise(x / 60, z / 60, 21));
       out.lerp(cGreen, sstep(5, 20, h) * (1 - sstep(0.2, 0.4, slope)) * 0.7);   // colinas con maleza
-      out.lerp(cRock, sstep(0.25, 0.5, slope));                                  // laderas y acrópolis
+      out.lerp(cRock, sstep(0.2, 0.42, slope));                                  // laderas rocosas
       out.lerp(cBeach, sstep(-2.5, -0.5, h) * (1 - sstep(0.6, 2.0, h)));         // playa
       if (h < -1.5) out.lerp(cWet, 0.8);                                         // fondo marino
       if (x > CITY.xMin && x < CITY.xMax && z > CITY.zMin && z < CITY.zMax && h < 40) {
@@ -505,7 +524,7 @@
       uLightDir: { value: new THREE.Vector3(0, 1, 0) }, uLightCol: { value: sun.color }, uLightI: { value: 0 },
       uHorizon: { value: col() }, uZenith: { value: col() }, uFogC: { value: col() },
       uDeep: { value: col('#1f5f8b') }, uShallow: { value: col('#3fb7b5') }, uFoam: { value: col('#f2f6f4') },
-      uHeight: { value: hmTex }, uHalf: { value: SEA_HALF }
+      uHeight: { value: hmTex }, uHalf: { value: SEA_HALF }, uMoonF: { value: 0 }
     };
     const waterMat = new THREE.ShaderMaterial({ uniforms: waterU, vertexShader: WATER_VS, fragmentShader: WATER_FS });
     const sea = new THREE.Mesh(seaGeo, waterMat);
@@ -633,12 +652,23 @@
       temple(SB, T.x, h4, T.z, T.L, T.W, T.colH, T.nL, T.nS);
     }
     // acrópolis (SO): plataforma a 110 m, templo mayor, muro circular y stoa
-    temple(SB, ACR.x, 110, ACR.z, 50, 24, 11, 12, 6);
+    temple(SB, ACR.x, ACR_TOP, ACR.z, 50, 24, 11, 12, 6);
     for (let k = 0; k < 24; k++) {
       const a = k * TAU / 24;
-      addBox(SB, C_WALL, ACR.x + Math.cos(a) * 62, 111, ACR.z + Math.sin(a) * 62, 16.4, 8, 2.6, -a - Math.PI / 2);
+      addBox(SB, C_WALL, ACR.x + Math.cos(a) * 44, ACR_TOP + 1, ACR.z + Math.sin(a) * 44, 12.2, 8, 2.6, -a - Math.PI / 2);
     }
-    stoa(SB, ACR.x - 30, ACR.z + 40, 10, 6.0, 110, 6.5);
+    stoa(SB, ACR.x - 30, ACR.z + 30, 8, 6.0, ACR_TOP, 6.5);
+
+    // almacenes del puerto (tejado a dos aguas) y muelles de piedra que entran en la bocana
+    const C_WARE = col('#d8c7a4'), C_ROOFW = col('#b5573a'), C_CONC2 = col('#9aa0a6');
+    for (let wx = -200; wx <= 200; wx += 64) {
+      const wz = coastZ(wx) + 16;
+      if (inlandAt(wx, wz) < 8) continue;
+      const gh = groundH(wx, wz), top = gh + 8;
+      addBox(SB, C_WARE, wx, (gh - 1 + top) / 2, wz, 34, top - (gh - 1), 12, 0);
+      addPrism(SB, C_ROOFW, wx, top, wz, 13.2, 3.0, 35, Math.PI / 2);
+    }
+    for (const px of [-150, -40, 60, 150]) addBox(SB, C_CONC2, px, -0.3, coastZ(px) - 13, 8, 3, 26, 0);
 
     const stoneMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0 });
     const stoneMesh = new THREE.Mesh(SB.geometry(), stoneMat);
@@ -647,8 +677,8 @@
     root.add(stoneMesh);
 
     // ---------- ciudad: casas cúbicas con tejados, en manzanas de la trama hipodámica ----------
-    const HOUSE_COLS = ['#ece6da', '#f1ead9', '#e8dcc4', '#dcc9a6', '#d9a35a', '#c98a55', '#e9e1cf'].map(col);
-    const ROOF_COLS = ['#b5573a', '#a64d32', '#8a4a36', '#6d7d8c', '#9c5b3f'].map(col);
+    const HOUSE_COLS = ['#f4efe6', '#f1ead9', '#ece6da', '#f7f2e8', '#e8dcc4', '#d9a35a', '#c98a55', '#d6b98a'].map(col);
+    const ROOF_COLS = ['#b5573a', '#a64d32', '#c0603f', '#9c4a30', '#8a4a36'].map(col);
     function buildable(x, z) {
       if (inlandAt(x, z) < 12) return false;
       for (const T of TEMPLES) {
@@ -670,18 +700,30 @@
             if (!buildable(cx, cz)) continue;
             houses.push({
               x: cx, z: cz, y: groundH(cx, cz),
-              w: 12 + rnd() * 4, d: 12 + rnd() * 4, H: 4.5 + rnd() * 5.5,
+              w: 10 + rnd() * 6, d: 10 + rnd() * 6, H: 3.5 + rnd() * 9,
               col: HOUSE_COLS[Math.floor(rnd() * HOUSE_COLS.length)],
-              roof: rnd() < 0.5, rh: 2.8 + rnd() * 1.2,
+              roof: rnd() < 0.6, rh: 2.4 + rnd() * 2.2,
               rc: ROOF_COLS[Math.floor(rnd() * ROOF_COLS.length)]
             });
           }
         }
       }
     }
+    // variedad: alas laterales y patios enlosados junto a las casas
+    const patioCol = col('#c9b48c');
+    const extraBoxes = [];
+    for (const h of houses) {
+      if (rnd() < 0.45) {
+        const ww = 6 + rnd() * 5, wd = 6 + rnd() * 4, wh = h.H * (0.45 + rnd() * 0.4);
+        const sgn = rnd() < 0.5 ? -1 : 1;
+        extraBoxes.push({ x: h.x + sgn * (h.w / 2 + ww / 2 - 1.5), y: h.y - 1.5, z: h.z + (rnd() - 0.5) * (h.d - wd) * 0.6,
+          sx: ww, sy: wh + 1.5, sz: wd, c: h.col });
+      }
+      if (rnd() < 0.3) extraBoxes.push({ x: h.x, y: h.y + 0.05, z: h.z, sx: h.w + 6, sy: 0.5, sz: h.d + 6, c: patioCol });
+    }
     const houseMesh = new THREE.InstancedMesh(
       new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0),
-      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), houses.length);
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), houses.length + extraBoxes.length);
     const roofs = houses.filter(function (h) { return h.roof; });
     const roofMesh = new THREE.InstancedMesh(UPRISM, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 }), roofs.length);
     const winPos = new Float32Array(houses.length * 2 * 3), winSeed = new Float32Array(houses.length * 2);
@@ -701,6 +743,11 @@
         winSeed[k * 2 + q] = rnd();
       }
     }
+    for (let e = 0; e < extraBoxes.length; e++) {
+      const b = extraBoxes[e];
+      houseMesh.setMatrixAt(houses.length + e, xf(b.x, b.y, b.z, b.sx, b.sy, b.sz, 0));
+      houseMesh.setColorAt(houses.length + e, b.c);
+    }
     for (let r = 0; r < roofs.length; r++) {
       const h = roofs[r];
       roofMesh.setMatrixAt(r, xf(h.x, h.y + h.H - 0.1, h.z, h.w + 0.8, h.rh, h.d + 0.8, 0));
@@ -718,7 +765,7 @@
     const winGeo = new THREE.BufferGeometry();
     winGeo.setAttribute('position', new THREE.BufferAttribute(winPos, 3));
     winGeo.setAttribute('aSeed', new THREE.BufferAttribute(winSeed, 1));
-    const winU = { uTime: { value: 0 }, uNight: { value: 0 }, uPx: { value: 90 }, uColor: { value: col('#ffc070') } };
+    const winU = { uTime: { value: 0 }, uNight: { value: 0 }, uPx: { value: 140 }, uColor: { value: col('#ffd27a') } };
     const winMat = new THREE.ShaderMaterial({
       uniforms: winU, vertexShader: WIN_VS, fragmentShader: POINT_FS,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
@@ -763,9 +810,61 @@
     if (bushMesh.instanceColor) bushMesh.instanceColor.needsUpdate = true;
     root.add(cypMesh); root.add(bushMesh);
 
+    // ---------- olivos, pinos y roca gris en las lomas (InstancedMesh) ----------
+    function scatterLand(count, hMin, hMax, slMin, slMax, fn) {
+      let n = 0, t = 0;
+      while (n < count && t < count * 40) {
+        t++;
+        const x = -900 + rnd() * 1300, z = rnd() * 1100;
+        const h = groundH(x, z), sl = slopeAt(x, z);
+        if (inlandAt(x, z) < 25 || h < hMin || h > hMax || sl < slMin || sl > slMax) continue;
+        if (x > CITY.xMin && x < CITY.xMax && z > CITY.zMin && z < CITY.zMax) continue;
+        fn(n, x, h, z); n++;
+      }
+      return n;
+    }
+    const OLIVE = 150, PINE = 70, OUTC = 90;
+    const oTrunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.25, 0.4, 2.4, 6).translate(0, 1.2, 0),
+      new THREE.MeshStandardMaterial({ color: 0x6b5a40, roughness: 0.95 }), OLIVE);
+    const oCanopy = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0).translate(0, 2.8, 0),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true }), OLIVE);
+    const pTrunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.2, 0.3, 8, 6).translate(0, 4, 0),
+      new THREE.MeshStandardMaterial({ color: 0x7a5a3a, roughness: 0.95 }), PINE);
+    const pCanopy = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0).translate(0, 9.2, 0),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true }), PINE);
+    const rockOut = new THREE.InstancedMesh(makeRockGeometry(THREE, 0),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, flatShading: true }), OUTC);
+    const oc = col();
+    const nO = scatterLand(OLIVE, 3, 95, 0, 0.5, function (n, x, h, z) {
+      const s = 1.0 + rnd() * 0.5;
+      oTrunk.setMatrixAt(n, xf(x, h - 0.3, z, s, s, s, 0));
+      oCanopy.setMatrixAt(n, xf(x, h - 0.3, z, s * 1.1, s * 0.9, s * 1.1, rnd() * TAU));
+      oCanopy.setColorAt(n, oc.set(['#8a9a70', '#7d8f62', '#97a57a'][Math.floor(rnd() * 3)]));
+    });
+    const nP = scatterLand(PINE, 8, 120, 0, 0.4, function (n, x, h, z) {
+      const s = 1.0 + rnd() * 0.4;
+      pTrunk.setMatrixAt(n, xf(x, h - 0.3, z, s, s, s, 0));
+      pCanopy.setMatrixAt(n, xf(x, h - 0.3, z, s * 1.5, s * 0.8, s * 1.5, 0));
+      pCanopy.setColorAt(n, oc.set(['#3f6a3a', '#4a7340', '#36593a'][Math.floor(rnd() * 3)]));
+    });
+    const nR = scatterLand(OUTC, 5, 120, 0.25, 1.0, function (n, x, h, z) {
+      const r = 2 + rnd() * 4;
+      rockOut.setMatrixAt(n, xf(x, h - 0.5, z, r, r * 0.6, r * 1.2, rnd() * TAU));
+      rockOut.setColorAt(n, oc.set(['#8f8a80', '#7d786f', '#a29d92'][Math.floor(rnd() * 3)]));
+    });
+    const treeMeshes = [[oTrunk, nO], [oCanopy, nO], [pTrunk, nP], [pCanopy, nP], [rockOut, nR]];
+    for (const pair of treeMeshes) {
+      const m = pair[0];
+      m.count = pair[1];
+      m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
+      m.instanceMatrix.needsUpdate = true;
+      if (m.instanceColor) m.instanceColor.needsUpdate = true;
+      root.add(m);
+    }
+
     // ---------- islotes en el mar (siluetas cercanas) ----------
     const ISLETS = 24;
-    const isletMesh = new THREE.InstancedMesh(makeRockGeometry(THREE, 1),
+    const isletMesh = new THREE.InstancedMesh(makeRockGeometry(THREE, 0),
       new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, flatShading: true }), ISLETS);
     let nIs = 0; tries = 0;
     while (nIs < ISLETS && tries < ISLETS * 60) {
@@ -824,7 +923,7 @@
     addCyl(TB, col('#c0392b'), LH.x, LH.base + 8, LH.z, 2.7, 3.2);
     addCyl(TB, col('#2b2f36'), LH.x, LH.base + 20, LH.z, 2.2, 3.0);
     addCyl(TB, col('#c0392b'), LH.x, LH.base + 23, LH.z, 2.5, 1.0);
-    const BRONZE = col('#b07a3c');
+    const BRONZE = col('#c98a45');
     for (const d of SITE.deerColumns) {
       const x = d[0], z = d[1], y0 = 10.0 + 0.3;                    // sobre la torrecilla
       addBox(TB, C_MARBLE, x, y0 + 0.4, z, 2.6, 0.8, 2.6, 0);      // base de la columna
@@ -846,7 +945,7 @@
     const todayStoneMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0, transparent: true, opacity: 0 });
     const todayStone = new THREE.Mesh(TB.geometry(), todayStoneMat);
     todayStone.castShadow = true; todayStone.receiveShadow = true;
-    const bronzeMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4, metalness: 0.35, transparent: true, opacity: 0 });
+    const bronzeMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.2, transparent: true, opacity: 0 });
     const bronze = new THREE.Mesh(DB.geometry(), bronzeMat);
     bronze.castShadow = true;
     const lampMat = new THREE.MeshBasicMaterial({ color: LAMP_DAY.clone(), transparent: true, opacity: 0 });
@@ -941,6 +1040,7 @@
       // mar
       waterU.uTime.value = wall;
       waterU.uQuake.value = quake;
+      waterU.uMoonF.value = moonVis;
       waterU.uLightDir.value.copy(lightDir);
       waterU.uLightI.value = sun.intensity;
       waterU.uHorizon.value.copy(tHor);

@@ -26,8 +26,11 @@
 
   // Lofting: secciones [x, y, z, rx, rz]. El eje sigue la dirección de la cadena; cada sección es una elipse.
   // rings: añade los anillos como líneas (grabado); meridians: nº de líneas longitudinales.
+  // Luz para el sombreado de grabado: viene de arriba-izquierda y algo de delante (dawn)
+  const HATCH_L = norm([-0.5, 0.6, -0.6]);
   function loft(B, secs, sides, rings, meridians) {
     const n = secs.length, base = B.P.length / 3;
+    const shade = B.hatch ? [] : null;
     for (let i = 0; i < n; i++) {
       const a = secs[Math.max(0, i - 1)], b = secs[Math.min(n - 1, i + 1)], c = secs[i];
       const d = norm([b[0] - a[0], b[1] - a[1], b[2] - a[2]]);
@@ -38,12 +41,25 @@
       for (let j = 0; j < sides; j++) {
         const th = TAU * j / sides, cs = Math.cos(th) * c[3], sn = Math.sin(th) * c[4];
         B.P.push(c[0] + u[0] * cs + v[0] * sn, c[1] + u[1] * cs + v[1] * sn, c[2] + u[2] * cs + v[2] * sn);
+        if (shade) {
+          // normal aproximada de la elipse en ese punto
+          const nn = norm([u[0] * Math.cos(th) / (c[3] || 1) + v[0] * Math.sin(th) / (c[4] || 1),
+            u[1] * Math.cos(th) / (c[3] || 1) + v[1] * Math.sin(th) / (c[4] || 1),
+            u[2] * Math.cos(th) / (c[3] || 1) + v[2] * Math.sin(th) / (c[4] || 1)]);
+          shade.push(nn[0] * HATCH_L[0] + nn[1] * HATCH_L[1] + nn[2] * HATCH_L[2]);
+        }
       }
     }
     for (let i = 0; i < n - 1; i++) {
       for (let j = 0; j < sides; j++) {
         const a = base + i * sides + j, b = base + i * sides + (j + 1) % sides, c = a + sides, d = b + sides;
         B.I.push(a, c, b, b, c, d);
+        if (shade) {
+          // grabado: trazos diagonales en las zonas en sombra (doble trama en la más oscura)
+          const s = (shade[a - base] + shade[b - base] + shade[c - base] + shade[d - base]) / 4;
+          if (s < 0.12) B.LI.push(a, d);
+          if (s < -0.45) B.LI.push(b, c);
+        }
       }
     }
     if (rings) {
@@ -233,10 +249,50 @@
     return { sprite: sp, mat: mat };
   }
 
+  // Inscripción de grabado: letras espaciadas, solo trazo fino (como una lámina antigua)
+  function engrave(text, o) {
+    const CW = 2048, px = 150, sp = px * 0.32;
+    const cv = document.createElement('canvas');
+    cv.width = CW; cv.height = Math.ceil(px * 1.9);
+    const g = cv.getContext('2d');
+    g.font = 'italic ' + px + 'px Georgia, serif';
+    const chars = text.split('');
+    const ws = chars.map(function (c) { return g.measureText(c).width; });
+    const total = ws.reduce(function (a, b) { return a + b; }, 0) + sp * (chars.length - 1);
+    let x = (CW - total) / 2;
+    const y = cv.height / 2;
+    g.textBaseline = 'middle'; g.textAlign = 'left';
+    g.shadowColor = o.color; g.shadowBlur = 10;
+    g.strokeStyle = o.color; g.lineWidth = 3;
+    g.fillStyle = 'rgba(255,207,106,0.12)';
+    for (let i = 0; i < chars.length; i++) {
+      g.strokeText(chars[i], x, y);
+      g.fillText(chars[i], x, y);
+      x += ws[i] + sp;
+    }
+    // filete doble bajo la inscripción
+    g.shadowBlur = 0; g.lineWidth = 2;
+    const fy = y + px * 0.72;
+    g.beginPath(); g.moveTo((CW - total) / 2, fy); g.lineTo((CW + total) / 2, fy); g.stroke();
+    g.beginPath(); g.moveTo((CW - total) / 2, fy + 8); g.lineTo((CW + total) / 2, fy + 8); g.stroke();
+    const tex = new THREE.CanvasTexture(cv);
+    tex.encoding = THREE.sRGBEncoding;
+    const mat = new THREE.SpriteMaterial({
+      map: tex, transparent: true, depthWrite: false,
+      depthTest: true, blending: THREE.AdditiveBlending, opacity: 0
+    });
+    const sp2 = new THREE.Sprite(mat);
+    const w = o.lh * CW / px;
+    sp2.scale.set(w, w * cv.height / CW, 1);
+    sp2.position.set(o.pos[0], o.pos[1], o.pos[2]);
+    return { sprite: sp2, mat: mat };
+  }
+
   // ---------- figuras ----------
   // El mito: figura de ~100 m con piernas abiertas, un pie sobre cada punta de espigón; antorcha en alto.
   function mythBuild() {
     const B = newB();
+    B.hatch = true;   // sombreado de grabado solo en el mito
     // torso y cuello (secciones [x, y, z, rx, rz]); pelvis a y=46, pecho a y=80, cuello a y=92
     loft(B, [
       [0, 46, CZ, 10, 6.5], [0, 52, CZ, 11.5, 7.5], [0, 58, CZ, 10.5, 7], [0, 66, CZ, 9.5, 6.8],
@@ -325,6 +381,9 @@
     figG.add(new THREE.Mesh(fillGeo(mB), mythFill));
     const mythLines = new THREE.LineSegments(lineGeo(mB), lineMat(GOLD_HI, 0));
     figG.add(mythLines);
+    // inscripción de grabado sobre el pecho
+    const labCol = engrave('COLOSSUS RHODIUS', { lh: 2.6, color: '#ffd27a', pos: [0, 62, CZ - 9.5] });
+    figG.add(labCol.sprite);
 
     // barco fantasma que pasa entre las piernas (de z=-350 a z=-170, bajo la entrepierna en z=-260)
     const shipG = new THREE.Group();
@@ -350,11 +409,11 @@
       color: RED, transparent: true, opacity: 0, depthTest: false, depthWrite: false, side: THREE.DoubleSide
     });
     const cross = new THREE.Mesh(xg, crossMat);
-    cross.renderOrder = 4;
+    cross.renderOrder = -1;   // la aspa se dibuja antes que las etiquetas (que no quedan tapadas)
     crossG.add(cross);
     const labMito = label('MITO · grabado del siglo XVI', { lh: 9, color: '#ff8a7a', pos: [0, 132, CZ - 2] });
     // anotación sobre la bocana: siempre visible (no la tapan las piernas ni el barco)
-    const labBocana = label('160 m de bocana: el bronce se partiría', { lh: 9, color: '#ffd27a', pos: [0, 16, CZ - 2], depthTest: false });
+    const labBocana = label('160 m de bocana: el bronce se partiría', { lh: 9, color: '#ffd27a', pos: [0, 6, CZ - 2], depthTest: false });
     crossG.add(labMito.sprite, labBocana.sprite);
 
     // ================= 3. realSpot: el emplazamiento real (origen) =================
@@ -387,7 +446,7 @@
     rsG.add(arc);
     const travel = glowSprite('170,240,255', 24, arcPts[0]);
     rsG.add(travel);
-    const labReal = label('AQUÍ ESTABA (probablemente)', { lh: 12, color: '#9fe9ff', pos: [-60, 40, 0] });
+    const labReal = label('AQUÍ ESTABA (probablemente)', { lh: 12, color: '#9fe9ff', pos: [-70, 60, 0] });
     rsG.add(labReal.sprite);
 
     // ================= 4. measure: regla de 0 a 48 m junto a la estatua =================
@@ -433,7 +492,8 @@
     compG.add(new THREE.Mesh(fillGeo(cB), compFill));
     const compLines = new THREE.LineSegments(lineGeo(cB), lineMat(CYAN, 0));
     compG.add(compLines);
-    const labComp = label('EL NUEVO COLOSO · 46 m', { lh: 4, color: '#9fe9ff', pos: [CMX, 58, CMZ] });
+    // etiqueta justo encima de la cabeza de la silueta (corona ~46 m)
+    const labComp = label('EL NUEVO COLOSO · 46 m', { lh: 2.4, color: '#9fe9ff', pos: [CMX, 51, CMZ] });
     compG.add(labComp.sprite);
 
     // ================= 6. sunLines: rayos de la corona hacia el este y círculo de grados =================
@@ -478,8 +538,11 @@
       figG.visible = myth > 0.001;
       if (figG.visible) {
         const shimmer = 1 + 0.05 * Math.sin(wall * 1.3);
-        mythFill.uniforms.uOp.value = 0.75 * myth * shimmer;
-        mythLines.material.opacity = 0.7 * myth;
+        // prólogo (t < 17, amanecer): más tenue para no sobreexponer
+        const dawn = t < 17 ? 0.7 : 1;
+        mythFill.uniforms.uOp.value = 0.7 * myth * shimmer * dawn;
+        mythLines.material.opacity = 0.55 * myth * dawn;
+        labCol.mat.opacity = t < 17 ? 0 : myth;
       }
       // barco fantasma: solo durante el mito (t >= 165)
       const shipK = t >= 165 ? myth : 0;

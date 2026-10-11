@@ -29,23 +29,35 @@
     const pick = function (arr) { return arr[Math.floor(rnd() * arr.length) % arr.length]; };
 
     // ---------- materiales ----------
-    // El emisivo cian se controla con xray (resalte de rayos X). Colores por instancia (óxido, variación de caliza).
+    // Hierro oscuro (metalness 0.7, roughness 0.6) con óxido por instancia. Caliza clara. Juntas oscuras.
     const ironMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.7, roughness: 0.6, emissive: new THREE.Color(CYAN), emissiveIntensity: 0 });
     const stoneMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0, roughness: 0.92, emissive: new THREE.Color(CYAN), emissiveIntensity: 0 });
-    const jointMat = new THREE.MeshStandardMaterial({ color: 0x2f2d2a, metalness: 0, roughness: 1 });
-    const IRON_PAL = [0x3f3d3a, 0x4a4742, 0x35332f, 0x46423c];
-    const RUST_PAL = [0x7a4426, 0x6b3a22, 0x8c5330];
-    const STONE_PAL = [0xb9b4a6, 0xa9a494, 0xbdb8aa, 0x9f9a8c];
-    const BALLAST_PAL = [0x8e897c, 0x7d786d, 0x968f80];
+    const jointMat = new THREE.MeshStandardMaterial({ color: 0x4a4640, metalness: 0, roughness: 1 });
+    const contourMat = new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0, blending: ADD, depthWrite: false });
+    const IRON_PAL = [0x2e2c2a, 0x3a3733, 0x33302d, 0x3f3b36];
+    const RUST_PAL = [0x8a3f22, 0x7a3a20, 0x9a4a28];
+    const STONE_PAL = [0xcfc6b4, 0xc6bdab, 0xd6cdbb];
+    const BALLAST_PAL = [0x7f786b, 0x6e685c, 0x8a8375];
 
     // ---------- geometrías base (una sola vez) ----------
-    const CYL = new THREE.CylinderGeometry(1, 1, 1, 6, 1, false);            // barras: base y=-0.5..0.5, se orientan por instancia
-    const TOR = new THREE.TorusGeometry(1, 0.035, 4, 16); TOR.rotateX(Math.PI / 2); // aros horizontales (plano XZ)
-    const PLATE = new THREE.BoxGeometry(0.36, 0.2, 0.1);                       // placas en los cruces (grosor en Z)
-    const RIVET = new THREE.CylinderGeometry(0.035, 0.035, 0.03, 5, 1, false); RIVET.rotateX(Math.PI / 2);
+    const CYL = new THREE.CylinderGeometry(1, 1, 1, 6, 1, false);            // barras: altura 1 centrada, se orientan por instancia
+    const TOR = new THREE.TorusGeometry(1, 0.05, 4, 16); TOR.rotateX(Math.PI / 2); // aros horizontales (plano XZ)
+    const PLATE = new THREE.BoxGeometry(0.4, 0.22, 0.1);                       // placas en los cruces (grosor en Z)
+    const RIVET = new THREE.CylinderGeometry(0.04, 0.04, 0.03, 5, 1, false); RIVET.rotateX(Math.PI / 2);
     const DRUM = new THREE.CylinderGeometry(1, 1, 1, 12, 1, false);            // sillares (fuste)
     const JOINT = new THREE.CylinderGeometry(1, 1, 1, 12, 1, false);           // juntas entre sillares
-    const BLOCK = new THREE.BoxGeometry(1, 1, 1);                              // piedras de lastre
+    // dodecaedro deformado (vértices con factor propio por posición: sin grietas)
+    const DODEC = new THREE.DodecahedronGeometry(1, 0);
+    {
+      const pa = DODEC.attributes.position, jm = {};
+      for (let i = 0; i < pa.count; i++) {
+        const key = pa.getX(i).toFixed(3) + '|' + pa.getY(i).toFixed(3) + '|' + pa.getZ(i).toFixed(3);
+        if (!jm[key]) jm[key] = [0.78 + 0.44 * rnd(), 0.78 + 0.44 * rnd(), 0.78 + 0.44 * rnd()];
+        const f = jm[key];
+        pa.setXYZ(i, pa.getX(i) * f[0], pa.getY(i) * f[1], pa.getZ(i) * f[2]);
+      }
+      DODEC.computeVertexNormals();
+    }
 
     function mesh(geo, mat, count, pal, rustChance) {
       const m = new THREE.InstancedMesh(geo, mat, count);
@@ -89,8 +101,8 @@
     }
 
     // ================= 1. ARMAZÓN DE HIERRO =================
-    // Estaciones (aros) cada ~1.5 m a lo largo de cada miembro; 6 nodos por aro; barras verticales entre
-    // aros y tirantes en diagonal. Radio interior = radio de la piel - 0.45 m.
+    // Aros cada ~1,5 m a lo largo de cada miembro; 6 nodos por aro, de los que solo los pares llevan barra
+    // vertical (3 barras separadas 120°) y los tirantes diagonales unen cada barra con el nodo vecino del siguiente aro.
     const NA = 6;
     const RINGS = [];   // {c, rx, rz, nodes[], nrm[], M}
     const RODS = [];    // {a, b, r}: barras y tirantes (se recortan por altura)
@@ -108,25 +120,25 @@
     }
     function rod(a, b, r) { RODS.push({ a: a, b: b, r: r }); }
 
-    // Miembro entre A y B; radfn(u) -> [rx, rz] interiores. Devuelve los índices de sus aros.
-    function member(A, B, radfn) {
+    // Miembro entre A y B; radfn(u) -> [rx, rz] interiores; rr = radio de las barras principales.
+    function member(A, B, radfn, rr) {
       const n = Math.max(1, Math.round(A.distanceTo(B) / 1.5));
       const ids = [];
       for (let k = 0; k <= n; k++) {
-        const u = k / n, rr = radfn(u);
-        ids.push(ringAt(A.clone().lerp(B, u), rr[0], rr[1]));
+        const u = k / n, rad = radfn(u);
+        ids.push(ringAt(A.clone().lerp(B, u), rad[0], rad[1]));
       }
       for (let k = 0; k < n; k++) {
         const r0 = RINGS[ids[k]], r1 = RINGS[ids[k + 1]];
-        for (let j = 0; j < NA; j++) {
-          rod(r0.nodes[j], r1.nodes[j], 0.1);                              // barra vertical
-          if (j % 2 === 0) rod(r0.nodes[j], r1.nodes[(j + 1) % NA], 0.07); // tirante en X
+        for (let j = 0; j < NA; j += 2) {
+          rod(r0.nodes[j], r1.nodes[j], rr);                                  // barra vertical principal
+          rod(r0.nodes[j], r1.nodes[(j + 1) % NA], rr * 0.6);                 // tirante diagonal
         }
       }
       return ids;
     }
     function limb(A, B, rA, rB) {
-      return member(A, B, function (u) { const r = rA + (rB - rA) * u - 0.45; return [r, r]; });
+      return member(A, B, function (u) { const r = rA + (rB - rA) * u - 0.45; return [r, r]; }, 0.17);
     }
 
     const J = COL.joints, R = COL.radii, TT = COL.torso;
@@ -158,16 +170,17 @@
     }
     const torsoIds = member(V(0, TT[0][0], 0), V(0, TT[TT.length - 1][0], 0), function (u) {
       return torsoRad(TT[0][0] + (TT[TT.length - 1][0] - TT[0][0]) * u);
-    });
-    // cruces horizontales dentro del torso (tirantes opuestos)
+    }, 0.2);
+    // cruces horizontales dentro del torso (tirantes opuestos entre los nodos principales)
     torsoIds.forEach(function (id) {
       const nd = RINGS[id].nodes;
-      for (let j = 0; j < 3; j++) rod(nd[j], nd[j + 3], 0.07);
+      rod(nd[0], nd[3], 0.12);
+      rod(nd[2], nd[5], 0.12);
     });
 
     // cuello y cabeza (esfera): aros en tres alturas, meridianos entre ellos
     const NECK_R = R.neck - 0.45;
-    member(Vj(J.neck), V(0, 29.4, -0.2), function () { return [NECK_R, NECK_R]; });
+    member(Vj(J.neck), V(0, 29.4, -0.2), function () { return [NECK_R, NECK_R]; }, 0.12);
     const HC = Vj(J.head), HR = R.head;
     const headIds = [29.4, 30.9, 32.3].map(function (y) {
       const dy = y - HC.y, rr = Math.sqrt(Math.max(0, HR * HR - dy * dy)) - 0.45;
@@ -175,13 +188,13 @@
     });
     for (let k = 0; k < headIds.length - 1; k++) {
       const r0 = RINGS[headIds[k]], r1 = RINGS[headIds[k + 1]];
-      for (let j = 0; j < NA; j++) rod(r0.nodes[j], r1.nodes[j], 0.07);
+      for (let j = 0; j < NA; j += 2) rod(r0.nodes[j], r1.nodes[j], 0.12);
     }
 
-    // nodos de todos los aros (para anclar los tirantes de las columnas y colocar placas)
+    // nodos principales (pares) de todos los aros: anclajes de tirantes y placas
     const NODES = []; // {p, n, y}
     RINGS.forEach(function (Rg) {
-      for (let j = 0; j < NA; j++) NODES.push({ p: Rg.nodes[j], n: Rg.nrm[j], y: Rg.nodes[j].y });
+      for (let j = 0; j < NA; j += 2) NODES.push({ p: Rg.nodes[j], n: Rg.nrm[j], y: Rg.nodes[j].y });
     });
 
     // tirantes diagonales desde cada columna hasta el nodo más cercano, cada ~2.5 m
@@ -197,11 +210,11 @@
           const d = P.distanceTo(q) + 0.6 * Math.abs(q.y - (y + 1.25));
           if (d < bd) { bd = d; best = q; }
         }
-        if (best) rod(P, best.clone(), 0.07);
+        if (best) rod(P, best.clone(), 0.1);
       }
     });
 
-    // placas y remaches en los cruces (dos remaches por placa)
+    // placas y remaches en los nodos principales (dos remaches por placa)
     const PLATE_M = [], RIVET_M = [];
     NODES.forEach(function (nd) {
       const Zd = nd.n;
@@ -209,31 +222,63 @@
       const pl = new THREE.Matrix4().makeBasis(X, UP, Zd);
       pl.setPosition(nd.p.clone().addScaledVector(Zd, 0.05));
       PLATE_M.push(pl);
-      [-0.1, 0.1].forEach(function (off) {
+      [-0.11, 0.11].forEach(function (off) {
         const rv = new THREE.Matrix4().makeBasis(X, UP, Zd);
-        rv.setPosition(nd.p.clone().addScaledVector(Zd, 0.115).addScaledVector(X, off));
+        rv.setPosition(nd.p.clone().addScaledVector(Zd, 0.12).addScaledVector(X, off));
         RIVET_M.push(rv);
       });
     });
 
-    // Matrices estáticas de aros
-    const barMesh = mesh(CYL, ironMat, RODS.length, IRON_PAL, 0.3);
-    const ringMesh = mesh(TOR, ironMat, RINGS.length, IRON_PAL, 0.2);
-    const plateMesh = mesh(PLATE, ironMat, NODES.length, IRON_PAL, 0.35);
-    const rivetMesh = mesh(RIVET, ironMat, NODES.length * 2, IRON_PAL, 0.15);
+    // mallas instanciadas del armazón
+    const barMesh = mesh(CYL, ironMat, RODS.length, IRON_PAL, 0.45);
+    const ringMesh = mesh(TOR, ironMat, RINGS.length, IRON_PAL, 0.3);
+    const plateMesh = mesh(PLATE, ironMat, NODES.length, IRON_PAL, 0.4);
+    const rivetMesh = mesh(RIVET, ironMat, NODES.length * 2, IRON_PAL, 0.2);
     const FRAME_MESHES = [barMesh, ringMesh, plateMesh, rivetMesh];
     RINGS.forEach(function (Rg, i) { ringMesh.setMatrixAt(i, Rg.M); });
     ringMesh.instanceMatrix.needsUpdate = true;
+
+    // contorno cian fino: líneas aditivas que siguen barras y aros (sin cubrir los materiales)
+    const RING_SEG = 16;
+    const ringStatic = new Float32Array(RINGS.length * RING_SEG * 6);
+    RINGS.forEach(function (Rg, i) {
+      for (let k = 0; k < RING_SEG; k++) {
+        const a0 = k / RING_SEG * Math.PI * 2, a1 = (k + 1) / RING_SEG * Math.PI * 2;
+        const o = (i * RING_SEG + k) * 6;
+        const c = Rg.c;
+        ringStatic.set([c.x + Rg.rx * Math.cos(a0), c.y, c.z + Rg.rz * Math.sin(a0), c.x + Rg.rx * Math.cos(a1), c.y, c.z + Rg.rz * Math.sin(a1)], o);
+      }
+    });
+    const RING_OFF = RODS.length * 6;
+    const contourPos = new Float32Array(RING_OFF + ringStatic.length);
+    const contourGeo = new THREE.BufferGeometry();
+    contourGeo.setAttribute('position', new THREE.BufferAttribute(contourPos, 3));
+    const contour = new THREE.LineSegments(contourGeo, contourMat);
+    contour.frustumCulled = false;
+    root.add(contour);
 
     let lastHf = -1;
     function setFrame(H) {
       for (let i = 0; i < RODS.length; i++) {
         const b = RODS[i];
-        if (clipSeg(b.a, b.b, H)) setBarFromClip(barMesh, i, b.r);
-        else barMesh.setMatrixAt(i, ZERO);
+        if (clipSeg(b.a, b.b, H)) {
+          setBarFromClip(barMesh, i, b.r);
+          const o = i * 6;
+          contourPos[o] = _clipLo.x; contourPos[o + 1] = _clipLo.y; contourPos[o + 2] = _clipLo.z;
+          contourPos[o + 3] = _clipHi.x; contourPos[o + 4] = _clipHi.y; contourPos[o + 5] = _clipHi.z;
+        } else {
+          barMesh.setMatrixAt(i, ZERO);
+          contourPos.fill(0, i * 6, i * 6 + 6);
+        }
       }
       barMesh.instanceMatrix.needsUpdate = true;
-      for (let i = 0; i < RINGS.length; i++) ringMesh.setMatrixAt(i, RINGS[i].c.y <= H ? RINGS[i].M : ZERO);
+      for (let i = 0; i < RINGS.length; i++) {
+        const vis = RINGS[i].c.y <= H;
+        ringMesh.setMatrixAt(i, vis ? RINGS[i].M : ZERO);
+        const len = RING_SEG * 6, off = RING_OFF + i * len;
+        if (vis) contourPos.set(ringStatic.subarray(i * len, i * len + len), off);
+        else contourPos.fill(0, off, off + len);
+      }
       ringMesh.instanceMatrix.needsUpdate = true;
       for (let i = 0; i < NODES.length; i++) {
         const vis = NODES[i].y <= H;
@@ -243,6 +288,7 @@
       }
       plateMesh.instanceMatrix.needsUpdate = true;
       rivetMesh.instanceMatrix.needsUpdate = true;
+      contourGeo.attributes.position.needsUpdate = true;
     }
 
     // ================= 2. COLUMNAS DE SILLARES + LASTRE =================
@@ -251,32 +297,37 @@
       const x = c[0], z = c[1], y0 = c[2], y1 = c[3], r = c[4];
       const n = Math.max(1, Math.ceil((y1 - y0) / 1.2)), h = (y1 - y0) / n;
       for (let k = 0; k < n; k++) {
-        DRUMS.push({ x: x, z: z, y0: y0 + k * h, y1: y0 + (k + 1) * h, r: r * (0.955 + 0.02 * rnd()) });
+        DRUMS.push({ x: x, z: z, y0: y0 + k * h, y1: y0 + (k + 1) * h, r: r * (0.94 + 0.02 * rnd()) });
         if (k > 0) JOINTS.push({ x: x, y: y0 + k * h, z: z, r: r });
       }
     });
-    // lastre: bloques entre las dos columnas de las piernas, en capas de 1.1 m hasta ~8 m
+    // lastre: piedras irregulares amontonadas dentro de las piernas (entre y bajo las columnas)
     const STONES = [];
-    for (let k = 0; k < 7; k++) {
-      [-0.6, 0.6].forEach(function (sx) {
-        [-0.45, 0.65].forEach(function (sz) {
-          const q = new THREE.Quaternion().setFromAxisAngle(UP, (rnd() - 0.5) * 0.2);
-          STONES.push({
-            x: sx + (rnd() - 0.5) * 0.06, z: sz, y0: k * 1.1,
-            w: 0.98 + 0.08 * rnd(), d: 1.0 + 0.1 * rnd(), h: 1.05 + 0.06 * rnd(), q: q
-          });
-        });
+    for (let i = 0; i < 72; i++) {
+      STONES.push({
+        x: (rnd() * 2 - 1) * 1.0, z: -0.7 + rnd() * 1.6, y: 0.4 + rnd() * 7.6,
+        r: 0.32 + 0.22 * rnd(),
+        q: new THREE.Quaternion().setFromEuler(new THREE.Euler(rnd() * 6.28, rnd() * 6.28, rnd() * 6.28)),
+        s: V(0.9 + 0.3 * rnd(), 0.7 + 0.4 * rnd(), 0.9 + 0.3 * rnd())
       });
     }
     const drumMesh = mesh(DRUM, stoneMat, DRUMS.length, STONE_PAL, 0);
     const jointMesh = mesh(JOINT, jointMat, JOINTS.length, null, 0);
-    const stoneMesh = mesh(BLOCK, stoneMat, STONES.length, BALLAST_PAL, 0);
-    const COL_MESHES = [drumMesh, jointMesh, stoneMesh];
+    const stoneMesh = mesh(DODEC, stoneMat, STONES.length, BALLAST_PAL, 0);
     const JOINT_M = JOINTS.map(function (j) {
-      return new THREE.Matrix4().compose(V(j.x, j.y, j.z), IDQ, V(j.r * 1.02, 0.07, j.r * 1.02));
+      return new THREE.Matrix4().compose(V(j.x, j.y, j.z), IDQ, V(j.r * 1.05, 0.1, j.r * 1.05));
     });
     JOINT_M.forEach(function (m, i) { jointMesh.setMatrixAt(i, m); });
     jointMesh.instanceMatrix.needsUpdate = true;
+
+    // contorno cian de las columnas: 8 generatrices por fuste, hasta la altura visible
+    const COL_SEG = 8;
+    const colPos = new Float32Array(COLS.length * COL_SEG * 6);
+    const colGeo = new THREE.BufferGeometry();
+    colGeo.setAttribute('position', new THREE.BufferAttribute(colPos, 3));
+    const colContour = new THREE.LineSegments(colGeo, contourMat);
+    colContour.frustumCulled = false;
+    root.add(colContour);
 
     let lastHc = -1;
     function setColumns(H) {
@@ -291,15 +342,27 @@
       drumMesh.instanceMatrix.needsUpdate = true;
       for (let i = 0; i < JOINTS.length; i++) jointMesh.setMatrixAt(i, JOINTS[i].y <= H ? JOINT_M[i] : ZERO);
       jointMesh.instanceMatrix.needsUpdate = true;
+      // lastre: cada piedra crece al subir el nivel (escala 0..1 según su base y su altura)
       for (let i = 0; i < STONES.length; i++) {
         const b = STONES[i];
-        const top = Math.min(b.y0 + b.h, H);
-        if (top <= b.y0 + 1e-4) { stoneMesh.setMatrixAt(i, ZERO); continue; }
-        const hh = top - b.y0;
-        _mat.compose(_p.set(b.x, b.y0 + hh / 2, b.z), b.q, _sc.set(b.w, hh, b.d));
+        const f = clamp01((H - (b.y - b.r)) / (2 * b.r));
+        if (f <= 0.001) { stoneMesh.setMatrixAt(i, ZERO); continue; }
+        _mat.compose(_p.set(b.x, b.y, b.z), b.q, _sc.set(b.s.x * b.r * f, b.s.y * b.r * f, b.s.z * b.r * f));
         stoneMesh.setMatrixAt(i, _mat);
       }
       stoneMesh.instanceMatrix.needsUpdate = true;
+      // contorno de columnas
+      for (let ci = 0; ci < COLS.length; ci++) {
+        const c = COLS[ci], top = Math.min(c[3], H), rr = c[4] * 1.02;
+        for (let k = 0; k < COL_SEG; k++) {
+          const th = k / COL_SEG * Math.PI * 2, o = (ci * COL_SEG + k) * 6;
+          if (top <= c[2]) { colPos.fill(0, o, o + 6); continue; }
+          const px = c[0] + rr * Math.cos(th), pz = c[1] + rr * Math.sin(th);
+          colPos[o] = px; colPos[o + 1] = c[2]; colPos[o + 2] = pz;
+          colPos[o + 3] = px; colPos[o + 4] = top; colPos[o + 5] = pz;
+        }
+      }
+      colGeo.attributes.position.needsUpdate = true;
     }
 
     // ================= 3. ETIQUETAS (Sprite + CanvasTexture, en español) =================
@@ -407,18 +470,22 @@
       const Hc = clamp01(s.columns || 0) * HT;
       const frameOn = Hf > 0.01, colOn = Hc > 0.01;
       for (let i = 0; i < FRAME_MESHES.length; i++) FRAME_MESHES[i].visible = frameOn;
-      for (let i = 0; i < COL_MESHES.length; i++) COL_MESHES[i].visible = colOn;
+      contour.visible = frameOn;
+      for (let i = 0; i < 3; i++) COL_MESHES[i].visible = colOn;
+      colContour.visible = colOn;
 
       if (Math.abs(Hf - lastHf) > 0.004) { lastHf = Hf; setFrame(Hf); }
       if (Math.abs(Hc - lastHc) > 0.004) { lastHc = Hc; setColumns(Hc); }
 
-      // resalte cian con rayos X (suave, con una leve pulsación)
+      // resalte: el contorno cian es el protagonista; el emisivo del hierro apenas tiñe
       const pulse = 0.9 + 0.1 * Math.sin((s.wall || 0) * 2.1);
-      ironMat.emissiveIntensity = xa * 0.28 * pulse;
-      stoneMat.emissiveIntensity = xa * 0.06 * pulse;
+      ironMat.emissiveIntensity = xa * 0.08 * pulse;
+      stoneMat.emissiveIntensity = xa * 0.03 * pulse;
+      contourMat.opacity = xa * 0.75 * pulse;
 
       updateLabels(xa);
     }
+    const COL_MESHES = [drumMesh, jointMesh, stoneMesh];
 
     return { update: update, group: root };
   };
