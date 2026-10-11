@@ -319,7 +319,12 @@
       uv.needsUpdate = true;
     }
     const sealBrick = new THREE.Mesh(sealGeo, MAT.seal);
-    sealBrick.position.set(BX + 9, 0.18, BZ - 11); sealBrick.rotation.y = 0.2;
+    sealBrick.position.set(BX + 9, 0.88, BZ - 11); sealBrick.rotation.y = 0.2;
+    // peana de adobe: el ladrillo queda por encima del relieve del terreno
+    const plinth = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.0, 2.4), new THREE.MeshStandardMaterial({ color: 0xc9a477, roughness: 1 }));
+    plinth.position.set(BX + 9, 0.3, BZ - 11);
+    plinth.castShadow = true; plinth.receiveShadow = true;
+    yardG.add(plinth);
     sealBrick.castShadow = true; sealBrick.receiveShadow = true; sealBrick.frustumCulled = false;
     yardG.add(sealBrick);
 
