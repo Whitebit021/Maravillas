@@ -8,7 +8,7 @@
 | 1:00 | III — Las ruedas de Quersifrón |
 | 1:22 | IV — Ciento veintisiete columnas |
 | 1:46 | V — La rampa de arena |
-| 2:08 | VI — Cuatro veces el Partenón |
+| 2:08 | VI — Tres veces el Partenón |
 | 2:28 | VII — La casa de Artemisa |
 | 2:46 | VIII — El hombre que quería ser famoso |
 | 3:10 | IX — La noche de Alejandro |

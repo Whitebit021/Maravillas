@@ -38,7 +38,7 @@
 
       { start: 128.8, end: 133.6, chapter: 'templo', text: 'Llegan el tejado, los frontones y las tejas de mármol.', emphasis: false },
       { start: 133.9, end: 137.4, chapter: 'templo', text: 'Dentro, la estatua de la diosa.', emphasis: false },
-      { start: 137.7, end: 142.2, chapter: 'templo', text: 'Ciento quince metros de largo. Cuatro veces el Partenón.', emphasis: true },
+      { start: 137.7, end: 142.2, chapter: 'templo', text: 'Ciento quince metros de largo. Casi tres veces el Partenón.', emphasis: true },
       { start: 142.5, end: 147.2, chapter: 'templo', text: 'El edificio más grande que había visto el mundo griego.', emphasis: false },
 
       { start: 148.8, end: 153.2, chapter: 'esplendor', text: 'Pintado de azul, rojo y oro, brillaba sobre la llanura.', emphasis: false },
@@ -72,7 +72,7 @@
       marmol: ['Mármol a unos 12 km', 'Quersifrón y Metágenes', 'Tambores con ejes de hierro'],
       columnas: ['127 columnas jónicas', 'Unos 18 m de altura', '36 con relieves'],
       arquitrabe: ['Rampa de sacos de arena', 'Los sacos se vacían', 'Leyenda: arquitrabe torcido'],
-      templo: ['115 x 55 m', 'Cuatro veces el Partenón', 'Tejas de mármol'],
+      templo: ['115 x 55 m', 'Casi 3 veces el Partenón', 'Tejas de mármol'],
       esplendor: ['Pintado de azul, rojo y oro', 'Peregrinos del Mediterráneo', 'Antípatro: superaba a todas'],
       erostrato: ['21 de julio de 356 a.C.', 'Lo quemó por fama', 'Nace Alejandro Magno'],
       numeros: ['Pena de muerte por nombrarlo', 'Artemisa, ausente (dicen)', 'Alejandro quiso pagar'],

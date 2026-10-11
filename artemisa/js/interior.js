@@ -49,8 +49,15 @@
     function Soup() { this.p = []; this.n = []; this.uv = []; }
     Soup.prototype.tri = function (a, b, c, ua, ub, uc, nrm, ref) {
       let nx, ny, nz;
-      if (nrm) { nx = nrm[0]; ny = nrm[1]; nz = nrm[2]; }
-      else {
+      if (nrm) {
+        nx = nrm[0]; ny = nrm[1]; nz = nrm[2];
+        // el bobinado debe coincidir con la normal dada (si no, el sombreado DoubleSide la invierte)
+        const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+        const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+        if ((uy * vz - uz * vy) * nx + (uz * vx - ux * vz) * ny + (ux * vy - uy * vx) * nz < 0) {
+          const tb = b, tub = ub; b = c; c = tb; ub = uc; uc = tub;
+        }
+      } else {
         const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
         const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
         nx = uy * vz - uz * vy; ny = uz * vx - ux * vz; nz = ux * vy - uy * vx;

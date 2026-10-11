@@ -498,7 +498,7 @@
     const starCore = glowSprite('255,255,255', 22, AE);
     alexG.add(starSp, starCore);
     const PL = 0.3;   // a mitad del recorrido ya dibujado en el plano 177 (cámara mirando al NO)
-    const alexLab = label('PELLA · nace Alejandro Magno · LA MISMA NOCHE', { lh: 1.2, color: '#ffd27a', pos: [ALEX.x + (AE[0] - ALEX.x) * PL, 10, ALEX.z + (AE[2] - ALEX.z) * PL], fmax: 20 });
+    const alexLab = label('PELLA · nace Alejandro Magno · LA MISMA NOCHE', { lh: 1.2, color: '#ffd27a', pos: [ALEX.x + (AE[0] - ALEX.x) * PL, -8, ALEX.z + (AE[2] - ALEX.z) * PL], fmax: 20 });
     root.add(alexLab.sprite, alexLab.plate);
 
     // ================= 4. nameBan: "ERÓSTRATO" en piedra, tachado en rojo =================
@@ -601,7 +601,7 @@
     parG.add(parBody);
     const parEdges = new THREE.LineSegments(segGeo(PE), vlineMat(0));
     parG.add(parEdges);
-    const parLab = label('PARTENÓN · 4 veces más pequeño', { lh: 1.2, color: '#9fe9ff', pos: [100, 4, -86], fmax: 20 });
+    const parLab = label('PARTENÓN · casi 3 veces menor', { lh: 1.2, color: '#9fe9ff', pos: [100, 4, -86], fmax: 20 });
     root.add(parLab.sprite, parLab.plate);
 
     // ---------- actualización (solo uniforms, visibilidad, escalas y opacidades) ----------

@@ -12,7 +12,7 @@
     { id: 'marmol',     start: 60,  end: 82,  num: 'III',  title: 'Las ruedas de Quersifrón' },
     { id: 'columnas',   start: 82,  end: 106, num: 'IV',   title: 'Ciento veintisiete columnas' },
     { id: 'arquitrabe', start: 106, end: 128, num: 'V',    title: 'La rampa de arena' },
-    { id: 'templo',     start: 128, end: 148, num: 'VI',   title: 'Cuatro veces el Partenón' },
+    { id: 'templo',     start: 128, end: 148, num: 'VI',   title: 'Tres veces el Partenón' },
     { id: 'esplendor',  start: 148, end: 166, num: 'VII',  title: 'La casa de Artemisa' },
     { id: 'erostrato',  start: 166, end: 190, num: 'VIII', title: 'El hombre que quería ser famoso' },
     { id: 'numeros',    start: 190, end: 210, num: 'IX',   title: 'La noche de Alejandro' },
