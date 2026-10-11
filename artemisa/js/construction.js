@@ -212,61 +212,42 @@
     // =====================================================================
     // 1. CANTERA en SITE.quarry: frentes escalonados blancos, bloques y tambores, obreros con picos
     // =====================================================================
-    const QX = SITE.quarry.x, QZ = SITE.quarry.z, QHW = 70, QHD = 45;
+    const QX = SITE.quarry.x, QZ = SITE.quarry.z;
+    // escalones de la cantera en el terreno (environment: anillos cada 14 m, de -8 a +4 m)
+    function qLevel(r) { return Math.min(4, -8 + 3 * Math.floor(r / 14)); }
     const quarryG = new THREE.Group(); root.add(quarryG);
     const qmb = MB();
-    const cCut = new THREE.Color(0xefe6d6), cRock = new THREE.Color(0xd8c9ad), cFloor = new THREE.Color(0xb9a88a);
-    const cGroove = new THREE.Color(0x9c8c6c), cChisel = new THREE.Color(0xfbf6ec);
-    function ringPlate(lo, hi, y0, y1, c) {
-      const th = hi - lo, h = y1 - y0, yc = (y0 + y1) / 2, mid = (lo + hi) / 2;
-      const outerX = QHW - lo, innerZ = QHD - hi;
-      mbBox(qmb, QX, yc, QZ - (QHD - mid), 2 * outerX, h, th, c);
-      mbBox(qmb, QX, yc, QZ + (QHD - mid), 2 * outerX, h, th, c);
-      mbBox(qmb, QX - (QHW - mid), yc, QZ, th, h, 2 * innerZ, c);
-      mbBox(qmb, QX + (QHW - mid), yc, QZ, th, h, 2 * innerZ, c);
-    }
-    // ranuras verticales y marcas de cincel en las caras de un nivel (pared en inset P)
-    function grooves(P, y0, y1) {
-      const h = (y1 - y0) * 0.7, yc = (y0 + y1) / 2;
-      const zN = QZ - (QHD - P), zS = QZ + (QHD - P), xW = QX - (QHW - P), xE = QX + (QHW - P);
-      for (let x = -QHW + P + 1.5; x < QHW - P - 1; x += 3.0) {
-        mbBox(qmb, QX + x, yc, zN + 0.03, 0.14, h, 0.1, cGroove);
-        mbBox(qmb, QX + x, yc, zS - 0.03, 0.14, h, 0.1, cGroove);
+    const cCut = new THREE.Color(0xefe6d6), cGroove = new THREE.Color(0x9c8c6c), cChisel = new THREE.Color(0xfbf6ec);
+    // frentes de corte blancos sobre cada escalón (cilindros abiertos, vistos por dentro)
+    [[14, -8, -5], [28, -5, -2], [42, -2, 1], [56, 1, 4]].forEach(function (R) {
+      const r = R[0], y0 = R[1], y1 = R[2], h = y1 - y0, yc = (y0 + y1) / 2;
+      mbAdd(qmb, new THREE.CylinderGeometry(r, r, h, 56, 1, true), new THREE.Matrix4().makeTranslation(QX, yc, QZ), cCut);
+      // franjas de marcas de cincel cada 0.6 m
+      for (let yy = y0 + 0.3; yy < y1 - 0.1; yy += 0.6) {
+        mbAdd(qmb, new THREE.CylinderGeometry(r + 0.04, r + 0.04, 0.07, 56, 1, true), new THREE.Matrix4().makeTranslation(QX, yy, QZ), cChisel);
       }
-      for (let z = -QHD + P + 1.5; z < QHD - P - 1; z += 3.0) {
-        mbBox(qmb, xW + 0.03, yc, QZ + z, 0.1, h, 0.14, cGroove);
-        mbBox(qmb, xE - 0.03, yc, QZ + z, 0.1, h, 0.14, cGroove);
+      // ranuras verticales cada 7.5 grados
+      for (let a = 0; a < 48; a++) {
+        const th = a / 48 * TAU;
+        mbBox(qmb, QX + Math.cos(th) * (r - 0.04), yc, QZ + Math.sin(th) * (r - 0.04), 0.12, h * 0.7, 0.1, cGroove, Math.PI / 2 - th);
       }
-      for (let yy = y0 + 0.3; yy < y1 - 0.1; yy += 0.45) {
-        mbBox(qmb, QX, yy, zN + 0.04, 2 * (QHW - P) - 2, 0.07, 0.06, cChisel);
-        mbBox(qmb, QX, yy, zS - 0.04, 2 * (QHW - P) - 2, 0.07, 0.06, cChisel);
-        mbBox(qmb, xW + 0.04, yy, QZ, 0.06, 0.07, 2 * (QHD - P) - 2, cChisel);
-        mbBox(qmb, xE - 0.04, yy, QZ, 0.06, 0.07, 2 * (QHD - P) - 2, cChisel);
-      }
-    }
-    mbBox(qmb, QX, -12.25, QZ, 2 * QHW - 4, 0.5, 2 * QHD - 4, cFloor);
-    ringPlate(11.4, 12, -12, -8, cCut);   // pared inferior
-    ringPlate(6, 12, -8.4, -8, cRock);    // banqueta 1
-    ringPlate(5.4, 6, -8, -4, cCut);      // pared media
-    ringPlate(0, 6, -4.4, -4, cRock);     // banqueta 2
-    ringPlate(-0.6, 0, -4, 0, cCut);      // borde superior
-    grooves(12, -12, -8); grooves(6, -8, -4); grooves(0, -4, 0);
-    const quarryMesh = new THREE.Mesh(mbGeo(qmb), MAT.marbleVC);
+    });
+    const quarryMesh = new THREE.Mesh(mbGeo(qmb), (function () { const m = MAT.marbleVC.clone(); m.side = THREE.DoubleSide; return m; })());
     quarryMesh.castShadow = true; quarryMesh.receiveShadow = true; quarryMesh.frustumCulled = false;
     quarryG.add(quarryMesh);
 
-    // bloques de sillar y tambores ya cortados, esparcidos por el suelo de la cantera
+    // bloques de sillar y tambores ya cortados, sobre los escalones
     const NBLK = 36, NQD = 8;
     const blockIM = mkIM(new THREE.BoxGeometry(2.4, 1.2, 1.2), MAT.marble, NBLK, true);
     const qDrumIM = mkIM((function () { const g = new THREE.CylinderGeometry(0.9, 0.9, 2.0, 20, 1); g.rotateZ(Math.PI / 2); return g; })(), MAT.marble, NQD, true);
     quarryG.add(blockIM, qDrumIM);
     for (let i = 0; i < NBLK; i++) {
-      const x = QX + (hash(i + 10) * 2 - 1) * 50, z = QZ + (hash(i + 30) * 2 - 1) * 28;
-      setInst(blockIM, i, x, -11.4 + (i % 4 === 0 ? 1.2 : 0), z, hash(i + 90) * 0.6 - 0.3);
+      const r = 16 + hash(i + 10) * 30, th = hash(i + 30) * TAU;
+      setInst(blockIM, i, QX + Math.cos(th) * r, qLevel(r) + 0.6, QZ + Math.sin(th) * r, hash(i + 90) * 0.6 - 0.3);
     }
     for (let i = 0; i < NQD; i++) {
-      const x = QX + (hash(i + 110) * 2 - 1) * 46, z = QZ + (hash(i + 130) * 2 - 1) * 26;
-      setInst(qDrumIM, i, x, -11.1, z, hash(i + 150) * Math.PI);
+      const r = 16 + hash(i + 110) * 30, th = hash(i + 130) * TAU;
+      setInst(qDrumIM, i, QX + Math.cos(th) * r, qLevel(r) + 0.9, QZ + Math.sin(th) * r, hash(i + 150) * Math.PI);
     }
     blockIM.instanceMatrix.needsUpdate = true; qDrumIM.instanceMatrix.needsUpdate = true;
 
@@ -416,7 +397,9 @@
       fSc = qOn ? 1 : 0.0001;
       for (let i = 0; i < 14; i++) {
         const h1 = hash(i + 500), h2 = hash(i + 600);
-        figRoot(QX + (h1 * 2 - 1) * 48, -12.0, QZ + (h2 * 2 - 1) * 30, h1 * TAU);
+        // cortadores repartidos por los escalones, de cara al centro de la cantera
+        const r = 18 + h2 * 30, th = h1 * TAU;
+        figRoot(QX + Math.cos(th) * r, qLevel(r), QZ + Math.sin(th) * r, headingOf(-Math.cos(th), -Math.sin(th)));
         const sw = Math.sin(W * 2.2 + i);
         setPose(0.08, -0.08, -0.3, -1.0 + 0.9 * sw, 0.35, 1);
         drawFig(i);
