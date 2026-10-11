@@ -34,7 +34,7 @@
     const FOCAL = 1.5;                                            // distancia focal del espejo
     const DISH_R = MIR.radius;                                    // 2.6
     const DISH_D = DISH_R * DISH_R / (4 * FOCAL);                 // profundidad del paraboloide
-    const FOCUS = new THREE.Vector3(0, MIR.y, -0.8);              // foco = centro de la hoguera
+    const FOCUS = new THREE.Vector3(0, MIR.y, -3.0);   // foco desplazado al norte de la linterna (lejos de la cámara de t171)              // foco = centro de la hoguera
     const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
     const NB = 20;                                                // burros
     const BURRO_S = 1.6;                                          // escala de los burros
@@ -443,8 +443,8 @@
       '  float tip = 1.0 - smoothstep(0.25, 1.0, h + n2 * 0.12);',
       '  float base = smoothstep(0.0, 0.08, h);',
       '  float a = edge * tip * base * uI;',
-      '  vec3 hot = vec3(1.0, 0.93, 0.62);',
-      '  vec3 mid = vec3(1.0, 0.5, 0.12);',
+      '  vec3 hot = vec3(1.0, 0.8, 0.44);',
+      '  vec3 mid = vec3(0.95, 0.42, 0.1);',
       '  vec3 low = vec3(0.7, 0.18, 0.04);',
       '  vec3 col = mix(hot, mid, smoothstep(0.0, 0.5, h + n1 * 0.1));',
       '  col = mix(col, low, smoothstep(0.5, 1.0, h));',

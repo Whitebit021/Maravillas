@@ -355,8 +355,8 @@
     });
     const reefMesh = new THREE.Mesh(reefGeo, reefMat);
     reefG.add(reefMesh);
-    const labReef = label('ESCOLLOS', { lh: 6, color: '#ff8a7a', pos: [84, SEA + 2, -152] });
-    const labWreck = label('NAUFRAGIOS', { lh: 4.5, color: '#ffd27a', pos: [G.SITE.wreck.x + 4, SEA + 2, G.SITE.wreck.z - 6] });
+    const labReef = label('ESCOLLOS', { lh: 6, color: '#ff8a7a', pos: [120, SEA + 0.5, -190] });
+    const labWreck = label('NAUFRAGIOS', { lh: 4.5, color: '#ffd27a', pos: [G.SITE.wreck.x + 30, SEA + 0.5, G.SITE.wreck.z - 70] });
     reefG.add(labReef.sprite, labWreck.sprite);
 
     // ================= 2. beam: haz de la linterna que barre el mar =================
@@ -561,7 +561,7 @@
     // sobre el anillo, en el sector que mira la cámara alta (dirección -X, +Z)
     const ringDir = norm([-0.836, 0, 0.548]);
     const labRing = label('VISIBLE A 50 km (crónicas)', {
-      lh: 900, color: '#9fe9ff', pos: [ringDir[0] * RING_R, 1400, ringDir[2] * RING_R], depthTest: false
+      lh: 1400, color: '#9fe9ff', pos: [ringDir[0] * RING_R, 1400, ringDir[2] * RING_R], depthTest: false
     });
     ringG.add(labRing.sprite);
 
