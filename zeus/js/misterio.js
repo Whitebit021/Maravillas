@@ -531,7 +531,7 @@
 
     // ================= 2. standup: Zeus de pie atravesando el techo del templo =================
     const standG = new THREE.Group();
-    standG.position.set(ZX, ZY, ZZ);
+    standG.position.set(ZX, ZY + 1.0, ZZ);   // pies 1 m sobre la basa: la cabeza y la corona salen claramente del tejado
     root.add(standG);
     const SU = newB(), SUE = { P: [], C: [] };
     grid(SU, 40, 48, suBodyFn);                                                      // túnica/cuerpo
@@ -562,19 +562,29 @@
       for (let y = 0.4; y < 14.3; y += 1.0) seg(SUE, suBody(y, w), suBody(y + 1.0, w), CYAN_C);
     }
     [0.35, 0.5, 0.65].forEach(function (u) { suSeg(function (w) { return headFnWorld(0.1, 15.9, 0, 0.9, 1.1, 0.72, 1)(u, w); }, 24, SIL_C); });
+    // dibujado encima de todo: fusión normal (no aditiva, que se pierde sobre el cielo claro), sin prueba de profundidad
     const suMat = ghostMat(CYAN, SILVER, 0.13, 0.85);
-    suMat.depthTest = false;      // fantasma: se ve entero aunque el tejado del templo lo cubra
-    standG.add(new THREE.Mesh(fillGeo(SU), suMat));
-    const suEdges = new THREE.LineSegments(segGeo(SUE), vlineMat(0));
-    suEdges.material.depthTest = false;
+    suMat.blending = THREE.NormalBlending;
+    suMat.depthTest = false;
+    const suBodyMesh = new THREE.Mesh(fillGeo(SU), suMat);
+    suBodyMesh.renderOrder = 10;
+    standG.add(suBodyMesh);
+    const suEdgeMat = new THREE.LineBasicMaterial({
+      vertexColors: true, transparent: true, opacity: 0, fog: false,
+      blending: THREE.NormalBlending, depthTest: false, depthWrite: false
+    });
+    const suEdges = new THREE.LineSegments(segGeo(SUE), suEdgeMat);
+    suEdges.renderOrder = 11;
     standG.add(suEdges);
     const suHalo = glowSprite('127,227,240', 22, [0.1, 17.0, 0]);
+    suHalo.renderOrder = 12;
     standG.add(suHalo);
     // rayo en la mano derecha: sube por encima de la cumbrera del templo (20,3 m)
     const BOLT = [[0.2, 18.9, 2.6], [0.7, 19.6, 2.6], [0.1, 20.3, 2.6], [0.9, 21.0, 2.6], [0.35, 21.7, 2.6]];
     const boltArr = [];
     for (let i = 0; i < BOLT.length - 1; i++) boltArr.push(BOLT[i][0], BOLT[i][1], BOLT[i][2], BOLT[i + 1][0], BOLT[i + 1][1], BOLT[i + 1][2]);
     const boltLine = new THREE.LineSegments(posGeo(boltArr), lineMat(0xfff0b0, 0));
+    boltLine.renderOrder = 12;
     standG.add(boltLine);
     const boltGlow = glowSprite('255,240,190', 4.5, BOLT[BOLT.length - 1]);
     standG.add(boltGlow);
@@ -762,8 +772,8 @@
       standG.visible = pu > 0.001;
       if (standG.visible) {
         const e = ss(pu);
-        standG.position.y = ZY - 6 * (1 - e);
-        suMat.uniforms.uOp.value = 0.45 * e;
+        standG.position.y = ZY + 1.0 - 6 * (1 - e);
+        suMat.uniforms.uOp.value = 0.35 * e;
         suEdges.material.opacity = 1.0 * e;
         suHalo.material.opacity = 0.6 * e;
         boltLine.material.opacity = 0.95 * e * (0.8 + 0.2 * Math.sin(wall * 17.0));

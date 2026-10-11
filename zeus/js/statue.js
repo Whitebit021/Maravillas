@@ -446,7 +446,7 @@
       z -= 0.1 * low * front;
       z -= 0.2 * gss(nx / 0.33) * gss((ny + 0.82) / 0.25) * front;                           // menton
       z -= 0.1 * gss((ny - 0.4) / 0.14) * front * (1 - 0.4 * Math.abs(nx));                  // arcada
-      z -= 0.22 * gss(nx / 0.1) * gss((ny - 0.08) / 0.32) * front;                           // nariz recta
+      z -= 0.32 * gss(nx / 0.1) * gss((ny - 0.08) / 0.32) * front;                           // nariz recta
       x += 0.1 * Math.sign(nx) * gss((ny + 0.08) / 0.22) * gss((Math.abs(nx) - 0.72) / 0.22) * front; // pomulos
       z += 0.05 * gss((ny - 0.12) / 0.14) * gss((Math.abs(nx) - 0.4) / 0.18) * front;        // cuencas
       z += 0.03 * gss((ny + 0.3) / 0.12) * gss(nx / 0.22) * front;                           // surco labial
@@ -485,17 +485,20 @@
     [-1, 1].forEach(function (sg) {
       ell(ivA, hd(sg * 1.95, -0.1, 0.1), [0.1, 0.22, 0.13]);                               // orejas
       ell(ivA, hd(sg * 0.72, 0.28, -2.12), [0.07, 0.055, 0.13], DARK_EYE);                  // ojos (oscuros, serenos)
-      ell(ivA, hd(sg * 0.7, 0.58, -1.98), [0.06, 0.03, 0.15], DARK_EYE);                    // cejas
+      ell(ivA, hd(sg * 0.72, 0.28, -2.22), [0.035, 0.035, 0.035], [0.08, 0.05, 0.04]);      // pupila oscura
     });
     ell(ivA, hd(0, -1.0, -2.0), [0.05, 0.03, 0.16], [0.6, 0.45, 0.4]);                      // labios
-    TUBE(ivA, [[-1.0, 9.9, 0], [-0.95, 10.5, 0], [-0.9, 10.9, 0]], [0.72, 0.6, 0.66], 16, 20);   // cuello
+    TUBE(ivA, [[-1.0, 9.9, 0], [-0.95, 10.5, 0], [-0.9, 10.9, 0]], [0.9, 0.8, 0.85], 16, 20);   // cuello ancho
+    [-1, 1].forEach(function (sg) {                                                       // clavicula
+      TUBE(ivA, [[-0.95, 9.85, 0], [-1.0, 9.7, sg * 1.0], [-1.0, 9.5, sg * 2.0]], [0.22, 0.24, 0.4], 12, 12, 1);
+    });
 
-    const TORSO_ROWS = [[5.6, -0.6, 1.2, 1.85], [6.6, -0.6, 1.15, 1.7], [7.6, -0.65, 1.3, 1.85],
-      [8.6, -0.7, 1.45, 2.1], [9.4, -0.75, 1.35, 2.25], [10.1, -0.8, 0.95, 1.2]];
+    const TORSO_ROWS = [[5.6, -0.6, 1.0, 1.6], [6.6, -0.6, 0.92, 1.45], [7.6, -0.65, 1.1, 1.7],
+      [8.6, -0.7, 1.3, 1.95], [9.4, -0.75, 1.15, 2.15], [10.1, -0.8, 0.8, 1.15]];
     function torsoDef(c, y, z) {                                                         // pectorales, abdomen, esternon
       const front = Math.max(0, c), lat = Math.abs(z);
       let d = 0;
-      d -= 0.32 * gss((y - 8.4) / 0.7) * gss((lat - 1.05) / 0.65) * Math.pow(front, 0.7);
+      d += 0.22 * gss((y - 8.4) / 0.8) * gss((lat - 1.0) / 0.7) * Math.pow(front, 0.7);   // pectorales abultados
       d += 0.1 * gss(lat / 0.14) * gss((y - 8.2) / 1.4) * front;
       d -= 0.12 * gss((lat - 1.5) / 0.35) * gss((y - 6.9) / 0.9) * Math.pow(front, 0.6);
       let ab = 0; const YC = [6.3, 7.0, 7.7];
@@ -506,6 +509,7 @@
       return d;
     }
     ivA.add(loft(TORSO_ROWS, 5.6, 10.1, 36, 48, torsoDef, 3, 3.2), IDM);
+    [-1, 1].forEach(function (sg) { ell(ivA, [-0.95, 9.4, sg * 2.0], [0.85, 0.85, 0.85]); });   // hombros redondos
 
     // brazo izquierdo (sostiene el cetro) y derecho (sostiene a Nike)
     TUBE(ivA, [[-1.0, 9.6, -2.0], [-0.6, 9.0, -2.8], [0.4, 10.0, -2.6]], [0.65, 0.5, 0.42], 30, 22, 3);
@@ -538,12 +542,13 @@
         const v = j / NV;
         drapeCurve.getPoint(v, Pp); drapeCurve.getTangent(v, T);
         const nx = -T.y, ny = T.x;                                    // normal hacia fuera (arriba / delante)
-        const W = 2.75 * (0.92 + 0.08 * Math.sin(v * Math.PI));
+        const W = lerp(2.75, 1.5, smooth((v - 0.6) / 0.4));          // se estrecha hacia los tobillos
         const amp = 0.1 + 0.3 * smooth(v);                            // pliegues mas hondos hacia el borde
         for (let i = 0; i <= NU; i++) {
           const u = i / NU, z = (u * 2 - 1) * W;
           const fold = 0.55 * Math.sin(z * 4.1 + 0.5) + 0.3 * Math.sin(z * 9.7 + v * 1.5) + 0.15 * Math.sin(z * 17.3 + v * 4.0);
-          const d = 0.22 + amp * fold;
+          const kn = gss((z - 1.45) / 0.8) + gss((z + 1.45) / 0.8);    // dos rodillas
+          const d = 0.22 + amp * fold + 0.3 * kn * gss((v - 0.45) / 0.13);
           pos.push(Pp.x + nx * d, Pp.y + ny * d, z);
           uv.push(u * 12, arc[j] * 2.2);                             // lirios finos (repeticion fina)
         }
@@ -557,7 +562,11 @@
     // ---------- oro del cuerpo: pelo, barba, corona de olivo, sandalias ----------
     const goA = new Acc();
     goA.add(sphereGrid(44, 56, function (a, b, c) { const p = hairRel(a, b, c); return hd(p[0], p[1], p[2]); }, null, 3, 2), IDM);
-    goA.add(superGeo([HX + 0.3, HY - 1.05, HZ], [0.36, 0.72, 0.5], 0.5, 16, 24), IDM);       // base de la barba (cuna)
+    goA.add(superGeo([0.05, 9.2, 0], [0.34, 1.0, 0.5], 0.5, 16, 24), IDM);                   // barba: cuna que cae hasta y~8.2
+    goA.add(superGeo([HX - 0.5, 10.4, HZ], [0.45, 1.0, 0.9], 0.5, 14, 22), IDM);              // pelo que cae sobre la nuca
+    [-1, 1].forEach(function (sg) {                                                         // cejas pobladas de oro
+      ell(goA, hd(sg * 0.7, 0.6, -2.0), [0.1, 0.05, 0.24]);
+    });
     // corona de olivo: aro sobre el pelo y hojas
     const crownM = new THREE.Matrix4().compose(P.set(HX, HY + 0.5, HZ), Q.setFromAxisAngle(XAX, Math.PI / 2), S.set(1, 1, 1));
     const crownGeo = new THREE.TorusGeometry(0.84, 0.05, 8, 40);
@@ -596,14 +605,22 @@
       }
     }
     // rizos de la barba: en la cuna que cae bajo la mandibula, mas largos hacia abajo
-    for (let k = 0; k < 150; k++) {
+    for (let k = 0; k < 230; k++) {
       const t = rnd(), a = rnd() * 2 * Math.PI;
-      const ax = 0.36 * (1 - 0.35 * t), az = 0.5 * (1 - 0.45 * t);
-      const cx = HX + 0.3 + ax * Math.cos(a), cy = HY - 0.45 - 1.25 * t, cz = HZ + az * Math.sin(a);
-      const n = new THREE.Vector3(Math.cos(a) / ax, -0.2, Math.sin(a) / az).normalize();
+      const ax = 0.34 * (1 - 0.3 * t), az = 0.5 * (1 - 0.4 * t);
+      const cx = 0.05 + ax * Math.cos(a), cy = 10.1 - 1.9 * t, cz = az * Math.sin(a);
+      const n = new THREE.Vector3(Math.cos(a) / ax, -0.1, Math.sin(a) / az).normalize();
       curlPos.push([cx + n.x * 0.04, cy + n.y * 0.04, cz + n.z * 0.04]);
       curlNrm.push([n.x, n.y, n.z]);
-      curlSz.push(0.075 * (1 - 0.3 * t) * (0.85 + 0.3 * rnd()));
+      curlSz.push(0.08 * (1 - 0.3 * t) * (0.85 + 0.3 * rnd()));
+    }
+    for (let k = 0; k < 110; k++) {                                       // pelo rizado hasta los hombros (nuca)
+      const t = rnd(), z = (rnd() - 0.5) * 1.6 * (1 - 0.3 * t);
+      const x = HX - 0.95 - 0.02, y = 10.9 - 1.5 * t;
+      const n = new THREE.Vector3(-1, -0.15, z * 0.3).normalize();
+      curlPos.push([x - 0.03, y, z]);
+      curlNrm.push([n.x, n.y, n.z]);
+      curlSz.push(0.08 * (0.85 + 0.3 * rnd()));
     }
     const curlCount = curlPos.length;
     const curlMesh = new THREE.InstancedMesh(new THREE.TorusGeometry(1, 0.3, 4, 6), goldStat, Math.max(1, curlCount));
@@ -661,16 +678,18 @@
 
     // ---------- Nike (de pie sobre la palma derecha) y cetro con aguila ----------
     const nkI = new Acc(), nkG = new Acc(), scG = new Acc();
-    nkG.add(loft([[0.03, 0, 0.13, 0.16], [0.5, 0, 0.11, 0.14], [0.95, 0, 0.1, 0.13], [1.2, 0, 0.12, 0.15], [1.28, 0, 0.11, 0.12]],
-      0.03, 1.28, 22, 32, function (c, y, z) { return 0.02 * Math.sin(z * 38) * Math.abs(c); }, 2, 1), IDM);   // quitón plegado
-    TUBE(nkI, [[0, 1.25, 0], [0.0, 1.38, 0]], [0.05, 0.04], 6, 12, 1);                    // cuello
-    ell(nkI, [0.01, 1.47, 0], [0.09, 0.1, 0.08]);                                           // cabeza
-    TUBE(nkI, [[0, 1.24, 0.14], [0.1, 1.1, 0.2], [0.22, 1.18, 0.22]], [0.05, 0.04, 0.035], 12, 12, 1);   // brazo que ofrece la corona
-    TUBE(nkI, [[0, 1.24, -0.14], [0.03, 1.0, -0.2], [0.08, 0.88, -0.18]], [0.05, 0.04, 0.035], 12, 12, 1);
-    const wreathM = new THREE.Matrix4().compose(P.set(0.3, 1.22, 0.2), Q.setFromAxisAngle(UP, Math.PI / 2), S.set(1, 1, 1));
+    // Nike: figura femenina de pie (tunica dorada, cuello, brazos de marfil), alas grandes en V detras
+    nkG.add(loft([[0.03, 0, 0.12, 0.2], [0.5, 0, 0.1, 0.16], [0.95, 0, 0.09, 0.15], [1.15, 0, 0.11, 0.17], [1.3, 0, 0.1, 0.14]],
+      0.03, 1.3, 22, 32, function (c, y, z) { return 0.02 * Math.sin(z * 38) * Math.abs(c); }, 2, 1), IDM);
+    TUBE(nkI, [[0, 1.27, 0], [0.0, 1.38, 0]], [0.05, 0.045], 6, 12, 1);                  // cuello
+    ell(nkI, [0.01, 1.47, 0], [0.09, 0.105, 0.09]);                                       // cabeza
+    ell(nkG, [-0.06, 1.52, 0], [0.09, 0.07, 0.09]);                                       // pelo recogido
+    TUBE(nkI, [[0, 1.24, 0.15], [0.1, 1.08, 0.22], [0.28, 1.2, 0.22]], [0.05, 0.045, 0.04], 12, 12, 1);   // brazo que ofrece la corona
+    TUBE(nkI, [[0, 1.24, -0.15], [0.03, 1.0, -0.2], [0.08, 0.88, -0.18]], [0.05, 0.045, 0.04], 12, 12, 1);
+    const wreathM = new THREE.Matrix4().compose(P.set(0.36, 1.22, 0.22), Q.setFromAxisAngle(UP, Math.PI / 2), S.set(1, 1, 1));
     nkG.add(new THREE.TorusGeometry(0.1, 0.015, 6, 20), wreathM);
-    nkG.add(wingGeo([-0.04, 1.3, 0.12], [-0.5, 0.8, 0.55], 1.05, 0.5, [0.6, 0, 0.45], 16, 10), IDM);
-    nkG.add(wingGeo([-0.04, 1.3, -0.12], [-0.5, 0.8, -0.55], 1.05, 0.5, [0.6, 0, -0.45], 16, 10), IDM);
+    nkG.add(wingGeo([-0.06, 1.3, 0.12], [-0.3, 0.35, 0.9], 1.0, 0.6, [-0.5, 0.9, 0], 18, 12), IDM);
+    nkG.add(wingGeo([-0.06, 1.3, -0.12], [-0.3, 0.35, -0.9], 1.0, 0.6, [-0.5, 0.9, 0], 18, 12), IDM);
 
     // cetro (ZEUS.scepter): asta con nudos, capitel y aguila de alas abiertas
     const SC = Z.scepter;
