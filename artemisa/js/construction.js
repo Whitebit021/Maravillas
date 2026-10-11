@@ -256,7 +256,9 @@
     //    de hierro en un bastidor de madera, tirado por dos yuntas de bueyes; boyero junto a cada equipo.
     //    Posición = f(fract(t/22 + i/6)) sobre SITE.route; el tambor gira según la distancia recorrida.
     // =====================================================================
-    const NT = 6, TEAM_PERIOD = 900, TEAM_PHASE = 0.419;
+    const NT = 6;
+    // distancia recorrida (m) de cada equipo a t=66; avanzan 1 m/s a lo largo de SITE.route (módulo L)
+    const TEAM_D0 = [560, 604, 380, 250, 150, 50];
     const ROUTE = polyline(SITE.route), RL = ROUTE.L;
     function comp(x, y, z, ax, ay, az, ang) {
       return new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(ax, ay, az), ang || 0), _ONE);
@@ -333,10 +335,15 @@
     const OX_X = [3.6, 6.9], OX_Z = [-0.6, 0.6], OX_S = new THREE.Matrix4().makeScale(1.3, 1.3, 1.3);
     function put(im, idx, base, loc) { _tmp.multiplyMatrices(base, loc); im.setMatrixAt(idx, _tmp); }
 
+    function teamU(i, t) {
+      const d = TEAM_D0[i] + (t - 66);
+      return ((d % RL) + RL) % RL / RL;
+    }
+
     function updateOxen(s, t, W) {
       const on = V(s.oxen) > 0.02;
       for (let i = 0; i < NT; i++) {
-        const u = frac(t / TEAM_PERIOD + TEAM_PHASE + i / NT);
+        const u = teamU(i, t);
         const P = ROUTE.at(u);
         // se desvanece en los extremos del ciclo (salto de vuelta y paso por la cantera)
         const fade = sstep((u - 0.08) / 0.04) * sstep((0.98 - u) / 0.04);
@@ -380,7 +387,7 @@
         .forEach(function (im) { im.instanceMatrix.needsUpdate = true; });
       // boyeros: caminan junto a la yunta de cada equipo
       for (let i = 0; i < NT; i++) {
-        const u = frac(t / TEAM_PERIOD + TEAM_PHASE + i / NT);
+        const u = teamU(i, t);
         const fade = sstep((u - 0.08) / 0.04) * sstep((0.98 - u) / 0.04);
         const sc = on ? Math.max(0.0001, fade) : 0.0001;
         const P = ROUTE.at(u);
