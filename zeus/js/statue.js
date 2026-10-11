@@ -468,7 +468,7 @@
       return Math.max(top, 1 - front) * low;
     }
     function hairRel(ux, uy, uz) {
-      const r = lerp(1.9, 2.75, hairVis(uy, uz));
+      const r = lerp(1.9, 2.5, hairVis(uy, uz));
       return [ux * r, uy * r * 1.08, uz * r * 1.04];
     }
     function beardMask(uy, uz) {
