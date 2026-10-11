@@ -330,7 +330,7 @@
     // ---------- materiales (opacidad se fija en update) ----------
     const ADD = THREE.AdditiveBlending;
     const M = {
-      lidMud: new THREE.MeshStandardMaterial({ map: texMud, roughness: 1 }),
+      lidMud: new THREE.MeshStandardMaterial({ map: texMud, roughness: 1, side: THREE.DoubleSide }),
       puddle: new THREE.MeshStandardMaterial({ color: 0x2b4a48, roughness: 0.12, envMap: envTex, envMapIntensity: 0.9 }),
       reed: new THREE.MeshStandardMaterial({ color: 0x6e7a3a, roughness: 0.9 }),
       earth: new THREE.MeshStandardMaterial({ map: texEarthWall, roughness: 1, side: THREE.DoubleSide }),
