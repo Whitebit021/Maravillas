@@ -5,7 +5,7 @@
   const G = window.GIZA;
 
   const CSS = `
-#hud{--bar:clamp(30px,7vh,70px);position:fixed;inset:0;z-index:10;pointer-events:none;font-family:Georgia,'Times New Roman',serif;color:#efe9dd;overflow:hidden;user-select:none;-webkit-user-select:none}
+#hud{--bar:clamp(30px,7vh,70px);position:fixed;inset:0;z-index:10;pointer-events:none;font-family:Georgia,'Times New Roman',serif;color:#f2e6cf;overflow:hidden;user-select:none;-webkit-user-select:none}
 #hud *{box-sizing:border-box}
 #hud button{pointer-events:auto;cursor:pointer;font-family:inherit}
 #hud .grain{position:absolute;inset:0;width:100%;height:100%;z-index:1;opacity:.025;mix-blend-mode:overlay;pointer-events:none}
@@ -13,10 +13,10 @@
 #hud .lb{position:absolute;left:0;right:0;height:var(--bar);background:#000;pointer-events:none;z-index:3}
 #hud .lb-top{top:0;background:linear-gradient(#000 75%,rgba(0,0,0,.55))}
 #hud .lb-bot{bottom:0;background:linear-gradient(rgba(0,0,0,.55),#000 25%)}
-#hud .panel{position:absolute;top:14px;right:18px;z-index:4;min-width:min(221px,40vw);padding:6px 10px;font-family:Consolas,'Courier New',monospace;font-size:clamp(9.5px,1.15vw,12.75px);line-height:1.5;color:#e0b257;text-shadow:0 0 6px rgba(224,178,87,.55);background:rgba(0,0,0,.45);border:1px solid rgba(224,178,87,.35);letter-spacing:.04em;transition:opacity .6s ease;pointer-events:none}
+#hud .panel{position:absolute;top:14px;right:18px;z-index:4;min-width:min(221px,40vw);padding:6px 10px;font-family:Consolas,'Courier New',monospace;font-size:clamp(9.5px,1.15vw,12.75px);line-height:1.5;color:#d4a63c;text-shadow:0 0 6px rgba(212,166,60,.55);background:rgba(0,0,0,.45);border:1px solid rgba(212,166,60,.35);letter-spacing:.04em;transition:opacity .6s ease;pointer-events:none}
 #hud .cover .keys{margin-top:14px;font-family:Consolas,'Courier New',monospace;font-size:13px;color:#9b8d6a;letter-spacing:.06em}
 #hud .cover .foot{position:absolute;left:0;right:0;bottom:calc(var(--bar) + 10px);font-family:Georgia,'Times New Roman',serif;font-size:12px;color:#7d776b;letter-spacing:.03em}
-#hud .panel .hd{color:#f0d28a;letter-spacing:.18em;font-size:.8em;border-bottom:1px dashed rgba(224,178,87,.4);margin-bottom:4px;padding-bottom:3px}
+#hud .panel .hd{color:#f0d28a;letter-spacing:.18em;font-size:.8em;border-bottom:1px dashed rgba(212,166,60,.4);margin-bottom:4px;padding-bottom:3px}
 #hud .panel .r{display:flex;justify-content:space-between;gap:14px;white-space:nowrap}
 #hud .panel .r span:last-child{color:#f3dca0}
 #hud .facts{position:absolute;left:3vw;top:30%;z-index:4;width:min(320px,40vw);display:flex;flex-direction:column;gap:12px;pointer-events:none}
@@ -27,27 +27,27 @@
 #hud .hg{width:clamp(30px,3.6vw,50px);height:auto;opacity:.85;filter:drop-shadow(0 0 6px rgba(185,138,69,.5))}
 #hud .cbody{text-align:center}
 #hud .ch .n{font-family:Consolas,'Courier New',monospace;font-size:clamp(10px,1.1vw,13px);letter-spacing:.5em;color:#b98a45}
-#hud .ch .t{margin-top:6px;font-family:Georgia,'Times New Roman',serif;font-size:clamp(28px,5vw,68px);font-weight:normal;letter-spacing:.04em;color:#e0b257}
-#hud .ch .rule{height:2px;width:0;margin:10px auto 0;background:linear-gradient(90deg,transparent,#e0b257,transparent)}
-#hud .ch.cian .t{color:#bff3fa;text-shadow:0 0 4px #000,0 0 14px #000,0 0 28px rgba(0,0,0,.9),0 2px 16px #000}
-#hud .ch.cian .n{color:#7fe3f0;text-shadow:0 0 6px #000,0 0 12px #000}
-#hud .ch.cian{padding:22px 48px;background:radial-gradient(ellipse at center,rgba(0,12,18,.78),rgba(0,0,0,.45) 55%,rgba(0,0,0,0) 74%)}
-#hud .ch.cian .rule{background:linear-gradient(90deg,transparent,#7fe3f0,transparent)}
+#hud .ch .t{margin-top:6px;font-family:Georgia,'Times New Roman',serif;font-size:clamp(28px,5vw,68px);font-weight:normal;letter-spacing:.04em;color:#d4a63c}
+#hud .ch .rule{height:2px;width:0;margin:10px auto 0;background:linear-gradient(90deg,transparent,#d4a63c,transparent)}
+#hud .ch.marfil .t{color:#f2e6cf;text-shadow:0 0 4px #000,0 0 14px #000,0 0 28px rgba(0,0,0,.9),0 2px 16px #000}
+#hud .ch.marfil .n{color:#d4a63c;text-shadow:0 0 6px #000,0 0 12px #000}
+#hud .ch.marfil{padding:22px 48px;background:radial-gradient(ellipse at center,rgba(20,14,4,.78),rgba(0,0,0,.45) 55%,rgba(0,0,0,0) 74%)}
+#hud .ch.marfil .rule{background:linear-gradient(90deg,transparent,#d4a63c,transparent)}
 #hud .ch.fuego .n{color:#ff7a1a;text-shadow:0 0 8px rgba(255,122,26,.7),0 0 14px #000}
 #hud .ch.fuego .t{color:#ffb070;text-shadow:0 0 10px rgba(255,122,26,.6),0 2px 16px #000}
 #hud .ch.fuego .rule{background:linear-gradient(90deg,transparent,#ff7a1a,transparent)}
 #hud .ch.fuego{padding:22px 48px;background:radial-gradient(ellipse at center,rgba(40,12,0,.8),rgba(0,0,0,.45) 55%,rgba(0,0,0,0) 74%)}
-#hud .ch.verde .n{color:#9db35f;text-shadow:0 0 8px rgba(93,107,58,.9),0 0 14px #000}
-#hud .ch.verde .t{color:#cfdc9a;text-shadow:0 0 10px rgba(93,107,58,.85),0 2px 16px #000}
-#hud .ch.verde .rule{background:linear-gradient(90deg,transparent,#5d6b3a,transparent)}
+#hud .ch.verde .n{color:#a9b468;text-shadow:0 0 8px rgba(107,122,58,.9),0 0 14px #000}
+#hud .ch.verde .t{color:#e3dc9a;text-shadow:0 0 10px rgba(107,122,58,.85),0 2px 16px #000}
+#hud .ch.verde .rule{background:linear-gradient(90deg,transparent,#6b7a3a,transparent)}
 #hud .ch.verde{padding:22px 48px;background:radial-gradient(ellipse at center,rgba(10,14,4,.8),rgba(0,0,0,.45) 55%,rgba(0,0,0,0) 74%)}
 #hud .sub{position:absolute;left:50%;bottom:calc(var(--bar) + 16px);transform:translateX(-50%);z-index:4;width:min(900px,90vw);padding:12px 20px;text-align:center;font-size:clamp(17px,2.1vw,27px);line-height:1.35;color:#f5efe0;text-shadow:0 2px 4px #000,0 0 12px #000;background:radial-gradient(ellipse at center,rgba(0,0,0,.62),rgba(0,0,0,0) 72%);opacity:0;transition:opacity .45s ease;pointer-events:none}
 #hud .sub.on{opacity:1}
 #hud .sub.mid{font-size:1.12em}
-#hud .sub.big{color:#e0b257;font-size:1.32em;font-weight:bold;text-shadow:0 0 16px rgba(224,178,87,.45),0 2px 4px #000}
-#hud .sub .em{color:#e0b257;font-weight:bold}
-#hud .scan{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;background:repeating-linear-gradient(to bottom,rgba(127,227,240,.16) 0 2px,rgba(0,0,0,0) 2px 6px);mix-blend-mode:screen;animation:mScanY .6s linear infinite}
-#hud .scan::after{content:'';position:absolute;left:0;right:0;height:8%;top:0;background:linear-gradient(transparent,rgba(127,227,240,.28),transparent);animation:mSweep .6s linear infinite}
+#hud .sub.big{color:#d4a63c;font-size:1.32em;font-weight:bold;text-shadow:0 0 16px rgba(212,166,60,.45),0 2px 4px #000}
+#hud .sub .em{color:#d4a63c;font-weight:bold}
+#hud .scan{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;background:repeating-linear-gradient(to bottom,rgba(242,230,207,.16) 0 2px,rgba(0,0,0,0) 2px 6px);mix-blend-mode:screen;animation:mScanY .6s linear infinite}
+#hud .scan::after{content:'';position:absolute;left:0;right:0;height:8%;top:0;background:linear-gradient(transparent,rgba(242,230,207,.28),transparent);animation:mSweep .6s linear infinite}
 @keyframes mScanY{from{background-position:0 0}to{background-position:0 24px}}
 @keyframes mSweep{from{top:-10%}to{top:110%}}
 #hud .note{position:absolute;top:calc(var(--bar) + 10px);left:3vw;z-index:6;font-family:Consolas,'Courier New',monospace;font-size:12px;color:#b98a45;background:rgba(0,0,0,.6);padding:4px 8px;border:1px solid rgba(185,138,69,.3);opacity:0;transition:opacity .4s;pointer-events:none}
@@ -57,30 +57,30 @@
 #hud .ctrl.off *{pointer-events:none!important}
 #hud .ctrl.on{opacity:1}
 #hud .ctrl.on .bar{pointer-events:auto}
-#hud .btn{padding:5px 10px;min-width:38px;font-family:Consolas,'Courier New',monospace;font-size:13px;letter-spacing:.06em;color:#e0b257;background:rgba(0,0,0,.6);border:1px solid rgba(224,178,87,.5)}
-#hud .btn:hover{background:rgba(224,178,87,.16)}
+#hud .btn{padding:5px 10px;min-width:38px;font-family:Consolas,'Courier New',monospace;font-size:13px;letter-spacing:.06em;color:#d4a63c;background:rgba(0,0,0,.6);border:1px solid rgba(212,166,60,.5)}
+#hud .btn:hover{background:rgba(212,166,60,.16)}
 #hud .time{font-family:Consolas,'Courier New',monospace;font-size:13px;color:#f0d9a0;white-space:nowrap;text-shadow:0 1px 3px #000}
 #hud .bar{position:relative;flex:1;height:22px;cursor:pointer;touch-action:none}
 #hud .track{position:absolute;left:0;right:0;top:9px;height:4px;background:rgba(255,255,255,.2)}
-#hud .fill{position:absolute;left:0;top:9px;height:4px;width:0;background:linear-gradient(90deg,#7a3e8e,#e0b257)}
+#hud .fill{position:absolute;left:0;top:9px;height:4px;width:0;background:linear-gradient(90deg,#6b7a3a,#d4a63c)}
 #hud .tick{position:absolute;top:0;width:9px;height:22px;margin-left:-4px;cursor:pointer}
 #hud .tick::after{content:'';position:absolute;left:4px;top:4px;width:1px;height:14px;background:rgba(255,230,160,.7)}
-#hud .tip{position:absolute;bottom:28px;transform:translateX(-50%);white-space:nowrap;font-family:Consolas,'Courier New',monospace;font-size:12px;color:#f0d9a0;background:rgba(0,0,0,.85);border:1px solid rgba(224,178,87,.4);padding:3px 8px;opacity:0;transition:opacity .15s;pointer-events:none}
+#hud .tip{position:absolute;bottom:28px;transform:translateX(-50%);white-space:nowrap;font-family:Consolas,'Courier New',monospace;font-size:12px;color:#f0d9a0;background:rgba(0,0,0,.85);border:1px solid rgba(212,166,60,.4);padding:3px 8px;opacity:0;transition:opacity .15s;pointer-events:none}
 #hud .tip.on{opacity:1}
-#hud .head{position:absolute;top:4px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#e0b257;box-shadow:0 0 8px #e0b257;left:0}
+#hud .head{position:absolute;top:4px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#d4a63c;box-shadow:0 0 8px #d4a63c;left:0}
 #hud .fade{position:absolute;inset:0;z-index:7;background:#000;opacity:0;pointer-events:none}
 #hud .endtxt{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);z-index:8;text-align:center;opacity:0;white-space:nowrap;pointer-events:none}
-#hud .endtxt h2{margin:0;font-weight:normal;font-size:clamp(34px,6vw,84px);letter-spacing:.08em;color:#e0b257;text-shadow:0 0 24px rgba(224,178,87,.35),0 2px 12px #000}
+#hud .endtxt h2{margin:0;font-weight:normal;font-size:clamp(34px,6vw,84px);letter-spacing:.08em;color:#d4a63c;text-shadow:0 0 24px rgba(212,166,60,.35),0 2px 12px #000}
 #hud .endtxt p{text-shadow:0 0 6px #000,0 2px 10px #000;margin:14px 0 0;font-family:Consolas,'Courier New',monospace;font-size:clamp(11px,1.3vw,14px);letter-spacing:.12em;color:#9b8d6a}
-#hud .again{position:absolute;left:50%;top:62%;transform:translate(-50%,-50%);z-index:9;padding:12px 26px;font-size:18px;letter-spacing:.14em;color:#e0b257;background:rgba(0,0,0,.4);border:1px solid #e0b257;opacity:0;pointer-events:none;transition:opacity .6s ease}
+#hud .again{position:absolute;left:50%;top:62%;transform:translate(-50%,-50%);z-index:9;padding:12px 26px;font-size:18px;letter-spacing:.14em;color:#d4a63c;background:rgba(0,0,0,.4);border:1px solid #d4a63c;opacity:0;pointer-events:none;transition:opacity .6s ease}
 #hud .again.on{opacity:1;pointer-events:auto}
-#hud .again:hover{background:rgba(224,178,87,.15)}
+#hud .again:hover{background:rgba(212,166,60,.15)}
 #hud .cover{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center;background:#000;pointer-events:auto;transition:opacity 1.2s ease}
 #hud .cover.gone{opacity:0;pointer-events:none}
-#hud .cover svg{width:min(30vw,200px);height:auto;margin-bottom:22px;filter:drop-shadow(0 0 14px rgba(127,227,240,.25))}
-#hud .cover h1{margin:0;font-weight:normal;font-size:clamp(26px,5vw,68px);letter-spacing:.12em;color:#e0b257;text-shadow:0 0 22px rgba(224,178,87,.25)}
+#hud .cover svg{width:min(30vw,200px);height:auto;margin-bottom:22px;filter:drop-shadow(0 0 14px rgba(242,230,207,.25))}
+#hud .cover h1{margin:0;font-weight:normal;font-size:clamp(26px,5vw,68px);letter-spacing:.12em;color:#d4a63c;text-shadow:0 0 22px rgba(212,166,60,.25)}
 #hud .cover .sub2{margin-top:12px;font-style:italic;font-size:clamp(15px,2vw,22px);color:#cdbd93;letter-spacing:.05em}
-#hud .cover .play{margin-top:40px;padding:16px 46px;font-family:Georgia,'Times New Roman',serif;font-size:clamp(17px,2.2vw,25px);letter-spacing:.2em;color:#120a00;background:linear-gradient(#e0b257,#b98a45);border:0;box-shadow:0 0 30px rgba(224,178,87,.35)}
+#hud .cover .play{margin-top:40px;padding:16px 46px;font-family:Georgia,'Times New Roman',serif;font-size:clamp(17px,2.2vw,25px);letter-spacing:.2em;color:#120a00;background:linear-gradient(#d4a63c,#b98a45);border:0;box-shadow:0 0 30px rgba(212,166,60,.35)}
 #hud .cover .play:hover{filter:brightness(1.08)}
 #hud .cover label{margin-top:22px;font-family:Consolas,'Courier New',monospace;font-size:14px;color:#cdbd93;cursor:pointer}
 #hud .cover input{accent-color:#b98a45;margin-right:6px;vertical-align:middle;width:16px;height:16px}
@@ -89,27 +89,42 @@
 
   const MASTER_VOL = 0.25;                      // volumen maestro base
   const DUCK_VOL = 0.07;                        // volumen maestro mientras habla la voz
-  const PAD_FREQS = [164.81, 174.61, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63]; // frigio en MI (oscuro, ritual): E3 F3 G3 A3 B3 C4 D4 E4
-  const PAD_PICK = [0, 0, 0, 3, 3, 4, 1, 2, 5, 6, 7];
-  const CHOIR = [164.81, 246.94, 329.63, 493.88]; // coro etéreo de la diosa (MI-SI abiertos, quintas del modo frigio)
-  const BRIGHT = [293.66, 369.99, 440.00, 523.25, 659.25]; // RE mixolidio (con DO natural): acorde brillante al completarse el tejado
-  // glifos decorativos: ciervo estilizado (izquierda, la cierva de Artemisa) y abeja (derecha, símbolo de Éfeso)
-  const GLYPH_CIERVO = '<svg class="hg" viewBox="0 0 60 60" aria-hidden="true"><g stroke="#e0b257" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"><path d="M16 32 C16 26 24 24 34 24 C42 24 46 26 46 30 C46 34 42 35 36 35 L36 46 L34 46 L34 36 L26 36 L26 46 L24 46 L24 36 C20 36 16 35 16 32 Z" fill="#7a3e8e" fill-opacity=".45"/><path d="M42 30 C44 24 47 20 49 17"/><ellipse cx="51" cy="17" rx="3.4" ry="2.5" transform="rotate(-25 51 17)" fill="#e0b257" fill-opacity=".5"/><path d="M50 14 L48 7 M48 9 L44 6 M49 10 L53 5"/><path d="M16 30 L12 28"/></g><path d="M10 49 L50 49" stroke="#7fe3f0" stroke-width="1.2" fill="none" opacity=".55"/></svg>';
-  const GLYPH_ABEJA = '<svg class="hg" viewBox="0 0 60 60" aria-hidden="true"><g stroke="#b98a45" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><ellipse cx="22" cy="18" rx="8" ry="5" transform="rotate(-25 22 18)" fill="#7fe3f0" fill-opacity=".18" stroke="#7fe3f0" stroke-width="1.2"/><ellipse cx="38" cy="18" rx="8" ry="5" transform="rotate(25 38 18)" fill="#7fe3f0" fill-opacity=".18" stroke="#7fe3f0" stroke-width="1.2"/><ellipse cx="30" cy="34" rx="15" ry="11" fill="#e0b257" fill-opacity=".45" stroke="#e0b257"/><path d="M22 27 L22 41 M30 25 L30 43 M38 27 L38 41" stroke="#2a2418" stroke-width="3"/><path d="M26 24 C24 16 22 12 18 10 M34 24 C36 16 38 12 42 10" fill="none" stroke="#e0b257" stroke-width="1.4"/><path d="M45 34 L51 34" stroke="#e0b257"/></g><path d="M14 52 L46 52 L46 56 L14 56 Z" fill="#b98a45" fill-opacity=".35" stroke="#b98a45"/></svg>';
-  let COLS_SVG = '<g fill="#efe9dd" fill-opacity=".18" stroke="#efe9dd" stroke-width="1.2">';
-  for (let i = 0; i < 8; i++) COLS_SVG += '<rect x="' + (40 + i * 17) + '" y="104" width="7" height="64"/>';
+  const PAD_FREQS = [146.83, 164.81, 174.61, 196.00, 220.00, 246.94, 261.63, 293.66]; // modo dórico en RE (solemne): D3 E3 F3 G3 A3 B3 C4 D4
+  const PAD_PICK = [0, 0, 0, 3, 3, 4, 1, 2, 5, 6, 7, 0];
+  const CHOIR = [146.83, 220.00, 293.66, 349.23]; // coro solemne: RE-LA-RE-FA (quintas y tercera menor del dórico)
+  const BRIGHT = [293.66, 369.99, 440.00, 587.33, 739.99]; // RE mayor: acorde brillante cuando la Nike y el cetro quedan colocados
+  // glifos decorativos: corona de olivo (izquierda, premio de Olimpia) y rayo de Zeus (derecha)
+  function olivoSvg() {
+    let g = '';
+    [-1, 1].forEach(function (side) {
+      for (let i = 0; i < 8; i++) {
+        const p = 0.1 + i * 0.3;                         // ángulo desde la base hacia arriba
+        const x = 30 + side * 18 * Math.sin(p), y = 34 + 18 * Math.cos(p);
+        const ang = Math.atan2(-18 * Math.sin(p), side * 18 * Math.cos(p)) * 180 / Math.PI;
+        g += '<ellipse cx="' + x.toFixed(2) + '" cy="' + y.toFixed(2) + '" rx="5.6" ry="2.3" transform="rotate(' + ang.toFixed(1) + ' ' + x.toFixed(2) + ' ' + y.toFixed(2) + ')" fill="#6b7a3a" stroke="#4f5c2a" stroke-width=".6"/>';
+        if (i % 2 === 1) { // aceituna dorada hacia el interior de la corona
+          const ox = x + (30 - x) / 18 * 3.2, oy = y + (34 - y) / 18 * 3.2;
+          g += '<circle cx="' + ox.toFixed(2) + '" cy="' + oy.toFixed(2) + '" r="1.7" fill="#d4a63c"/>';
+        }
+      }
+    });
+    return '<svg class="hg" viewBox="0 0 60 60" aria-hidden="true">' + g + '<path d="M22 53 L38 53" stroke="#d4a63c" stroke-width="2" stroke-linecap="round"/></svg>';
+  }
+  const GLYPH_OLIVO = olivoSvg();
+  const GLYPH_RAYO = '<svg class="hg" viewBox="0 0 60 60" aria-hidden="true"><path d="M35 4 L15 34 L28 34 L22 56 L46 24 L32 24 L40 4 Z" fill="#d4a63c" fill-opacity=".55" stroke="#f2e6cf" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 50 L52 50" stroke="#6b7a3a" stroke-width="1.4" fill="none" opacity=".8"/></svg>';
+  let COLS_SVG = '<g fill="#f2e6cf" fill-opacity=".18" stroke="#f2e6cf" stroke-width="1.2">';
+  for (let i = 0; i < 6; i++) COLS_SVG += '<rect x="' + (46 + i * 22) + '" y="104" width="9" height="64"/>';
   COLS_SVG += '</g>';
   const GLITCH_FRAMES = [
-    { textShadow: '0 0 14px rgba(224,178,87,.9)', color: '#fff6d0' },
-    { textShadow: '-3px 0 #7fe3f0, 3px 0 #e0b257', color: '#e0b257' },
-    { textShadow: '2px 0 #e0b257, -2px 0 #7fe3f0', color: '#e0b257' },
-    { textShadow: '-1px 0 #7fe3f0, 1px 0 #e0b257', color: '#e0b257' },
-    { textShadow: '0 0 16px rgba(224,178,87,.45), 0 2px 4px #000', color: '#e0b257' }
+    { textShadow: '0 0 14px rgba(212,166,60,.9)', color: '#fff6d0' },
+    { textShadow: '-3px 0 #d4a63c, 3px 0 #d4a63c', color: '#d4a63c' },
+    { textShadow: '2px 0 #d4a63c, -2px 0 #d4a63c', color: '#d4a63c' },
+    { textShadow: '-1px 0 #d4a63c, 1px 0 #d4a63c', color: '#d4a63c' },
+    { textShadow: '0 0 16px rgba(212,166,60,.45), 0 2px 4px #000', color: '#d4a63c' }
   ];
 
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
   function ramp(t, a, b) { return clamp((t - a) / (b - a), 0, 1); }
-  function fmtInt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
   function fmtTime(sec) {
     sec = Math.max(0, Math.floor(sec));
     const m = Math.floor(sec / 60), s = sec % 60;
@@ -128,14 +143,16 @@
   // GIZA.SCRIPT puede no existir o estar vacío: se lee de forma perezosa y tolerante
   function getLines() { const S = G.SCRIPT; return S && Array.isArray(S.lines) ? S.lines : []; }
   function getFacts(id) { const S = G.SCRIPT; const f = S && S.facts && S.facts[id]; return Array.isArray(f) ? f : []; }
-  // fecha que muestra el panel: c. 550 a.C. durante la obra y el esplendor, 21 jul 356 a.C. con el incendio de Eróstrato,
-  // c. 323 a.C. con la reconstrucción de Alejandro, 262 d.C. con el saqueo godo y HOY al final
+  // fecha que muestra el panel: primeros Juegos (776 a.C.), templo (c. 456 a.C.), taller a esplendor (c. 435 a.C.),
+  // Calígula (40 d.C.), incendio en Constantinopla (475 d.C.) y HOY al final
   function fechaAt(t) {
     if (t < 18) return '—';
-    if (t < 166) return 'c. 550 a.C.';
-    if (t < 190) return '21 jul 356 a.C.';
-    if (t < 212) return 'c. 323 a.C.';
-    if (t < 228) return '262 d.C.';
+    if (t < 38) return '776 a.C. primeros Juegos';
+    if (t < 60) return 'c. 456 a.C.';
+    if (t < 166) return 'c. 435 a.C.';
+    if (t < 188) return '40 d.C. Calígula';
+    if (t < 210) return 'c. 435 a.C.';
+    if (t < 232) return '475 d.C.';
     return 'HOY';
   }
 
@@ -144,12 +161,12 @@
     const DUR = G.DURATION || timeline.duration || 245;
     const CHAPTERS = G.CHAPTERS || [];
     const idxOf = function (id) { for (let i = 0; i < CHAPTERS.length; i++) if (CHAPTERS[i].id === id) return i; return -1; };
-    const ID_INTERIOR = ['cimientos', 'esplendor'];        // capítulos interiores: filtro del dron y eco de sala
-    const ID_VERDE = 'marisma', ID_FUEGO = 'erostrato', ID_CIAN = 'numeros', ID_FINAL = 'final';   // rótulos y efectos propios
+    const ID_INTERIOR = ['nucleo', 'marfil', 'trono', 'esplendor', 'aceite'];  // dentro de la cella con la estatua: filtro del dron y eco de sala
+    const ID_VERDE = 'aceite', ID_FUEGO = 'final', ID_CIAN = 'numeros', ID_FINAL = 'final';   // rótulos y efectos propios (aceite: dorado verdoso; final: rojo fuego; numeros: marfil y desmentido)
 
     // ---------- CSS y contenedor ----------
-    if (!document.getElementById('artemisa-hud-css')) {
-      const st = mk('style'); st.id = 'artemisa-hud-css'; st.textContent = CSS;
+    if (!document.getElementById('zeus-hud-css')) {
+      const st = mk('style'); st.id = 'zeus-hud-css'; st.textContent = CSS;
       document.head.appendChild(st);
     }
     let root = document.getElementById('hud');
@@ -161,8 +178,8 @@
     let shownChapter = -1, prevChapter = -1, curLine = -1, prevT = 0;
     let chAnim = null, ruleAnim = null, factsSig = '', factEls = [], noteTimer = null, bannerEnd = 0;
     let droneFilt = null, roomSendG = null, choirBus = null, camState = false;
-    let cnt = { alt: null, col: null, lay: null, wk: null };
-    let fireG = null, fireKickT = -99;
+    let prevAtt = 0;
+    let fireKickT = -99;
 
     // ---------- capas visuales ----------
     const grain = mk('canvas', 'grain');
@@ -189,15 +206,15 @@
     const cover = mk('div', 'cover');
     cover.innerHTML =
       '<svg viewBox="0 0 200 200" aria-hidden="true"><defs><linearGradient id="mHudGold" x1="0" y1="0" x2="0" y2="1">' +
-      '<stop offset="0" stop-color="#efe9dd"/><stop offset="1" stop-color="#b98a45"/></linearGradient></defs>' +
+      '<stop offset="0" stop-color="#f2e6cf"/><stop offset="1" stop-color="#b98a45"/></linearGradient></defs>' +
       '<g fill="none" stroke="url(#mHudGold)" stroke-width="3" stroke-linejoin="round">' +
       '<path d="M30 186 L170 186 L170 178 L30 178 Z"/><path d="M36 178 L164 178 L164 170 L36 170 Z"/>' +
       '<path d="M34 96 L34 104 L166 104 L166 96 Z"/><path d="M34 96 L100 60 L166 96 Z"/>' +
       '<path d="M50 96 L100 68 L150 96"/></g>' +
       COLS_SVG +
-      '<circle cx="100" cy="80" r="5" fill="#7fe3f0"/>' +
-      '<line x1="24" y1="192" x2="176" y2="192" stroke="#5d6b3a" stroke-width="4" stroke-linecap="round"/></svg>' +
-      '<h1>EL TEMPLO DE ARTEMISA</h1>' +
+      '<circle cx="100" cy="80" r="5" fill="#d4a63c"/>' +
+      '<line x1="24" y1="192" x2="176" y2="192" stroke="#6b7a3a" stroke-width="4" stroke-linecap="round"/></svg>' +
+      '<h1>LA ESTATUA DE ZEUS</h1>' +
       '<div class="sub2">Lo que no te contaron</div>' +
       '<button class="play" type="button">▶ REPRODUCIR</button>' +
       '<label><input type="checkbox" checked> Voz narrada</label>' +
@@ -208,7 +225,7 @@
 
     // ---------- datos (panel terminal) ----------
     const panel = mk('div', 'panel');
-    panel.appendChild(mk('div', 'hd', 'SISTEMA DE DATOS · ÉFESO'));
+    panel.appendChild(mk('div', 'hd', 'SISTEMA DE DATOS · OLIMPIA'));
     function dataRow(label, initial) {
       const r = mk('div', 'r');
       const v = mk('span', null, initial);
@@ -217,25 +234,23 @@
       return { row: r, val: v };
     }
     const rAlt = dataRow('ALTURA:', '0,0 m');
-    const rCol = dataRow('COLUMNAS:', '0 de 127');
-    const rLen = dataRow('LARGO:', '115 m');
-    const rLay = dataRow('CAPAS DE CIMIENTO:', '0 de 5');
-    const rWk = dataRow('OBREROS:', '≈0');
+    const rMar = dataRow('MARFIL:', '0 %');
+    const rOro = dataRow('ORO:', '0 %');
+    const rNuc = dataRow('NÚCLEO:', '0 %');
     const rDate = dataRow('FECHA:', '—');
-    setDisp(rWk.row, false);
 
     // ---------- fichas, rótulo de capítulo, subtítulos ----------
     const factsEl = mk('div', 'facts');
     const chEl = mk('div', 'ch');
     const chRow = mk('div', 'chrow');
     const chBody = mk('div', 'cbody');
-    chRow.innerHTML = GLYPH_CIERVO;
+    chRow.innerHTML = GLYPH_OLIVO;
     const chNum = mk('div', 'n');
     const chTitle = mk('div', 't');
     const chRule = mk('div', 'rule');
     chBody.append(chNum, chTitle, chRule);
     chRow.appendChild(chBody);
-    chRow.insertAdjacentHTML('beforeend', GLYPH_ABEJA);
+    chRow.insertAdjacentHTML('beforeend', GLYPH_RAYO);
     chEl.appendChild(chRow);
     const subEl = mk('div', 'sub');
     const noteEl = mk('div', 'note');
@@ -273,7 +288,7 @@
     // ---------- cine: fundido final, texto y botón ----------
     const fadeEl = mk('div', 'fade');
     const endEl = mk('div', 'endtxt');
-    endEl.innerHTML = '<h2>¿QUIÉN GANÓ?</h2><p>Hecho 100% con código · Three.js</p>';
+    endEl.innerHTML = '<h2>¿DÓNDE ESTÁ EL ORO?</h2><p>Hecho 100% con código · Three.js</p>';
     const againBtn = mk('button', 'again', '↺ Volver a ver');
     againBtn.type = 'button';
 
@@ -340,8 +355,8 @@
       const lfo = c.createOscillator(); lfo.frequency.value = 0.05;
       const lfoAmt = c.createGain(); lfoAmt.gain.value = 45;
       lfo.connect(lfoAmt); lfoAmt.connect(droneLP.frequency); lfo.start();
-      // [frecuencia, detune cents, tipo, ganancia]: E1, E1 desafinado, B1, E2
-      [[41.20, 0, 'sine', 1.0], [41.20, 8, 'sawtooth', 0.12], [61.74, -5, 'sine', 0.45], [82.41, 6, 'sine', 0.18]]
+      // [frecuencia, detune cents, tipo, ganancia]: D1, D1 desafinado, A1, D2 (tónica del modo dórico)
+      [[36.71, 0, 'sine', 1.0], [36.71, 8, 'sawtooth', 0.12], [55.00, -5, 'sine', 0.45], [73.42, 6, 'sine', 0.18]]
         .forEach(function (d) {
           const o = c.createOscillator();
           o.type = d[2]; o.frequency.value = d[0]; o.detune.value = d[1];
@@ -373,7 +388,7 @@
       choirBus = c.createGain(); choirBus.gain.value = 0.5;
       choirBus.connect(master); choirBus.connect(verb);
 
-      // viento del desierto: ruido filtrado con modulación lenta
+      // viento de la llanura de Olimpia: ruido filtrado con modulación lenta
       const wind = c.createBufferSource(); wind.buffer = noiseBuf; wind.loop = true;
       const windBP = c.createBiquadFilter();
       windBP.type = 'bandpass'; windBP.frequency.value = 420; windBP.Q.value = 0.6;
@@ -402,7 +417,7 @@
         const Ctor = window.AudioContext || window.webkitAudioContext;
         if (!Ctor) return;
         try { AC = new Ctor(); } catch (e) { AC = null; return; }
-        try { buildAudio(); } catch (e) { console.warn('[ARTEMISA] audio no disponible', e); }
+        try { buildAudio(); } catch (e) { console.warn('[ZEUS] audio no disponible', e); }
       }
       if (AC && AC.state !== 'running') {
         const p = AC.resume();
@@ -465,7 +480,7 @@
       if (!AC || AC.state !== 'running') return;
       tone(BRIGHT, AC.currentTime + 0.05, 6, { peak: 0.35, attack: 0.05, release: 4, vib: false, type: 'triangle' });
     }
-    // golpe grave y ruido bajo del terremoto (siglos XII-XV): caída de las piedras
+    // golpe grave y ruido bajo del terremoto (siglo VI): caída de las piedras
     function quakeRumble() {
       if (!AC || AC.state !== 'running' || !noiseBuf) return;
       const c = AC, t0 = c.currentTime + 0.02;
@@ -539,6 +554,23 @@
       og.gain.linearRampToValueAtTime(0.0001, t1 + 0.1);
       o.connect(og); og.connect(master);
       o.start(t0); o.stop(t1 + 0.2);
+    }
+
+    // "risa" de Calígula (Suetonio): tres carcajadas suaves con glissando ascendente
+    function laugh() {
+      if (!AC || AC.state !== 'running' || !master) return;
+      const c = AC;
+      for (let k = 0; k < 3; k++) {
+        const t0 = c.currentTime + 0.05 + k * 0.32;
+        const o = c.createOscillator(); o.type = 'triangle';
+        o.frequency.setValueAtTime(233, t0);
+        o.frequency.exponentialRampToValueAtTime(466, t0 + 0.26);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.1, t0 + 0.04);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.28);
+        o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + 0.3);
+      }
     }
 
     function duck(on) {
@@ -648,9 +680,9 @@
       if (ruleAnim) ruleAnim.cancel();
       chNum.textContent = /^[IVXL]+$/.test(ch.num) ? 'CAPÍTULO ' + ch.num : ch.num;
       chTitle.textContent = ch.title;
-      chEl.classList.toggle('verde', ch.id === ID_VERDE); // la marisma va en verde
-      chEl.classList.toggle('fuego', ch.id === ID_FUEGO); // Eróstrato y el incendio van en naranja fuego
-      chEl.classList.toggle('cian', ch.id === ID_CIAN); // los números (desmentido) van en cian
+      chEl.classList.toggle('verde', ch.id === ID_VERDE); // el estanque de aceite va en dorado verdoso
+      chEl.classList.toggle('fuego', ch.id === ID_FUEGO); // el final (fuego en Constantinopla) va en rojo fuego
+      chEl.classList.toggle('marfil', ch.id === ID_CIAN); // los números (desmentido) van en marfil
       bannerEnd = nowS() + 3.5;
       chAnim = chEl.animate([
         { opacity: 0, filter: 'blur(6px)', transform: 'translate(-50%,-50%) scale(1.03)' },
@@ -766,13 +798,6 @@
     });
 
     // ---------- actualización por frame ----------
-    function ramped(key, target, dt) {
-      if (cnt[key] === null) { cnt[key] = target; return target; }
-      cnt[key] += (target - cnt[key]) * (1 - Math.exp(-dt * 8)); // contador que rueda hacia el valor
-      if (Math.abs(target - cnt[key]) < 0.5) cnt[key] = target;
-      return cnt[key];
-    }
-
     function update(s) {
       const t = s.t;
       const tn = nowS();
@@ -789,7 +814,7 @@
       if (changed && live) kick();
       prevChapter = ci;
 
-      // audio de interior (cimientos y cella): filtro del dron bajo y eco
+      // audio de interior (cella con la estatua): filtro del dron bajo y eco
       const inCam = !!ch && ID_INTERIOR.indexOf(ch.id) >= 0;
       if (droneFilt && AC && inCam !== camState) {
         camState = inCam;
@@ -797,16 +822,20 @@
         roomSendG.gain.setTargetAtTime(inCam ? 0.55 : 0, AC.currentTime, 0.8);
       }
 
-      // coro al aparecer la diosa en sueños (117); acorde brillante al completarse el tejado (142);
-      // riser antes del incendio (168) y antes del saqueo godo (208); golpe grave del saqueo (212)
+      // coro solemne al levantarse el núcleo (82) y al brillar el oro (146); risa de Calígula (176);
+      // riser antes del incendio (208); golpe grave del terremoto (220)
       const dtT = t - prevT;
       if (live && dtT > 0 && dtT < 0.5) {
-        if (prevT < 117 && t >= 117) choirSwell();
-        if (prevT < 142 && t >= 142) brightChord();
-        if (prevT < 168 && t >= 168) riser(4);
+        if (prevT < 82 && t >= 82) choirSwell();
+        if (prevT < 146 && t >= 146) choirSwell();
+        if (prevT < 176 && t >= 176) laugh();
         if (prevT < 208 && t >= 208) riser(3);
-        if (prevT < 212 && t >= 212) quakeRumble();
+        if (prevT < 220 && t >= 220) quakeRumble();
       }
+      // acorde brillante cuando la Nike y el cetro quedan colocados (attributes llega a 1)
+      const att = clamp(s.attributes || 0, 0, 1);
+      if (live && dtT > 0 && dtT < 0.5 && prevAtt < 0.999 && att >= 0.999) brightChord();
+      prevAtt = att;
       prevT = t;
 
       // fuego (170-188): rugido grave que sigue s.fire, crepitar aleatorio y percusión cada ~1,1 s
@@ -853,27 +882,17 @@
         setOp(factsEl, (1 - ramp(t, ch.end - 3, ch.end - 2)) * (tn < bannerEnd ? 0 : 1)); // sin fichas mientras dura el rótulo
       }
 
-      // panel de datos (templo: plataforma 3 m + columnas 18 m + tejado 10 m = 31 m, la cumbrera)
-      const pla = clamp(s.platform || 0, 0, 1);
-      const col = clamp(s.columns || 0, 0, 1);
-      const roo = clamp(s.roof || 0, 0, 1);
-      const lay = clamp(s.layers || 0, 0, 1);
-      // las pistas de templo se quedan en 1 tras el saqueo: el panel usa goths y today para la ruina y la columna de hoy
-      const tod = clamp(s.today || 0, 0, 1);
-      const ruin = (s.goths || 0) > 0.01 && tod < 0.5;
-      if (ruin) {
-        setTxt(rAlt.val, 'EN RUINAS');
-        ramped('alt', 0, dt);
-      } else {
-        const hgt = (1 - tod) * (pla * 3 + col * 18 + roo * 10) + tod * 18; // hoy: una sola columna de 18 m
-        setTxt(rAlt.val, ramped('alt', hgt, dt).toFixed(1).replace('.', ',') + ' m');
-      }
-      const nCol = ruin ? 0 : (1 - tod) * col * 127 + tod;
-      setTxt(rCol.val, Math.round(ramped('col', nCol, dt)) + ' de 127');
-      setTxt(rLay.val, Math.round(ramped('lay', lay * 5, dt)) + ' de 5');
-      const wk = (s.workers || 0) > 0.01;
-      setDisp(rWk.row, wk);
-      if (wk) setTxt(rWk.val, '≈' + fmtInt(Math.round(ramped('wk', clamp(s.workers, 0, 1) * 3000, dt) / 100) * 100));
+      // panel de datos: altura de la estatua sentada (12 m), porcentaje de marfil, oro y núcleo;
+      // tras la combustión (burn > 0.9) la estatua ya no existe
+      const core = clamp(s.core || 0, 0, 1);
+      const ivo = clamp(s.ivory || 0, 0, 1);
+      const gol = clamp(s.gold || 0, 0, 1);
+      const gone = clamp(s.burn || 0, 0, 1) > 0.9;
+      const pctTxt = function (v) { return Math.round(clamp(v, 0, 1) * 100) + ' %'; };
+      setTxt(rAlt.val, gone ? 'DESAPARECIDA' : (core * 12).toFixed(1).replace('.', ',') + ' m');
+      setTxt(rMar.val, gone ? 'DESAPARECIDA' : pctTxt(ivo));
+      setTxt(rOro.val, gone ? 'DESAPARECIDA' : pctTxt(gol));
+      setTxt(rNuc.val, gone ? 'DESAPARECIDA' : pctTxt(core));
       setTxt(rDate.val, fechaAt(t));
       // el panel se oculta suavemente mientras dura el rótulo de capítulo
       setOp(panel, tn < bannerEnd ? 0 : 1);
