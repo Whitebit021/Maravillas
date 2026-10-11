@@ -256,7 +256,7 @@
     //    de hierro en un bastidor de madera, tirado por dos yuntas de bueyes; boyero junto a cada equipo.
     //    Posición = f(fract(t/22 + i/6)) sobre SITE.route; el tambor gira según la distancia recorrida.
     // =====================================================================
-    const NT = 6, TEAM_PERIOD = 22;
+    const NT = 6, TEAM_PERIOD = 900, TEAM_PHASE = 0.445;
     const ROUTE = polyline(SITE.route), RL = ROUTE.L;
     function comp(x, y, z, ax, ay, az, ang) {
       return new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(ax, ay, az), ang || 0), _ONE);
@@ -285,17 +285,21 @@
       return mbGeo(mb);
     })();
     const drumIM = mkIM(drumG, MAT.marbleVC, NT, true);
-    // bueyes: 2 yuntas por equipo (4 bueyes), cuerpo, cabeza, cuernos, patas, cola
-    const oxBodyIM = mkIM(new THREE.BoxGeometry(2.0, 0.8, 0.7), MAT.ox, NT * 4, true);
-    const oxHeadIM = mkIM(new THREE.BoxGeometry(0.7, 0.6, 0.5), MAT.ox, NT * 4, true);
-    const oxHornIM = mkIM(new THREE.CylinderGeometry(0.05, 0.03, 0.45, 5), MAT.horn, NT * 8, false);
-    const oxLegIM = mkIM(new THREE.BoxGeometry(0.18, 0.9, 0.18), MAT.ox, NT * 16, true);
-    const oxTailIM = mkIM(new THREE.BoxGeometry(0.08, 0.7, 0.08), MAT.ox, NT * 4, false);
-    const yokeIM = mkIM(new THREE.BoxGeometry(0.14, 0.14, 1.5), MAT.wood, NT * 2, true);
+    // bueyes: 2 yuntas por equipo (4 bueyes): barril (cápsula), cabeza con hocico, cuernos curvos,
+    // joroba suave, patas, cola; yugo de madera con dos postes
+    const oxBodyIM = mkIM((function () { const g = new THREE.CapsuleGeometry(0.42, 1.3, 6, 10); g.rotateZ(Math.PI / 2); return g; })(), MAT.ox, NT * 4, true);
+    const oxHeadIM = mkIM(new THREE.BoxGeometry(0.5, 0.55, 0.42), MAT.ox, NT * 4, true);
+    const oxMuzzleIM = mkIM(new THREE.BoxGeometry(0.34, 0.3, 0.36), MAT.ox, NT * 4, false);
+    const oxHumpIM = mkIM(new THREE.SphereGeometry(0.26, 8, 6).scale(1, 0.7, 1), MAT.ox, NT * 4, false);
+    const oxHornIM = mkIM(new THREE.TorusGeometry(0.2, 0.035, 4, 8, Math.PI * 0.9), MAT.horn, NT * 8, false);
+    const oxLegIM = mkIM(new THREE.CylinderGeometry(0.09, 0.07, 0.9, 6), MAT.ox, NT * 16, true);
+    const oxTailIM = mkIM(new THREE.BoxGeometry(0.08, 0.8, 0.08), MAT.ox, NT * 4, false);
+    const yokeIM = mkIM(new THREE.BoxGeometry(0.16, 0.16, 1.9), MAT.wood, NT * 2, true);
+    const yokePostIM = mkIM(new THREE.BoxGeometry(0.12, 0.4, 0.12), MAT.wood, NT * 4, true);
     const ropeIM = mkIM(new THREE.BoxGeometry(2.0, 0.05, 0.05), MAT.rope, NT, false);
     const oxGroup = new THREE.Group();
     root.add(oxGroup);
-    oxGroup.add(frameIM, drumIM, oxBodyIM, oxHeadIM, oxHornIM, oxLegIM, oxTailIM, yokeIM, ropeIM);
+    oxGroup.add(frameIM, drumIM, oxBodyIM, oxHeadIM, oxMuzzleIM, oxHumpIM, oxHornIM, oxLegIM, oxTailIM, yokeIM, yokePostIM, ropeIM);
     // surcos en el camino (dos rodadas por segmento de la ruta)
     const rutMesh = (function () {
       const mb = MB(), cR = new THREE.Color(0x6a4a2a);
@@ -317,18 +321,22 @@
     // escena local por equipo: matrices de trabajo reutilizadas (sin crear geometría por frame)
     const _TM = new THREE.Matrix4(), _base = new THREE.Matrix4(), _loc = new THREE.Matrix4(), _tmp = new THREE.Matrix4(), _rot = new THREE.Matrix4();
     const _pp = new THREE.Vector3(), _qq = new THREE.Quaternion(), _ss = new THREE.Vector3();
-    const L_BODY = new THREE.Matrix4().makeTranslation(0, 1.4, 0);
-    const L_HEAD = new THREE.Matrix4().makeTranslation(1.25, 1.5, 0);
-    const L_TAIL = comp(-1.1, 1.6, 0, 0, 0, 1, 0.5);
-    const L_HORN = [comp(1.3, 1.9, -0.22, 1, 0, 0, -0.4), comp(1.3, 1.9, 0.22, 1, 0, 0, 0.4)];
-    const L_YOKE = new THREE.Matrix4().makeTranslation(1.2, 1.1, 0);
+    function ec(x, y, z, rx, rz) {
+      return new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx || 0, 0, rz || 0)), _ONE);
+    }
+    const L_BODY = new THREE.Matrix4().makeTranslation(0, 1.3, 0);
+    const L_HEAD = ec(1.45, 1.42, 0);
+    const L_MUZ = ec(1.72, 1.22, 0);
+    const L_HUMP = ec(0.4, 1.9, 0);
+    const L_TAIL = ec(-1.2, 1.5, 0, 0, 0.5);
+    const L_HORN = [ec(1.5, 1.85, -0.2, -0.35, -0.6), ec(1.5, 1.85, 0.2, 0.35, -0.6)];
     const OX_X = [3.2, 5.8], OX_Z = [-0.6, 0.6];
     function put(im, idx, base, loc) { _tmp.multiplyMatrices(base, loc); im.setMatrixAt(idx, _tmp); }
 
     function updateOxen(s, t, W) {
       const on = V(s.oxen) > 0.02;
       for (let i = 0; i < NT; i++) {
-        const u = frac(t / TEAM_PERIOD + i / NT);
+        const u = frac(t / TEAM_PERIOD + TEAM_PHASE + i / NT);
         const P = ROUTE.at(u);
         // se desvanece en los extremos del ciclo (salto de vuelta y paso por la cantera)
         const fade = sstep((u - 0.08) / 0.04) * sstep((0.98 - u) / 0.04);
@@ -340,16 +348,18 @@
         frameIM.setMatrixAt(i, _TM);
         _loc.makeTranslation(0, 0.9, 0); _rot.makeRotationZ(spin); _loc.multiply(_rot);
         put(drumIM, i, _TM, _loc);
-        // yuntas: la cuerda del bastidor a la primera yunta
-        put(ropeIM, i, _TM, new THREE.Matrix4().makeTranslation(3.1, 1.0, 0));
+        put(ropeIM, i, _TM, _loc.makeTranslation(3.1, 1.0, 0));
         for (let y = 0; y < 2; y++) {
           const ox = OX_X[y];
-          put(yokeIM, i * 2 + y, _TM, new THREE.Matrix4().makeTranslation(ox + 1.2, 1.1, 0));
+          put(yokeIM, i * 2 + y, _TM, _loc.makeTranslation(ox + 1.05, 1.5, 0));
+          for (let sd = 0; sd < 2; sd++) put(yokePostIM, (i * 2 + y) * 2 + sd, _TM, _loc.makeTranslation(ox + 1.05, 1.3, sd ? 0.9 : -0.9));
           for (let o = 0; o < 2; o++) {
             const k = (i * 2 + y) * 2 + o;          // índice del buey (0..NT*4-1)
             _base.multiplyMatrices(_TM, _tmp.makeTranslation(ox, 0, OX_Z[o]));
             put(oxBodyIM, k, _base, L_BODY);
             put(oxHeadIM, k, _base, L_HEAD);
+            put(oxMuzzleIM, k, _base, L_MUZ);
+            put(oxHumpIM, k, _base, L_HUMP);
             put(oxTailIM, k, _base, L_TAIL);
             put(oxHornIM, k * 2, _base, L_HORN[0]);
             put(oxHornIM, k * 2 + 1, _base, L_HORN[1]);
@@ -365,15 +375,11 @@
           }
         }
       }
-      frameIM.instanceMatrix.needsUpdate = true; drumIM.instanceMatrix.needsUpdate = true;
-      ropeIM.instanceMatrix.needsUpdate = true; yokeIM.instanceMatrix.needsUpdate = true;
-      oxBodyIM.instanceMatrix.needsUpdate = true; oxHeadIM.instanceMatrix.needsUpdate = true;
-      oxHornIM.instanceMatrix.needsUpdate = true; oxLegIM.instanceMatrix.needsUpdate = true;
-      oxTailIM.instanceMatrix.needsUpdate = true;
+      [frameIM, drumIM, ropeIM, yokeIM, yokePostIM, oxBodyIM, oxHeadIM, oxMuzzleIM, oxHumpIM, oxHornIM, oxLegIM, oxTailIM]
+        .forEach(function (im) { im.instanceMatrix.needsUpdate = true; });
       // boyeros: caminan junto a la yunta de cada equipo
-      fSc = 1;
       for (let i = 0; i < NT; i++) {
-        const u = frac(t / TEAM_PERIOD + i / NT);
+        const u = frac(t / TEAM_PERIOD + TEAM_PHASE + i / NT);
         const fade = sstep((u - 0.08) / 0.04) * sstep((0.98 - u) / 0.04);
         const sc = on ? Math.max(0.0001, fade) : 0.0001;
         const P = ROUTE.at(u);
@@ -388,6 +394,7 @@
       rutMesh.visible = on;
       fSc = 1;
     }
+
     // =====================================================================
     // 3. OBREROS: 0-13 cantera (con picos), 14-35 plataforma del estilóbato,
     //    36-49 obra en la fila de columnas (siguen el frente oeste→este según s.columns)
@@ -530,59 +537,52 @@
     }
 
     // =====================================================================
-    // 5b. RAMPA DE SACOS DE ARENA junto a la esquina NO (x≈−55, z≈−25): sube hasta los capiteles (y≈21),
-    //     arquitrabe encima. En la segunda mitad de la pista se vacían los sacos de arriba (arena cayendo
-    //     en Points) y el bloque desciende suavemente sobre los capiteles.
+    // 5b. RAMPA ESCALONADA DE SACOS junto a la esquina NO (x≈−55, z≈−25): 44 hiladas de 0.5 m hasta los
+    //     capiteles (y≈22), sacos redondeados en cada huella y arpillera. En la segunda mitad se vacían los
+    //     sacos de arriba (arena cayendo en Points) y el bloque desciende sobre los capiteles.
     // =====================================================================
-    const RB = { x: -88, y: 0 }, RT = { x: -58, y: 22.2 }, RZ = -25;
-    const RLEN = Math.hypot(RT.x - RB.x, RT.y - RB.y);
-    const RUX = (RT.x - RB.x) / RLEN, RUY = (RT.y - RB.y) / RLEN;   // dirección de la pendiente
-    const RNX = -RUY, RNY = RUX;                                    // normal (hacia arriba)
-    const RQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.atan2(RUY, RUX));
-    const RK = 37, RZN = 11, RM = 3, NSACK = RK * RZN * RM;
-    const sackIM = mkIM(new THREE.BoxGeometry(1.0, 0.6, 0.9), MAT.sack, NSACK, true);
+    const RX0 = -88, RXT = -58, RZ = -25, RR = 44, RH = 0.5, RUN = (RXT - RX0) / RR;
+    const xf = function (r) { return RX0 + r * RUN; };      // frente de la hilada r
+    const coreIM = mkIM(new THREE.BoxGeometry(1, 1, 1), MAT.sack, RR, true);
+    const sackIM = mkIM(new THREE.SphereGeometry(0.5, 8, 6).scale(1, 0.56, 0.95), MAT.sack, RR * 9, true);
     const archBlock = new THREE.Mesh(new THREE.BoxGeometry(3.0, 1.2, 8.0), MAT.marble);
     archBlock.castShadow = true; archBlock.receiveShadow = true; archBlock.frustumCulled = false;
-    root.add(sackIM, archBlock);
-    const SACK = [];   // [fracción a lo largo de la rampa, capa, z]
-    for (let k = 0; k < RK; k++) for (let zi = 0; zi < RZN; zi++) for (let m = 0; m < RM; m++) SACK.push([(k + 0.5) / RK, m, RZ + (zi - 5) * 0.9]);
+    root.add(coreIM, sackIM, archBlock);
+    const CORE_M = [], SACK_M = [];
+    for (let r = 0; r < RR; r++) {
+      const L = RXT - xf(r);
+      CORE_M.push(new THREE.Matrix4().compose(new THREE.Vector3((xf(r) + RXT) / 2, r * RH + RH / 2, RZ), Q_ID, new THREE.Vector3(L, RH, 9.0)));
+      for (let j = 0; j < 9; j++) SACK_M.push(new THREE.Matrix4().compose(new THREE.Vector3(xf(r) + 0.2, r * RH + RH / 2, RZ + (j - 4) * 1.0), Q_ID, _ONE));
+    }
     const NSP = 220, spPos = new Float32Array(NSP * 3);
     const spGeo = new THREE.BufferGeometry();
     spGeo.setAttribute('position', new THREE.BufferAttribute(spPos, 3));
     const sandPts = new THREE.Points(spGeo, MAT.sand);
     sandPts.frustumCulled = false;
     root.add(sandPts);
-    // la rampa se va cerrando desde arriba: 30% de su longitud se vacía en la segunda mitad
+    // la rampa se va cerrando desde arriba: 30% de su altura se vacía en la segunda mitad
     function updateSandRamp(s, t, W) {
       const on = V(s.sandramp) > 0.01;
-      sackIM.visible = on; archBlock.visible = on;
+      coreIM.visible = on; sackIM.visible = on; archBlock.visible = on;
       if (!on) { sandPts.visible = false; return; }
       const grow = sstep((t - 106) / 4);
       const p = sstep((t - 116) / 10);
       const cut = Math.min(grow, 1 - 0.3 * p);
-      for (let i = 0; i < NSACK; i++) {
-        const sk = SACK[i], f = sk[0];
-        const vis = f <= cut;
-        if (vis) {
-          _pp.set(RB.x + RUX * RLEN * f + RNX * (0.3 + sk[1] * 0.6), RB.y + RUY * RLEN * f + RNY * (0.3 + sk[1] * 0.6), sk[2]);
-          _ss.set(1, 1, 1);
-          _m.compose(_pp, RQ, _ss);
-        } else _m.copy(ZERO);
-        sackIM.setMatrixAt(i, _m);
+      for (let r = 0; r < RR; r++) {
+        const vis = r / (RR - 1) <= cut;
+        coreIM.setMatrixAt(r, vis ? CORE_M[r] : ZERO);
+        for (let j = 0; j < 9; j++) sackIM.setMatrixAt(r * 9 + j, vis ? SACK_M[r * 9 + j] : ZERO);
       }
-      sackIM.instanceMatrix.needsUpdate = true;
-      // el bloque: sobre la rampa al principio, desciende 1.2 m sobre los capiteles (y = 21 + 0.6)
-      archBlock.position.set(-56.5, 22.8 - 1.2 * p, -21.5);
-      archBlock.scale.set(1, 1, 1);
-      archBlock.rotation.set(0, 0, 0);
-      archBlock.updateMatrix();
+      coreIM.instanceMatrix.needsUpdate = true; sackIM.instanceMatrix.needsUpdate = true;
+      // el bloque: sobre la rampa (base 22.0) y desciende 1.0 m sobre los capiteles (centro 21.6)
+      archBlock.position.set(-56.5, 22.6 - 1.0 * p, -21.5);
       // arena cayendo desde los sacos vaciados
       sandPts.visible = p > 0.02;
       if (p > 0.02) {
         for (let i = 0; i < NSP; i++) {
           const h = hash(i + 900), h2 = hash(i + 950);
           const fs = clamp(cut - 0.1 * h2, 0.05, 1);
-          const sx = RB.x + RUX * RLEN * fs + RNX * 0.6, sy = RB.y + RUY * RLEN * fs + RNY * 0.6;
+          const sx = RX0 + fs * (RXT - RX0) + 0.6, sy = fs * RR * RH + 0.8;
           const sz = RZ + (h2 - 0.5) * 8;
           const tau = frac((t - 116) * 0.7 + h) / 0.7;
           const y = sy - 4.9 * tau * tau;
@@ -592,13 +592,14 @@
         }
         spGeo.attributes.position.needsUpdate = true;
       }
-      // obreros cortando sacos sobre la rampa (hasta que se vacían)
+      // obreros cortando sacos desde las hiladas (de pie sobre cada huella)
       const wOn = t < 122;
       fSc = wOn ? 1 : 0.0001;
       for (let j = 0; j < 8; j++) {
         const i = 50 + j, h = hash(i + 700);
-        const f = clamp(0.15 + 0.7 * h, 0.05, cut - 0.03);
-        figRoot(RB.x + RUX * RLEN * f + RNX * 0.1, RB.y + RUY * RLEN * f + RNY * 0.1, RZ + (j - 3.5) * 1.6, Math.PI / 2);
+        const f = clamp(0.15 + 0.7 * h, 0.05, Math.max(0.05, cut - 0.03));
+        const r = Math.min(RR - 1, Math.floor(f * RR));
+        figRoot(xf(r) + 0.34, (r + 1) * RH, RZ + (j - 3.5) * 1.6, Math.PI / 2);
         setPose(0.1, -0.1, -0.5 + 0.4 * Math.sin(W * 4 + j), -0.8 + 0.7 * Math.cos(W * 4 + j), 0.5, 1);
         drawFig(i);
       }

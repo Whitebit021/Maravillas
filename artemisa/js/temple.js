@@ -287,14 +287,25 @@
       }
       return cv;
     }
-    function pedimentCanvas(c) {
+    const PEDB = { bg: '#1d4b96', fig: '#ece3cf', hi: '#fbf6ea', shade: '#6b604d', line: '#2a2118' };
+    const PEDBUMP = { bg: '#202020', fig: '#d8d8d8', hi: '#ffffff', shade: '#505050', line: '#000000' };
+    function pedimentCanvas(c, shaded) {
       const W = 1024, H = 360, cv = makeCanvas(W, H), g = cv.getContext('2d');
       g.fillStyle = c.bg; g.fillRect(0, 0, W, H);
-      drawDeer(g, 230, 330, 3.0, false, c);
-      drawDeer(g, 794, 330, 3.0, true, c);
-      drawHunter(g, 512, 340, 4.2, false, c);
+      const cc = { bg: c.bg, fig: c.fig, line: c.line, acc: c.acc };
+      if (shaded) {                                        // sombreado de volumen: luz desde arriba a la izquierda
+        const gr = g.createLinearGradient(0, 0, W * 0.5, H);
+        gr.addColorStop(0, c.hi); gr.addColorStop(0.55, c.fig); gr.addColorStop(1, c.shade);
+        cc.fig = gr;
+      }
+      drawHunter(g, 88, 340, 3.6, false, cc);
+      drawDeer(g, 262, 330, 3.2, false, cc);
+      drawWoman(g, 512, 340, 340, cc.fig, cc.line);       // Artemisa en el centro
+      drawDeer(g, 762, 330, 3.2, true, cc);
+      drawHunter(g, 936, 340, 3.6, true, cc);
       return cv;
     }
+
     function tileCanvases() {
       const N = 256, c = makeCanvas(N, N), b = makeCanvas(N, N), r = makeRng(808);
       const g = c.getContext('2d'), h = b.getContext('2d');
@@ -317,7 +328,7 @@
     const env = skyEnv();
     const SIL = sillarCanvases(), SMO = smoothMarble(), CAE = caelataCanvases(), TIL = tileCanvases();
     const FRC = { marble: friezeCanvas(PAL.marble), paint: friezeCanvas(PAL.paint), bump: friezeCanvas(PAL.bump) };
-    const PDC = { marble: pedimentCanvas(PAL.marble), paint: pedimentCanvas(PAL.paint), bump: pedimentCanvas(PAL.bump) };
+    const PDC = { marble: pedimentCanvas(PEDB, true), paint: pedimentCanvas(PAL.paint, false), bump: pedimentCanvas(PEDBUMP, true) };
     const sillarMat = new THREE.MeshStandardMaterial({ map: canvasTex(SIL.map, true), bumpMap: canvasTex(SIL.bump, false), bumpScale: 0.4, roughness: 0.33, envMap: env, envMapIntensity: 0.6 });
     const colMat = new THREE.MeshStandardMaterial({ map: canvasTex(SMO.map, true), bumpMap: canvasTex(SMO.bump, false), bumpScale: 0.05, roughness: 0.3, envMap: env, envMapIntensity: 0.7 });
     const caelMat = new THREE.MeshStandardMaterial({ map: canvasTex(CAE.map, true), bumpMap: canvasTex(CAE.bump, false), bumpScale: 0, roughness: 0.3, envMap: env, envMapIntensity: 0.7 });
@@ -328,7 +339,7 @@
     const pedPaintMat = new THREE.MeshStandardMaterial({ map: canvasTex(PDC.paint, true), transparent: true, opacity: 0, depthWrite: false, roughness: 0.6, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     const roofMat = new THREE.MeshStandardMaterial({ map: canvasTex(TIL.map, true), bumpMap: canvasTex(TIL.bump, false), bumpScale: 2.5, roughness: 0.7, side: THREE.DoubleSide });
     const cedarMat = new THREE.MeshStandardMaterial({ color: 0x8a5a2b, roughness: 0.8 });
-    const puddleMat = new THREE.MeshStandardMaterial({ color: 0x33403f, roughness: 0.05, transparent: true, opacity: 0, depthWrite: false, envMap: env, envMapIntensity: 1.2 });
+    const puddleMat = new THREE.MeshStandardMaterial({ color: 0x3b3326, roughness: 0.05, transparent: true, opacity: 0, depthWrite: false, envMap: env, envMapIntensity: 1.2 });
     const ghostMat = new THREE.MeshBasicMaterial({ color: 0xffc860, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
     const ghostEdgeMat = new THREE.LineBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0, depthWrite: false });
     const smokeMat = new THREE.PointsMaterial({ color: 0x1b1915, size: 36, sizeAttenuation: true, map: null, transparent: true, opacity: 0, depthWrite: false });
@@ -403,8 +414,8 @@
     }
 
     // ---------- 2. COLUMNAS: basa, tres tambores estriados, capitel jónico ----------
-    const baseGeo = new THREE.LatheGeometry([[0, 0], [1.05, 0], [1.0, 0.22], [0.95, 0.32], [0.9, 0.5], [0.92, 0.7], [0.92, 0.9]].map(function (p) { return new THREE.Vector2(p[0], p[1]); }), 16);
-    const drumGeo = new THREE.CylinderGeometry(0.9, 0.9, 1, 96, 1, true);
+    const baseGeo = new THREE.LatheGeometry([[0, 0], [1.06, 0], [1.0, 0.16], [0.92, 0.3], [0.9, 0.48], [0.92, 0.7], [0.92, 0.9]].map(function (p) { return new THREE.Vector2(p[0], p[1]); }), 24);
+    const drumGeo = new THREE.CylinderGeometry(0.9, 0.9, 1, 48, 1, true);
     drumGeo.translate(0, 0.5, 0);
     (function () {                                          // 24 estrías por desplazamiento radial
       const P = drumGeo.attributes.position;
@@ -416,7 +427,7 @@
       }
       drumGeo.computeVertexNormals();
     })();
-    const caelGeo = new THREE.CylinderGeometry(0.9, 1.0, 1, 96, 1, true);  // tambor inferior ensanchado
+    const caelGeo = new THREE.CylinderGeometry(0.9, 1.0, 1, 48, 1, true);  // tambor inferior ensanchado
     caelGeo.translate(0, 0.5, 0);
     function voluteGeo(zc) {
       const pts = [];
@@ -424,7 +435,7 @@
         const th = i / 36 * Math.PI * 2.7, r = 0.4 * Math.exp(-0.16 * th) + 0.07;
         pts.push(new THREE.Vector3(r * Math.cos(th), 1.02 + r * Math.sin(th), zc));
       }
-      return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 14, 0.07, 4, false);
+      return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 10, 0.07, 3, false);
     }
     const ECH = [[0.9, 0], [1.2, 0.1], [1.36, 0.34], [1.24, 0.56], [1.08, 0.7], [0.92, 0.72]];
     function echinusGeo(sc) { return new THREE.LatheGeometry(ECH.map(function (p) { return new THREE.Vector2(p[0] * sc, p[1]); }), 12); }
@@ -453,7 +464,7 @@
         ys.push((Math.abs(hxF) <= HX && Math.abs(hzF) <= HZ) ? TP.stylobateY : 0);
       }
       colD.push({ x: c.x, z: c.z, dx: dx, dz: dz, qy: yawQ(yaw), caelIdx: c.caelata ? caelCount++ : -1,
-        st: 0, fT: 0.05 + 0.45 * rnd(), thr: 0.88 * rnd(), ys: ys });
+        st: 0, fT: 0.05 + 0.45 * rnd(), thr: 0.88 * rnd(), ys: ys, broken: rnd() < 0.3 });
     });
     // orden de subida: de oeste (x negativa) a este
     colD.map(function (_, i) { return i; }).sort(function (a, b) { return COLS[a].x - COLS[b].x; })
@@ -483,35 +494,38 @@
       });
     }
     const _tc = new THREE.Color();
-    const _Q = new THREE.Quaternion(), _T = new THREE.Vector3(), _rel = new THREE.Vector3(), _rq = new THREE.Quaternion();
+    const _T = new THREE.Vector3(), _R = new THREE.Quaternion(), _QL = new THREE.Quaternion(), _QP = new THREE.Quaternion();
+    const _up = new THREE.Vector3(), _lp = new THREE.Vector3();
+    const RS = [0, 0.9, 6.1, 11.2, 16.3];   // inicio radial de cada pieza tumbada (la columna yace de 0 a 18 m)
     function writeColumns(c, rr, dis) {
       for (let i = 0; i < NC; i++) {
         const K0 = colD[i];
-        const e = smooth(clamp01((rr - K0.fT) / 0.45));          // caída hacia fuera girando sobre la basa
-        const bb = smooth(clamp01((rr - K0.fT - 0.3) / 0.4));    // rotura en tambores
         const keep = keepOf(dis, K0.thr);
+        const eCol = smooth(clamp01((rr - K0.fT) / 0.45));     // cae hacia fuera girando sobre la basa
+        const bb = smooth(clamp01((rr - K0.fT - 0.3) / 0.4));  // se rompe en tambores al tocar el suelo
         _T.set(K0.dz, 0, -K0.dx);
-        _Q.setFromAxisAngle(_T, e * 1.52);
+        _R.setFromAxisAngle(_T, Math.PI / 2);
+        _QL.copy(_R).multiply(K0.qy);
         for (let m = 0; m < 5; m++) {
           const u = clamp01((c - (K0.st + m * 0.1)) / 0.28);
-          const dy = (1 - smooth(u)) * 7 * (1 - e);
-          const yb = PYB[m], hh = PHH[m];
-          const rel = _rel.set(0, yb - 3, 0).applyQuaternion(_Q);
-          const off = bb * e * (m - 2) * 1.6;
-          const px = K0.x + rel.x + K0.dx * off, pz = K0.z + rel.z + K0.dz * off;
-          const py = 3 + rel.y + e * (K0.ys[m] + 0.9 - 3) + dy;
-          _rq.copy(_Q).multiply(K0.qy);
+          const e = (K0.broken && m < 2) ? 0 : eCol;           // fuste roto: base y primer tambor quedan de pie
+          const dy = (1 - smooth(u)) * 7;
           const show = u > 0 && keep > 0.001;
-          const sy = (m === 0 || m === 4) ? keep : hh * keep;
+          const sp = bb * e * (m - 2) * 0.7;
+          _up.set(K0.x, PYB[m] + dy, K0.z);
+          _lp.set(K0.x + K0.dx * (RS[m] + sp), K0.ys[m] + 0.9, K0.z + K0.dz * (RS[m] + sp));
+          _up.lerp(_lp, e);
+          _QP.copy(K0.qy).slerp(_QL, e);
+          const sy = (m === 0 || m === 4) ? keep : PHH[m] * keep;
           if (m === 1 && K0.caelIdx >= 0) {
-            if (show) put(caelInst, K0.caelIdx, px, py, pz, _rq, keep, sy, keep); else hide(caelInst, K0.caelIdx);
+            if (show) put(caelInst, K0.caelIdx, _up.x, _up.y, _up.z, _QP, keep, sy, keep); else hide(caelInst, K0.caelIdx);
           } else if (m === 0) {
-            if (show) put(baseInst, i, px, py, pz, _rq, keep, keep, keep); else hide(baseInst, i);
+            if (show) put(baseInst, i, _up.x, _up.y, _up.z, _QP, keep, keep, keep); else hide(baseInst, i);
           } else if (m === 4) {
-            if (show) { put(capInst, i, px, py, pz, _rq, keep, keep, keep); put(capPaintInst, i, px, py, pz, _rq, keep, keep, keep); }
+            if (show) { put(capInst, i, _up.x, _up.y, _up.z, _QP, keep, keep, keep); put(capPaintInst, i, _up.x, _up.y, _up.z, _QP, keep, keep, keep); }
             else { hide(capInst, i); hide(capPaintInst, i); }
           } else {
-            if (show) put(drumInst, i * 3 + (m - 1), px, py, pz, _rq, keep, sy, keep); else hide(drumInst, i * 3 + (m - 1));
+            if (show) put(drumInst, i * 3 + (m - 1), _up.x, _up.y, _up.z, _QP, keep, sy, keep); else hide(drumInst, i * 3 + (m - 1));
           }
         }
       }
@@ -713,11 +727,23 @@
     rfG.add(rake); rfG.add(acro);
 
     // ---------- 6. PLANTILLA DE RUINA: cimientos y charcas (solo al desmontar) ----------
-    const fdnMesh = new THREE.Mesh(ringGeo(62, 32, 0, 0.6, 1.8), sillarMat);
+    const ruinStoneMat = new THREE.MeshStandardMaterial({ color: 0x8e8270, roughness: 0.95 });
+    const fdnMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), ruinStoneMat, 90);
     fdnMesh.castShadow = true; fdnMesh.receiveShadow = true; fdnMesh.frustumCulled = false; fdnMesh.visible = false;
+    for (let i = 0; i < 90; i++) {
+      const sx = 1.6 + 2.6 * rnd(), sy = 0.5 + 0.5 * rnd(), sz = 1.2 + 2.2 * rnd();
+      put(fdnMesh, i, (rnd() * 2 - 1) * 60, 0.05 + 0.2 * rnd(), (rnd() * 2 - 1) * 31, yawQ(rnd() * Math.PI), sx, sy, sz);
+    }
+    flush(fdnMesh);
     root.add(fdnMesh);
+    const grassMat = new THREE.MeshStandardMaterial({ color: 0x5f7a34, roughness: 0.9 });
+    const grassInst = new THREE.InstancedMesh(new THREE.ConeGeometry(0.12, 0.55, 3).translate(0, 0.275, 0), grassMat, 320);
+    grassInst.frustumCulled = false; grassInst.visible = false;
+    for (let i = 0; i < 320; i++) put(grassInst, i, (rnd() * 2 - 1) * 60, 0.0, (rnd() * 2 - 1) * 31, yawQ(rnd() * Math.PI), 1, 0.8 + 0.6 * rnd(), 1);
+    flush(grassInst);
+    root.add(grassInst);
     const puddle = new THREE.Mesh(new THREE.PlaneGeometry(120.4, 60.4).rotateX(-Math.PI / 2), puddleMat);
-    puddle.position.y = 0.12; puddle.visible = false; puddle.frustumCulled = false;
+    puddle.position.y = 0.22; puddle.visible = false; puddle.frustumCulled = false;
     root.add(puddle);
 
     // ---------- 7. FUEGO: llamas en tejado y vigas (tarjetas con shader), humo negro, chispas, luz naranja ----------
@@ -855,7 +881,7 @@
       // plataforma
       if (pf !== lastPf || dis !== lastDis) { lastPf = pf; lastDis = dis; writeSteps(pf, dis); }
       stepMesh.visible = pf > 0.0001;
-      fdnMesh.visible = dis > 0.001;
+      fdnMesh.visible = dis > 0.001; grassInst.visible = dis > 0.001;
       puddle.visible = dis > 0.001;
       puddleMat.opacity = 0.9 * smooth(clamp01((dis - 0.3) / 0.6));
 
@@ -883,7 +909,7 @@
       const paintOn = pa > 0.001;
       frPaintMat.opacity = pa; friezeP.visible = paintOn;
       pedPaintMat.opacity = pa; pedimentP.visible = paintOn;
-      capPaintMat.opacity = pa; capPaintInst.visible = paintOn;
+      capPaintMat.opacity = pa; capPaintInst.visible = paintOn && rr < 0.02;
 
       // incendio y fantasma (las llamas van con el tejado hundido)
       writeFire(fi, gh, bu, wall, rr);

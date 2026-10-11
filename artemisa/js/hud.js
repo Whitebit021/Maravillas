@@ -860,7 +860,7 @@
       const lay = clamp(s.layers || 0, 0, 1);
       // las pistas de templo se quedan en 1 tras el saqueo: el panel usa goths y today para la ruina y la columna de hoy
       const tod = clamp(s.today || 0, 0, 1);
-      const ruin = (s.goths || 0) > 0.5 && tod < 0.5;
+      const ruin = (s.goths || 0) > 0.01 && tod < 0.5;
       if (ruin) {
         setTxt(rAlt.val, 'EN RUINAS');
         ramped('alt', 0, dt);

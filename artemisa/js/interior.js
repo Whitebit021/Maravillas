@@ -350,6 +350,7 @@
       skirt: new THREE.MeshStandardMaterial({ map: texPanels, roughness: 0.6, envMap: envTex, envMapIntensity: 0.25 }),
       gold: new THREE.MeshStandardMaterial({ color: 0xe0b257, metalness: 1, roughness: 0.28, envMap: envTex, envMapIntensity: 1.3 }),
       cyan: new THREE.LineBasicMaterial({ color: 0x7ff7ff, transparent: true, opacity: 0, blending: ADD, depthWrite: false }),
+      cyanTenue: new THREE.LineBasicMaterial({ color: 0x2fb8d6, transparent: true, opacity: 0, blending: ADD, depthWrite: false }),
       lead: new THREE.LineBasicMaterial({ color: 0x7ff7ff, transparent: true, opacity: 0, blending: ADD, depthWrite: false, depthTest: false })
     };
     const layerTex = { clay: texClay, chunks: texChunks, wool: texWool, charcoal: texCharcoal, stone: texStone };
@@ -546,6 +547,43 @@
       statue.add(goldMesh);
     }
 
+    // ---------- bloque diagrama: corte elevado junto a la fosa (siempre legible, escala vertical x1.3) ----------
+    const DS = 1.3, DX0 = -30, DX1 = 10, DZF = -39.5, DZB = -36.5, DY0 = 1;
+    const dg = new THREE.Group(); root.add(dg);
+    const diagMats = KINDS.map(function (k) {       // sin sombreado: el diagrama se lee a cualquier hora
+      return new THREE.MeshBasicMaterial({ map: layerTex[k], color: 0xe4e4e4, side: THREE.DoubleSide });
+    });
+    const diagY = [];
+    let cumD = 0;
+    for (let i = 0; i < NL; i++) { diagY.push(DY0 + cumD); cumD += layerH[i] * DS; }
+    const diagSlots = [];
+    for (let i = 0; i < NL; i++) {
+      const hd = layerH[i] * DS;
+      const mesh = new THREE.Mesh(new Soup().box(DX0, DX1, 0, hd, DZF, DZB, 2).geo(), diagMats[i]);
+      mesh.position.set(0, diagY[i], 0);
+      const eg = new THREE.EdgesGeometry(new THREE.BoxGeometry(DX1 - DX0, hd, DZB - DZF).translate((DX0 + DX1) / 2, hd / 2, (DZF + DZB) / 2));
+      mesh.add(new THREE.LineSegments(eg, M.cyan));
+      dg.add(mesh);
+      diagSlots.push(mesh);
+      // hueco de la capa (contorno tenue) siempre visible: indica las 5 posiciones aunque aún no estén rellenas
+      const slot = new THREE.LineSegments(eg.clone(), M.cyanTenue);
+      slot.position.set(0, diagY[i], 0);
+      dg.add(slot);
+    }
+    // vellones del bloque: bultos esponjosos en la banda de lana
+    const DWN = 50;
+    const dwMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.3, 1), M.wool, DWN);
+    dwMesh.frustumCulled = false;
+    const dwInst = [], R8 = mulberry32(31);
+    for (let r = 0; r < 2; r++) {
+      for (let k = 0; k < DWN / 2; k++) {
+        const x = DX0 + 1 + k * (DX1 - DX0 - 2) / (DWN / 2 - 1) + (R8() - 0.5) * 0.8;
+        const y = diagY[WOOL] + layerH[WOOL] * DS * (r === 0 ? 0.3 : 0.7) + (R8() - 0.5) * 0.15;
+        dwInst.push({ x: x, y: y, z: DZF + 0.05, s: 0.8 + R8() * 0.35 });
+      }
+    }
+    dg.add(dwMesh);
+
     // ---------- etiquetas de capa (sprites) y líneas de unión ----------
     const labelsG = new THREE.Group(); root.add(labelsG);
     const LAB_X = 0.70;                     // centro del tercio derecho de la pantalla
@@ -578,7 +616,7 @@
       labels.push({
         sprite: sp, mat: mat, aspect: lt.aspect, idx: i,
         yN: -0.32 + i * 0.16,                          // de abajo arriba, en el tercio derecho
-        anchor: V(-18, (L.y0 + L.y1) / 2, -HZ)         // punto en la cara de corte
+        anchor: V(DX1, diagY[i] + layerH[i] * DS / 2, DZF)   // borde derecho de la capa del bloque
       });
     }
     const leadPos = new Float32Array(NL * 6);
@@ -635,6 +673,28 @@
             woolMesh.setMatrixAt(i, _m);
           }
           woolMesh.instanceMatrix.needsUpdate = true;
+        }
+
+        // bloque diagrama: contornos siempre (con xr), capas rellenándose de abajo arriba con s.layers
+        dg.visible = xr > 0.001;
+        M.cyanTenue.opacity = 0.6 * xr;
+        if (dg.visible) {
+          for (let i = 0; i < NL; i++) {
+            const lp = lpArr[i];
+            diagSlots[i].visible = lp > 0.0005;
+            diagSlots[i].scale.y = Math.max(0.001, lp);
+          }
+          const dTop = diagY[WOOL] + layerH[WOOL] * DS * lpArr[WOOL];
+          dwMesh.visible = lpArr[WOOL] > 0.001;
+          if (dwMesh.visible) {
+            for (let i = 0; i < dwInst.length; i++) {
+              const w = dwInst[i];
+              const sc = Math.max(0.001, w.s * smooth(clamp01((dTop - w.y) / 0.25)));
+              _p.set(w.x, w.y, w.z); _q.identity(); _m.compose(_p, _q, _s.set(sc, sc, sc));
+              dwMesh.setMatrixAt(i, _m);
+            }
+            dwMesh.instanceMatrix.needsUpdate = true;
+          }
         }
 
         // obreros: de pie sobre el relleno (o sobre el fondo de la fosa)

@@ -70,7 +70,7 @@
   const HILL_R = [420, 380, 480, 440], HILL_A = [110, 90, 130, 100];
   const HILLS = SITE.hills.map(function (p, i) { return { x: p[0], z: p[1], r: HILL_R[i], a: HILL_A[i] }; });
   const WORLD = 1800;                                      // mitad del lado del terreno
-  const GRID = 140;                                      // celdas por lado (antes de los cortes)
+  const GRID = 120;                                      // celdas por lado (antes de los cortes)
   const SHADOW_DIST = 1200;
   const SUN_ELEV = 62 * Math.PI / 180;
   const EY = Math.sin(SUN_ELEV), EZ = Math.cos(SUN_ELEV);
@@ -117,6 +117,49 @@
     }
   })();
 
+  // canales serpenteantes que unen charcas cercanas (segmentos a-b; el agua se pinta en la misma malla)
+  const CHAN = [];
+  (function () {
+    const base = PONDS.filter(function (p) { return !p.flood; });
+    base.forEach(function (p, i) {
+      let best = null, bd = 1e9;
+      base.forEach(function (q, j) {
+        if (j === i) return;
+        const d = Math.hypot(p.x - q.x, p.z - q.z);
+        if (d < bd) { bd = d; best = q; }
+      });
+      if (!best || bd > 260 || rnd() > 0.6) return;
+      const off = (rnd() < 0.5 ? -1 : 1) * 0.16 * bd;
+      const nx = -(best.z - p.z) / bd, nz = (best.x - p.x) / bd;
+      const N = 8, seg = [];
+      let px = p.x, pz = p.z, bad = false;
+      for (let k = 1; k <= N; k++) {
+        const t = k / N;
+        const env = Math.sin(Math.PI * t);
+        const wob = (off * env + 12 * Math.sin(t * Math.PI * 3 + p.ph) * env);
+        const cx = p.x + (best.x - p.x) * t + nx * wob;
+        const cz = p.z + (best.z - p.z) * t + nz * wob;
+        if ((Math.abs(cx) < 100 && Math.abs(cz) < 64) || inHoleRaw(cx, cz)) bad = true;
+        seg.push({ ax: px, az: pz, bx: cx, bz: cz });
+        px = cx; pz = cz;
+      }
+      if (!bad) seg.forEach(function (c) { CHAN.push(c); });
+    });
+  })();
+  function inHoleRaw(x, z) { return x > -70 && x < 70 && z > -40 && z < 40; }
+  function chanDist(x, z) {
+    let best = 1e18;
+    for (let i = 0; i < CHAN.length; i++) {
+      const c = CHAN[i];
+      const vx = c.bx - c.ax, vz = c.bz - c.az;
+      const t = clamp01(((x - c.ax) * vx + (z - c.az) * vz) / (vx * vx + vz * vz + 1e-9));
+      const dx = c.ax + vx * t - x, dz = c.az + vz * t - z;
+      const d = dx * dx + dz * dz;
+      if (d < best) best = d;
+    }
+    return Math.sqrt(best);
+  }
+
   // ---------- altura del terreno y máscaras en (x,z); reutiliza un objeto ----------
   const tS = { h: 0, mud: 0, pond: 0, river: 0, quarry: 0, road: 0, city: 0, n: 0 };
   function sampleTerrain(x, z) {
@@ -143,15 +186,18 @@
     const qlvl = Math.min(4, -8 + 3 * Math.floor(qd / 14));
     const qW = sstep(64, 54, qd);
     h += (qlvl - h) * qW;
+    // cantera rocosa: relieve de crestas dentro de los cortes
+    h += qW * 2.2 * (ridged(x / 9, z / 9, 2, 77) - 0.35);
 
-    // charcas: cuenca suave con el agua a WL
+    // charcas: cuenca suave con el agua a WL, de borde irregular
     let pw = 0;
     for (let i = 0; i < PONDS.length; i++) {
       const P = PONDS[i];
       const dx = x - P.x, dz = z - P.z;
       const d2 = dx * dx + dz * dz;
       if (d2 > (P.r * 1.6) * (P.r * 1.6)) continue;
-      const dn = Math.sqrt(d2) / P.r;
+      const ang = Math.atan2(dz, dx);
+      const dn = Math.sqrt(d2) / (P.r * (1 + 0.18 * Math.sin(ang * 3 + P.ph) + 0.08 * Math.sin(ang * 5 - 2 * P.ph)));
       const w = sstep(1.18, 0.82, dn);
       if (w > 0) {
         h += (Math.min(h, WL - 0.45) - h) * w;
@@ -163,6 +209,12 @@
     const dr = Math.abs(z - riverZ(x));
     const rW = sstep(RIV.width / 2 + 6, RIV.width / 2 - 6, dr);
     h += (-1.6 - h) * rW;
+
+    // canales de las charcas: zanjas estrechas con el agua a WL
+    if (CHAN.length) {
+      const cw = sstep(4.2, 2.4, chanDist(x, z));
+      if (cw > 0) h += (Math.min(h, WL - 0.4) - h) * cw;
+    }
 
     // borde del hueco: suelo casi a nivel para que el piso del cimiento no deje escalón
     const hx = Math.max(HOLE.x0 - x, x - HOLE.x1, 0), hz = Math.max(HOLE.z0 - z, z - HOLE.z1, 0);
@@ -302,7 +354,7 @@
     '  float fres = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);',
     '  vec3 R = reflect(-V, n);',
     '  vec3 sky = mix(uHorizon, uZenith, smoothstep(0.0, 0.6, R.y));',
-    '  vec3 col = mix(uDeep, sky, clamp(fres * 0.8, 0.0, 1.0));',
+    '  vec3 col = mix(uDeep, sky, clamp(fres * 0.7 + 0.04, 0.0, 1.0));',
     '  float rl = max(dot(reflect(-L, n), V), 0.0);',
     '  float spec = pow(rl, 90.0) * 1.2 + pow(rl, 8.0) * 0.06;',
     '  col += uLightCol * spec * uLightI * 1.5;',
@@ -506,7 +558,7 @@
     const root = new THREE.Group(); scene.add(root);
 
     const MOON_COL = new THREE.Color('#6f8fe0');
-    const DEEP_DAY = new THREE.Color('#2a3a2c'), DEEP_NIGHT = new THREE.Color('#081018');
+    const DEEP_DAY = new THREE.Color('#2a4a4a'), DEEP_NIGHT = new THREE.Color('#081018');
     const FOG_DAY = new THREE.Color('#cfc7a8');
     const HEM_GROUND_DAY = new THREE.Color('#6d5a3a');
     const HEM_GROUND_NIGHT = new THREE.Color('#263046');
@@ -565,14 +617,14 @@
     root.add(sky);
 
     // niebla: muy suave, solo a partir de ~2 km
-    scene.fog = new THREE.FogExp2(FOG_DAY.getHex(), 0.00004);
+    scene.fog = new THREE.FogExp2(FOG_DAY.getHex(), 0.00002);
 
     // ---------- sol / luna: sombras ajustadas al templo (±85 m) ----------
     const sun = new THREE.DirectionalLight(0xffffff, 2);
     sun.castShadow = true;
     sun.shadow.mapSize.width = 2048; sun.shadow.mapSize.height = 2048;
     const sc = sun.shadow.camera;
-    sc.left = -85; sc.right = 85; sc.top = 85; sc.bottom = -85;
+    sc.left = -120; sc.right = 120; sc.top = 120; sc.bottom = -120;
     sc.near = SHADOW_DIST - 150; sc.far = SHADOW_DIST + 150;   // profundidad alrededor del templo (alto ~35 m)
     sc.updateProjectionMatrix();
     sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.35;
@@ -633,11 +685,11 @@
     const nrm = terGeo.attributes.normal.array;
 
     // colores por vértice: marisma, tierra seca, olivar, roca de laderas, río, orillas, camino, piedra
-    const cMud = new THREE.Color('#4b4a2c'), cGreen = new THREE.Color('#5f6d36');
-    const cShore = new THREE.Color('#3a3524'), cDry = new THREE.Color('#a99c6c');
+    const cMud = new THREE.Color('#56592f'), cGreen = new THREE.Color('#6b7f3a');
+    const cShore = new THREE.Color('#2b2618'), cDry = new THREE.Color('#a99c6c');
     const cOlive = new THREE.Color('#7a7c40'), cRock = new THREE.Color('#8b7f6c');
     const cRiver = new THREE.Color('#40382b'), cRoad = new THREE.Color('#d6b984');
-    const cStone = new THREE.Color('#d9cdb3'), cPale = new THREE.Color('#cdbda0');
+    const cStone = new THREE.Color('#d9cdb3'), cPale = new THREE.Color('#e9e1cf');
     const tmpC = new THREE.Color(), tmpM = new THREE.Color();
     const tCol = new Float32Array(NV * 3);
     for (let k = 0; k < NV; k++) {
@@ -653,7 +705,7 @@
       tmpC.lerp(cShore, clamp01(shore) * 0.9);
       tmpC.lerp(cRiver, rw * 0.9);
       tmpC.lerp(cRoad, road * 0.85);
-      tmpC.lerp(cPale, qw * 0.8);
+      tmpC.lerp(cPale, qw * 0.95);
       tmpC.lerp(cStone, tCity[k] * 0.8);
       const shade = 0.72 + 0.28 * clamp01(ny);
       tCol[k * 3] = tmpC.r * shade; tCol[k * 3 + 1] = tmpC.g * shade; tCol[k * 3 + 2] = tmpC.b * shade;
@@ -670,22 +722,30 @@
       uTime: { value: 0 }, uLightDir: { value: new THREE.Vector3(0, 1, 0) },
       uLightCol: { value: sun.color }, uLightI: { value: 0 },
       uHorizon: { value: new THREE.Color() }, uZenith: { value: new THREE.Color() },
-      uDeep: { value: new THREE.Color('#2a3a2c') },
+      uDeep: { value: new THREE.Color('#2a4a4a') },
       uQuake: { value: 0 }, uQT: { value: 0 }, uFlood: { value: 0 }
     };
-    const waterMat = new THREE.ShaderMaterial({ uniforms: waterU, vertexShader: WATER_VS, fragmentShader: WATER_FS });
+    const waterMat = new THREE.ShaderMaterial({ uniforms: waterU, vertexShader: WATER_VS, fragmentShader: WATER_FS, side: THREE.DoubleSide });
 
     const wPos = [], wC = [];
     PONDS.forEach(function (P) {
-      const seg = 28, rr = P.r * 1.04;
+      const seg = 32;
+      const rAt = function (a) { return P.r * 1.06 * (1 + 0.18 * Math.sin(a * 3 + P.ph) + 0.08 * Math.sin(a * 5 - 2 * P.ph)); };
       for (let k = 0; k < seg; k++) {
         const a0 = k / seg * TAU, a1 = (k + 1) / seg * TAU;
-        // orden antihorario visto desde arriba (la cara mira hacia el cielo)
+        const r0 = rAt(a0), r1 = rAt(a1);
         wPos.push(P.x, WL, P.z,
-          P.x + Math.cos(a1) * rr, WL, P.z + Math.sin(a1) * rr,
-          P.x + Math.cos(a0) * rr, WL, P.z + Math.sin(a0) * rr);
+          P.x + Math.cos(a1) * r1, WL, P.z + Math.sin(a1) * r1,
+          P.x + Math.cos(a0) * r0, WL, P.z + Math.sin(a0) * r0);
         for (let v = 0; v < 3; v++) wC.push(P.x, P.z, P.ph, P.flood);
       }
+    });
+    // canales: cintas de agua a lo largo de cada segmento
+    CHAN.forEach(function (c) {
+      const vx = c.bx - c.ax, vz = c.bz - c.az, L = Math.hypot(vx, vz) || 1;
+      const ox = -vz / L * 2.6, oz = vx / L * 2.6;
+      const q = [[c.ax + ox, c.az + oz], [c.ax - ox, c.az - oz], [c.bx + ox, c.bz + oz], [c.bx - ox, c.bz - oz]];
+      [q[0], q[1], q[2], q[1], q[3], q[2]].forEach(function (v) { wPos.push(v[0], WL, v[1]); wC.push(0, 0, 0, 0); });
     });
     const pondGeo = new THREE.BufferGeometry();
     pondGeo.setAttribute('position', new THREE.Float32BufferAttribute(wPos, 3));
@@ -739,10 +799,10 @@
     // juncos: sobre todo en las orillas de las charcas (densos) y algunos sueltos por la marisma
     let guard = 0;
     const nPonds = PONDS.filter(function (p) { return !p.flood; });
-    while (junList.length < 2600 && guard < 120000) {
+    while (junList.length < 5200 && guard < 200000) {
       guard++;
       let x, z;
-      if (junList.length < 2000) {
+      if (junList.length < 4300) {
         const P = nPonds[Math.floor(rnd() * nPonds.length)];
         const a = rnd() * TAU, rr = P.r * (0.9 + rnd() * 1.1);
         x = P.x + Math.cos(a) * rr; z = P.z + Math.sin(a) * rr;
@@ -753,11 +813,11 @@
       if (inHole(x, z, 4)) continue;
       const s = sampleTerrain(x, z);
       if (s.h > 0.5 || s.quarry > 0.01) continue;
-      placeOne(junList, x, z, 0.9 + rnd() * 0.6, 0);
+      placeOne(junList, x, z, 1.0 + rnd() * 1.2, 0);
     }
-    // cañas: en los bordes de las charcas
+    // cañas: en los bordes de las charcas, de 2 a 3 m
     guard = 0;
-    while (canList.length < 700 && guard < 60000) {
+    while (canList.length < 1200 && guard < 80000) {
       guard++;
       const P = nPonds[Math.floor(rnd() * nPonds.length)];
       const a = rnd() * TAU, rr = P.r * (0.9 + rnd() * 1.2);
@@ -765,7 +825,19 @@
       if (inHole(x, z, 4)) continue;
       const s = sampleTerrain(x, z);
       if (s.h > 0.5) continue;
-      placeOne(canList, x, z, 2.3 + rnd() * 1.4, 0);
+      placeOne(canList, x, z, 2.0 + rnd() * 1.2, 0);
+    }
+    // hierba alta: matas bajas y densas en toda la marisma
+    const grassList = [];
+    guard = 0;
+    while (grassList.length < 3500 && guard < 60000) {
+      guard++;
+      const a = rnd() * TAU, rr = Math.sqrt(rnd()) * MR * 1.05;
+      const x = Math.cos(a) * rr, z = Math.sin(a) * rr;
+      if (inHole(x, z, 3)) continue;
+      const s = sampleTerrain(x, z);
+      if (s.h > 1.5 || s.quarry > 0.01) continue;
+      placeOne(grassList, x, z, 0.6 + rnd() * 0.8, 0);
     }
     // invasión: juncos que crecen alrededor de la columna de hoy (aparecen con s.today > 0.5)
     guard = 0; let inv = 0;
@@ -776,7 +848,7 @@
       if (inHole(x, z, 4)) continue;
       const s = sampleTerrain(x, z);
       if (s.h > 0.6 || s.quarry > 0.01) continue;
-      placeOne(junList, x, z, 0.9 + rnd() * 0.7, 0.5 + 0.45 * rnd());
+      placeOne(junList, x, z, 1.0 + rnd() * 1.0, 0.5 + 0.45 * rnd());
       inv++;
     }
 
@@ -799,8 +871,13 @@
       root.add(mesh);
       return mesh;
     }
-    buildReedMesh(junList, junMat, 2, 0.1, junList.length);
-    buildReedMesh(canList, canMat, 2, 0.11, canList.length);
+    const grassMat = new THREE.ShaderMaterial({
+      uniforms: Object.assign({}, RU, { uC0: { value: new THREE.Color('#3b4a1e') }, uC1: { value: new THREE.Color('#9aa04a') } }),
+      vertexShader: REED_VS, fragmentShader: REED_FS, side: THREE.DoubleSide
+    });
+    buildReedMesh(junList, junMat, 1, 0.13, junList.length);
+    buildReedMesh(canList, canMat, 1, 0.16, canList.length);
+    buildReedMesh(grassList, grassMat, 1, 0.11, grassList.length);
 
     // ---------- olivos, pinos y roca en las colinas y tierra seca ----------
     const trunkGeo = new THREE.CylinderGeometry(0.22, 0.4, 3.4, 6, 1, false).translate(0, 1.7, 0);
@@ -889,6 +966,25 @@
     const cutMesh = new THREE.Mesh(mergeGeos(THREE, cutGeos), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }));
     cutMesh.castShadow = false; cutMesh.receiveShadow = true;
     root.add(cutMesh);
+    // bloques de mármol rodados en los escalones (rocosos y blancos)
+    const qRocks = new THREE.InstancedMesh(makeRockGeometry(THREE, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, flatShading: true }), 140);
+    const cQA = new THREE.Color('#f2ece0'), cQB = new THREE.Color('#d6c9ae');
+    for (let i = 0; i < 140; i++) {
+      const k = 1 + Math.floor(rnd() * 4);
+      const R = 14 * k + (rnd() - 0.5) * 6;
+      const th = cutA - 1.15 + rnd() * 2.3;
+      const sc = 1.2 + rnd() * 2.6;
+      vPos.set(Q.x + Math.cos(th) * R, -8 + 3 * (k - 1) + sc * 0.2, Q.z + Math.sin(th) * R);
+      vSc.set(sc, sc * 0.8, sc * (0.8 + rnd() * 0.4));
+      quat.setFromAxisAngle(yAxis, rnd() * TAU);
+      m4.compose(vPos, quat, vSc);
+      qRocks.setMatrixAt(i, m4);
+      qRocks.setColorAt(i, rnd() < 0.5 ? cQA : cQB);
+    }
+    qRocks.instanceMatrix.needsUpdate = true;
+    qRocks.instanceColor.needsUpdate = true;
+    qRocks.frustumCulled = false;
+    root.add(qRocks);
 
     // ---------- Éfeso: casas, murallas, teatro ----------
     const stoneMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true });
@@ -1067,11 +1163,11 @@
       const lightDir = el >= 0 ? sunDir : moonDir;
       sun.position.copy(lightDir).multiplyScalar(SHADOW_DIST);
       sun.color.copy(MOON_COL).lerp(tSun, sunVis);
-      sun.intensity = kSunI * sunVis + 0.6 * moonVis;
+      sun.intensity = kSunI * sunVis * 1.25 + 0.6 * moonVis;
       tHemG.copy(HEM_GROUND_NIGHT).lerp(HEM_GROUND_DAY, dayF);
       hemi.color.copy(tHem);
       hemi.groundColor.copy(tHemG);
-      hemi.intensity = 0.25 + 0.6 * dayF;
+      hemi.intensity = 0.2 + 0.3 * dayF;
       renderer.toneMappingExposure = 0.8 + 0.1 * dayF;
 
       // cielo sigue a la cámara
@@ -1088,9 +1184,9 @@
       skyU.uTime.value = wall;
 
       // niebla: muy suave, teñida del horizonte
-      tFog.copy(tHor).lerp(FOG_DAY, 0.5 * dayF);
+      tFog.copy(tHor).lerp(FOG_DAY, 0.25 * dayF);
       scene.fog.color.copy(tFog);
-      scene.fog.density = 0.00004 * (1 + 0.5 * moonVis);
+      scene.fog.density = 0.00002 * (1 + 0.5 * moonVis);
       skyU.uBelow.value.copy(tFog);
 
       // agua: reflejos, temblor (s.quakeDemo, fase s.t) e inundación de hoy

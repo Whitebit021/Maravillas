@@ -429,7 +429,7 @@
     dreamG.add(dreamEdges);
     const dreamHalo = glowSprite('150,230,255', 30, [0, 12.2, 0]);
     dreamG.add(dreamHalo);
-    const dreamLab = label('LA LEYENDA: Artemisa lo colocó en sueños', { lh: 1.0, color: '#bff4ff', pos: toW(DREAM, DREAM.yaw, 0, 18.4, 0), fmax: 20 });
+    const dreamLab = label('LA LEYENDA: Artemisa lo colocó en sueños', { lh: 1.0, color: '#bff4ff', pos: toW(DREAM, DREAM.yaw, 0, 16.5, 9.5), fmax: 20 });
     root.add(dreamLab.sprite, dreamLab.plate);
 
     // ================= 2. herostratus: Eróstrato con la antorcha, junto a la fachada oeste =================
@@ -535,28 +535,32 @@
 
     // ================= 5. measure: cotas del templo =================
     const MS = { P: [], C: [] };
-    const zD = -HZ - 8, GD = 0.6, xD = HX + 8, xH = HX + 3;
-    seg(MS, [-HX, GD, zD], [HX, GD, zD], GOLD_C);                                        // largo 115 m
-    seg(MS, [-HX, GD, -HZ - 0.6], [-HX, GD, zD - 1.5], GOLD_C);
-    seg(MS, [HX, GD, -HZ - 0.6], [HX, GD, zD - 1.5], GOLD_C);
-    seg(MS, [-HX - 0.8, GD, zD - 0.8], [-HX + 0.8, GD, zD + 0.8], GOLDHI_C);
-    seg(MS, [HX - 0.8, GD, zD - 0.8], [HX + 0.8, GD, zD + 0.8], GOLDHI_C);
-    seg(MS, [xD, GD, -HZ], [xD, GD, HZ], GOLD_C);                                        // ancho 55 m
-    seg(MS, [HX + 0.6, GD, -HZ], [xD + 1.5, GD, -HZ], GOLD_C);
-    seg(MS, [HX + 0.6, GD, HZ], [xD + 1.5, GD, HZ], GOLD_C);
-    seg(MS, [xD - 0.8, GD, -HZ - 0.8], [xD + 0.8, GD, -HZ + 0.8], GOLDHI_C);
-    seg(MS, [xD - 0.8, GD, HZ - 0.8], [xD + 0.8, GD, HZ + 0.8], GOLDHI_C);
-    seg(MS, [xH, ST_Y, zD], [xH, TOP_Y, zD], CYAN_C);                                    // altura 18 m
-    seg(MS, [xH - 0.8, ST_Y, zD - 0.8], [xH + 0.8, ST_Y, zD + 0.8], CYAN_C);
-    seg(MS, [xH - 0.8, TOP_Y, zD - 0.8], [xH + 0.8, TOP_Y, zD + 0.8], CYAN_C);
-    seg(MS, [HX - 1.5, TOP_Y, -HZ + 1.5], [xH + 1, TOP_Y, zD], CYAN_C);
-    seg(MS, [HX - 1.5, ST_Y, -HZ + 1.5], [xH + 1, ST_Y, zD], CYAN_C);
+    const GD = 0.6;
+    const zS = HZ + 8, xW = -(HX + 6), xC = HX + 3.5, zC = HZ - 2.5;   // cota sur, cota oeste, cota junto a la columna SE
+    // largo 115 m: lado sur
+    seg(MS, [-HX, GD, zS], [HX, GD, zS], GOLD_C);
+    seg(MS, [-HX, GD, HZ + 0.6], [-HX, GD, zS + 1.5], GOLD_C);
+    seg(MS, [HX, GD, HZ + 0.6], [HX, GD, zS + 1.5], GOLD_C);
+    seg(MS, [-HX - 0.8, GD, zS - 0.8], [-HX + 0.8, GD, zS + 0.8], GOLDHI_C);
+    seg(MS, [HX - 0.8, GD, zS - 0.8], [HX + 0.8, GD, zS + 0.8], GOLDHI_C);
+    // ancho 55 m: lado oeste
+    seg(MS, [xW, GD, -HZ], [xW, GD, HZ], GOLD_C);
+    seg(MS, [-HX - 0.6, GD, -HZ], [xW - 1.5, GD, -HZ], GOLD_C);
+    seg(MS, [-HX - 0.6, GD, HZ], [xW - 1.5, GD, HZ], GOLD_C);
+    seg(MS, [xW - 0.8, GD, -HZ - 0.8], [xW + 0.8, GD, -HZ + 0.8], GOLDHI_C);
+    seg(MS, [xW - 0.8, GD, HZ - 0.8], [xW + 0.8, GD, HZ + 0.8], GOLDHI_C);
+    // altura 18 m: junto a la columna de la esquina SE (x 55, z 25), de la base (3 m) al arquitrabe (21 m)
+    seg(MS, [xC, ST_Y, zC], [xC, TOP_Y, zC], CYAN_C);
+    seg(MS, [xC - 0.8, ST_Y, zC - 0.8], [xC + 0.8, ST_Y, zC + 0.8], CYAN_C);
+    seg(MS, [xC - 0.8, TOP_Y, zC - 0.8], [xC + 0.8, TOP_Y, zC + 0.8], CYAN_C);
+    seg(MS, [HX - 1.5, TOP_Y, zC], [xC - 1, TOP_Y, zC], CYAN_C);
+    seg(MS, [HX - 1.5, ST_Y, zC], [xC - 1, ST_Y, zC], CYAN_C);
     const measG = new THREE.LineSegments(segGeo(MS), vlineMat(0));
     root.add(measG);
-    const m115 = label('115 m', { lh: 1.6, color: '#ffd27a', pos: [0, GD + 1.8, zD - 3.5], fmax: 12 });
-    const m55 = label('55 m', { lh: 1.6, color: '#ffd27a', pos: [xD + 6, GD + 1.8, 0], fmax: 12 });
-    const m18 = label('18 m', { lh: 1.4, color: '#9fe9ff', pos: [xH - 6, 12, zD - 2], fmax: 12 });
-    const m127 = label('127 COLUMNAS', { lh: 1.4, color: '#ffe9a8', pos: [30, 40, -55], fmax: 14 });
+    const m115 = label('115 m', { lh: 1.6, color: '#ffd27a', pos: [0, GD + 1.8, zS + 3.5], fmax: 12 });
+    const m55 = label('55 m', { lh: 1.6, color: '#ffd27a', pos: [xW - 6, GD + 1.8, 0], fmax: 12 });
+    const m18 = label('18 m', { lh: 1.4, color: '#9fe9ff', pos: [xC + 4, 12, zC], fmax: 12 });
+    const m127 = label('127 COLUMNAS', { lh: 1.4, color: '#ffe9a8', pos: [0, 44, 0], fmax: 14 });
     [m115, m55, m18, m127].forEach(function (L) { root.add(L.sprite, L.plate); });
 
     // ================= 6. compare: Partenón fantasma cian (69 x 31 m, 8 x 17 columnas) =================
