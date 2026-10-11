@@ -672,13 +672,41 @@
       { g: statueG, m: mat(0, 121.3, 0, 0) }
     ]);
     const ghostG = new THREE.Group();
-    const ghostMat = new THREE.MeshBasicMaterial({ color: 0x7fe3f0, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+    const ghostMat = new THREE.MeshBasicMaterial({ color: 0x3fe6f5, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
     ghostG.add(new THREE.Mesh(ghostShell, ghostMat));
     const ghostEdgeMat = new THREE.LineBasicMaterial({ color: 0xd4fdff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.NormalBlending });
     ghostG.add(new THREE.LineSegments(new THREE.EdgesGeometry(ghostShell, 30), ghostEdgeMat));
     const goldEdgeMat = new THREE.LineBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.NormalBlending });
     const goldShell = mergeGeos([{ g: lanternTopG, m: ID }, { g: statueG, m: mat(0, 121.3, 0, 0) }]);
+    const goldMat = new THREE.MeshBasicMaterial({ color: 0xffc860, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+    ghostG.add(new THREE.Mesh(goldShell, goldMat));
     ghostG.add(new THREE.LineSegments(new THREE.EdgesGeometry(goldShell, 30), goldEdgeMat));
+    // resplandor general (halo) y llama fantasma de la linterna
+    function glowTex(c0, c1) {
+      const cv = makeCanvas(128, 128), g = cv.getContext("2d");
+      const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gr.addColorStop(0, c0); gr.addColorStop(0.35, c1); gr.addColorStop(1, "rgba(0,0,0,0)");
+      g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+      const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; return t;
+    }
+    const haloMat = new THREE.SpriteMaterial({ map: glowTex("rgba(127,233,255,0.9)", "rgba(63,230,245,0.25)"), color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+    const halo = new THREE.Sprite(haloMat);
+    halo.position.set(0, 62, 0); halo.scale.setScalar(200);
+    ghostG.add(halo);
+    const lanternGlowMat = new THREE.SpriteMaterial({ map: glowTex("rgba(255,250,220,1)", "rgba(255,210,120,0.4)"), color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+    const lanternGlow = new THREE.Sprite(lanternGlowMat);
+    lanternGlow.position.set(0, 116, 0); lanternGlow.scale.setScalar(24);
+    ghostG.add(lanternGlow);
+    const flameCv = makeCanvas(64, 128), fg = flameCv.getContext("2d");
+    fg.translate(32, 90); fg.scale(0.55, 1.5);
+    const fgr = fg.createRadialGradient(0, 0, 0, 0, 0, 50);
+    fgr.addColorStop(0, "rgba(255,255,235,1)"); fgr.addColorStop(0.35, "rgba(170,250,255,0.9)"); fgr.addColorStop(1, "rgba(0,0,0,0)");
+    fg.fillStyle = fgr; fg.fillRect(-60, -100, 120, 200);
+    const flameTex = new THREE.CanvasTexture(flameCv); flameTex.encoding = THREE.sRGBEncoding;
+    const flameMat = new THREE.SpriteMaterial({ map: flameTex, color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+    const flame = new THREE.Sprite(flameMat);
+    flame.position.set(0, 114.8, 0);
+    ghostG.add(flame);
     ghostG.visible = false;
     root.add(ghostG);
 
@@ -831,9 +859,15 @@
 
       // fantasma
       ghostG.visible = gh > 0.001;
-      ghostMat.opacity = 0.22 * gh;
-      ghostEdgeMat.opacity = 1.0 * gh;
-      goldEdgeMat.opacity = 1.0 * gh;
+      ghostMat.opacity = 0.6 * gh;                       // relleno translúcido (~0.3 al final)
+      goldMat.opacity = 0.5 * gh;
+      ghostEdgeMat.opacity = Math.min(1, 1.5 * gh);      // aristas brillantes
+      goldEdgeMat.opacity = Math.min(1, 1.5 * gh);
+      haloMat.opacity = 0.28 * gh;
+      const fl = 0.85 + 0.15 * Math.sin(wall * 2.1);
+      lanternGlowMat.opacity = 0.7 * gh * fl;
+      flameMat.opacity = 0.9 * gh;
+      flame.scale.set(4.5 + 0.7 * Math.sin(wall * 11) + 0.4 * Math.sin(wall * 17.3), 7 + 1.2 * Math.sin(wall * 9) + 0.6 * Math.sin(wall * 23), 1);
 
       // hundimiento
       if (sk !== lastSk) { lastSk = sk; writeSunk(sk); }

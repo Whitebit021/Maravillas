@@ -536,7 +536,7 @@
       // 64-83: cima de la obra, de pie en el borde a la altura actual (solo arco sur-oeste)
       const yt = clamp(s.build, 0, 1) * TOWER.H;
       // la cima se despeja al completarse la altura (la linterna ocupa ese sitio)
-      const topOn = s.build > 0.1 && s.build < 0.97 && yt > 8;
+      const topOn = s.build > 0.1 && s.build < 0.97 && s.cranes > 0.5 && s.collapse <= 0.001 && yt > 8;
       for (let j = 0; j < 20; j++) {
         const i = 64 + j, h1 = hash(i + 500), h2 = hash(i + 600);
         if (!topOn) { wRoot(0, -50, 0, 0); }
@@ -640,7 +640,7 @@
     quayCrane.position.set(QUAY_PIER.x, 0, QUAY_PIER.z);
     quayCrane.rotation.y = -headingOf(QUAY_BARGE.x - QUAY_PIER.x, QUAY_BARGE.z - QUAY_PIER.z);
     // andamios: postes y tablones alrededor de la franja en construcción (~8 m bajo la cima)
-    const NPOST = 40, NBRD = 40;
+    const NPOST = 80, NBRD = 160;
     const postIM = mkIM(new THREE.BoxGeometry(0.22, 8, 0.22), MAT.wood, NPOST, true);
     const boardIM = mkIM(new THREE.BoxGeometry(1.8, 0.14, 0.5), MAT.wood, NBRD, true);
     root.add(postIM, boardIM);
@@ -648,7 +648,7 @@
     function updateCranes(s) {
       const W = s.wall, b = clamp(s.build, 0, 1);
       const yt = b * TOWER.H;
-      const topOn = b > 0.1 && b < 0.97 && s.cranes > 0.5 && yt > 8;
+      const topOn = b > 0.1 && b < 0.97 && s.cranes > 0.5 && s.collapse <= 0.001 && yt > 8;
       // grúas de la cima
       TOPC.forEach(function (C, k) {
         const g = C.g;
@@ -666,7 +666,7 @@
         if (ud.wheel) ud.wheel.rotation.z = -W * 0.9;
       });
       // grúa del muelle: visible mientras hay barcazas
-      quayCrane.visible = s.barges > 0.002;
+      quayCrane.visible = s.barges > 0.002 && s.collapse <= 0.001;
       if (quayCrane.visible) {
         const ql = 3.5 + 2.5 * (0.5 + 0.5 * Math.sin(W * 0.4));
         quayCrane.userData.rope.position.set(12.5, 13.2 - ql / 2, 0);
@@ -674,23 +674,36 @@
         quayCrane.userData.block.position.set(12.5, 13.2 - ql - 0.6, 0);
       }
       // andamios: una fila de postes y tablones a ~8 m bajo la cima, en el arco sur-oeste
-      const scOn = b > 0.4 && yt > 30;
+      // andamio pegado a las caras (1 m fuera de la pared), con la forma de cada cuerpo:
+      // cuadrado con postes en las esquinas (cuerpo 1), octogonal (cuerpo 2), circular (cilindro)
+      const scOn = b > 0.2 && yt > 22 && s.cranes > 0.5 && s.collapse <= 0.001 && b < 0.97;
       const sy = yt - 8;
-      // andamio pegado a las caras (1 m fuera de la pared): postes y tablones siguen el contorno real
-      for (let k = 0; k < NPOST; k++) {
-        const a = 1.3 + k / (NPOST - 1) * 3.3;
-        const p = outlineAt(sy, a, 1.0);
-        if (scOn) setPRS(postIM, k, p[0], sy, p[1], 0);
-        else setPRS(postIM, k, 0, -60, 0, 0, 0.0001, 0.0001, 0.0001);
+      const P = scOn ? scaffoldPts(sy, 1.0) : null;
+      const keep = [];
+      let np = 0;
+      if (P) {
+        for (let k = 0; k < P.length; k++) {
+          const kp = inSector(P[k]);
+          keep.push(kp);
+          if (kp && np < NPOST) { setPRS(postIM, np, P[k][0], sy, P[k][1], 0); np++; }
+        }
       }
-      for (let k = 0; k < NBRD; k++) {
-        const a = 1.3 + (k + 0.5) / NBRD * 3.3;
-        const dy = k % 2 ? 2.2 : -2.2;
-        const p = outlineAt(sy + dy, a, 1.0);
-        const ry = Math.atan2(-Math.cos(a), -Math.sin(a));
-        if (scOn) setPRS(boardIM, k, p[0], sy + dy, p[1], ry);
-        else setPRS(boardIM, k, 0, -60, 0, 0, 0.0001, 0.0001, 0.0001);
+      for (let k = np; k < NPOST; k++) setPRS(postIM, k, 0, -60, 0, 0, 0.0001, 0.0001, 0.0001);
+      // tablones entre postes consecutivos, a dos alturas
+      let nb = 0;
+      if (P) {
+        for (let k = 0; k + 1 < P.length; k++) {
+          if (!keep[k] || !keep[k + 1]) continue;
+          const A = P[k], B = P[k + 1];
+          const dx = B[0] - A[0], dz = B[1] - A[1], L = Math.hypot(dx, dz);
+          const mx = (A[0] + B[0]) / 2, mz = (A[1] + B[1]) / 2, ry = headingOf(dx, dz);
+          for (let lv = 0; lv < 2 && nb < NBRD; lv++) {
+            setPRS(boardIM, nb, mx, sy + (lv ? 2.2 : -2.2), mz, ry, L / 1.8, 1, 1);
+            nb++;
+          }
+        }
       }
+      for (let k = nb; k < NBRD; k++) setPRS(boardIM, k, 0, -60, 0, 0, 0.0001, 0.0001, 0.0001);
       postIM.instanceMatrix.needsUpdate = true;
       boardIM.instanceMatrix.needsUpdate = true;
     }
@@ -767,6 +780,31 @@
     // =====================================================================
     // update: cada grupo depende solo de s (sin acumular)
     // =====================================================================
+    // muestras (cada 2.4 m) sobre el contorno poligonal de la torre a la altura y, desplazado off
+    // hacia fuera. Convención: punto = (R sin θ, R cos θ). Cuadrado en las esquinas, octógono con
+    // la fase de pharos.js (vértices en -π/8 + k·π/4, expresado aquí como π/8), círculo en el cilindro.
+    function scaffoldPts(y, off) {
+      let n, apo, ph;
+      if (y < TOWER.tier2.y0) { n = 4; apo = TOWER.tier1HalfAt(Math.max(TOWER.tier1.y0, Math.min(TOWER.tier1.y1, y))) + off; ph = Math.PI / 4; }
+      else if (y < TOWER.tier3.y0) { n = 8; apo = TOWER.tier2.radius * Math.cos(Math.PI / 8) + off; ph = Math.PI / 8; }
+      else { n = 32; apo = TOWER.tier3.radius * Math.cos(Math.PI / 32) + off; ph = 0; }
+      const Rv = apo / Math.cos(Math.PI / n);
+      const V = [];
+      for (let k = 0; k <= n; k++) { const th = ph + k * TAU / n; V.push([Rv * Math.sin(th), Rv * Math.cos(th)]); }
+      const out = [];
+      for (let k = 0; k < n; k++) {
+        const A = V[k], B = V[k + 1];
+        const m = Math.max(1, Math.round(Math.hypot(B[0] - A[0], B[1] - A[1]) / 2.4));
+        for (let j = 0; j < m; j++) { const f = j / m; out.push([A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f]); }
+      }
+      return out;
+    }
+    // sector de obra: ángulo a = atan2(x, z) entre 1.3 y 4.6 rad (sur-oeste), fuera del lado de la cámara
+    function inSector(p) {
+      let a = Math.atan2(p[0], p[1]);
+      if (a < 0) a += TAU;
+      return a >= 1.3 && a <= 4.6;
+    }
     // contorno de la torre a la altura y, ángulo a, desplazado off metros hacia fuera de la pared
     function outlineAt(y, a, off) {
       const s = Math.sin(a), c = Math.cos(a);

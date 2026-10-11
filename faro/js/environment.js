@@ -447,9 +447,9 @@
       [0.50,  '#1450c0', '#8fc6e8', '#fff6e6', 2.5, '#c6e0ee'],   // mediodía azul mediterráneo
       [0.62,  '#2466c8', '#9ccfe9', '#ffebc6', 2.3, '#bcd8e8'],
       [0.72,  '#3a4fa0', '#ffb070', '#ffa050', 1.6, '#f0a878'],   // atardecer naranja
-      [0.765, '#44407f', '#ff8a2a', '#ff9040', 0.9, '#c07a6a'],
-      [0.80,  '#1f2352', '#d0583a', '#ff7a3a', 0.15, '#6a4a5a'],
-      [0.86,  '#02050f', '#0a1830', '#6f8fe0', 0.0, '#1f2a55'],
+      [0.765, '#4a3f8a', '#ff9a4a', '#ff9040', 0.9, '#b07a8a'],
+      [0.80,  '#3a2f70', '#e0743a', '#ff7a3a', 0.15, '#6a4a7a'],
+      [0.86,  '#0c0f30', '#4a3a70', '#6f8fe0', 0.0, '#1f2a55'],
       [1.00,  '#02050f', '#0a1830', '#6f8fe0', 0.0, '#1a2a50']
     ].map(function (k) {
       return { t: k[0], zen: col(k[1]), hor: col(k[2]), sun: col(k[3]), sI: k[4], hem: col(k[5]) };
@@ -878,6 +878,28 @@
     windows.frustumCulled = false;
     root.add(windows);
 
+    // ---------- luces de barcos en el horizonte (solo de noche, mismo shader de puntos) ----------
+    const SHIP_LIGHTS = [];
+    for (let tr = 0, nC = 0; nC < 45 && tr < 4000; tr++) {
+      const x = -2600 + rnd() * 5200, z = -500 + rnd() * 1500;
+      if (Math.hypot(x, z) < 900) continue;
+      const hS = groundH(x, z);
+      if (hS > -2.0 || GX.dd < 60) continue;                 // solo mar abierto
+      nC++;
+      for (let k = 0; k < 3; k++) {
+        SHIP_LIGHTS.push(x + (rnd() - 0.5) * 16, SEA_Y + 2 + rnd() * 2.5, z + (rnd() - 0.5) * 16);
+      }
+    }
+    const shipN = SHIP_LIGHTS.length / 3;
+    const shipPos = new Float32Array(SHIP_LIGHTS);
+    const shipSeed = new Float32Array(shipN).fill(0.5);
+    const shipGeo = new THREE.BufferGeometry();
+    shipGeo.setAttribute('position', new THREE.BufferAttribute(shipPos, 3));
+    shipGeo.setAttribute('aSeed', new THREE.BufferAttribute(shipSeed, 1));
+    const ships = new THREE.Points(shipGeo, winMat);
+    ships.frustumCulled = false;
+    root.add(ships);
+
     // ---------- palmeras (InstancedMesh): esquinas de la trama, quay y la isla ----------
     const PALMS = 150;
     const trunkGeo = new THREE.CylinderGeometry(0.28, 0.42, 9, 6, 1, true).translate(0, 4.5, 0);
@@ -1066,7 +1088,7 @@
       skyU.uSunCol.value.copy(tSun);
       skyU.uSunVis.value = sunVis;
       skyU.uMoonVis.value = moonVis;
-      skyU.uNight.value = moonVis;
+      skyU.uNight.value = Math.max(moonVis, 0.35 * sstep(0.0, -0.25, el));   // primeras estrellas al anochecer
       skyU.uDusk.value = dusk;
       skyU.uDay.value = dayF;
       skyU.uSunAng.value = 0.0047 * (1 + 2.5 * dusk);
