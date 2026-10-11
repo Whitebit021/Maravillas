@@ -62,7 +62,7 @@
     games:      [[18, 0], [22, 1], [36, 1], [40, 0]],                  // atletas y público en el estadio
     workers:    [[38, 0], [42, 1], [140, 1], [144, 0]],
     workshop:   [[58, 0], [62, 1], [126, 1], [130, 0]],                // actividad en el taller de Fidias
-    cup:        [[74, 0], [76, 1], [81, 1], [83, 0]],                  // la taza "Pertenezco a Fidias"
+    cup:        [[70, 0], [72, 1], [78, 1], [80, 0]],                  // la taza "Pertenezco a Fidias"
     core:       [[82, 0], [100, 1]],                                    // núcleo de madera subiendo
     scaffold:   [[82, 0], [84, 1], [140, 1], [144, 0]],                // andamios dentro de la cella
     xray:       [[100, 0], [104, 0.7], [112, 0.7], [116, 0], [188, 0], [192, 0.7], [200, 0.7], [204, 0]],

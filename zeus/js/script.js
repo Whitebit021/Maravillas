@@ -54,7 +54,7 @@
       { start: 182.3, end: 186.5, chapter: 'aceite', text: 'Al subir, la estatua se rió. Cayeron los andamios.', emphasis: true },
 
       { start: 188.5, end: 192.48, chapter: 'numeros', text: 'Hagamos cuentas. Doce metros sentado.', emphasis: false },
-      { start: 192.8, end: 196.98, chapter: 'numeros', text: 'Unas cuarenta veces el tamaño de un hombre.', emphasis: false },
+      { start: 192.8, end: 196.98, chapter: 'numeros', text: 'De pie mediría unos 17 metros: casi diez hombres.', emphasis: false },
       { start: 197.3, end: 201.98, chapter: 'numeros', text: 'Toneladas de oro y marfil sobre madera. 800 años en pie.', emphasis: false },
       { start: 202.3, end: 209.0, chapter: 'numeros', text: '¿Cómo sobrevive algo así tanto tiempo para desaparecer de golpe?', emphasis: true },
 
@@ -76,7 +76,7 @@
       trono: ['Ébano, oro, marfil, gemas', 'Nike en la mano derecha', 'Cetro con águila'],
       esplendor: ['Estrabón: rompería el techo', 'Cabeza casi bajo las vigas', 'Penumbra y luz de lámparas'],
       aceite: ['Estanque de aceite de oliva', 'Calígula quiso llevársela', 'Fuente: Suetonio ("cuentan")'],
-      numeros: ['Unas 40 veces un hombre', 'Toneladas de oro y marfil', '800 años en pie'],
+      numeros: ['De pie: unos 17 m', 'Toneladas de oro y marfil', '800 años en pie'],
       final: ['Llevada a Constantinopla', 'Incendio en 475 d.C.', 'Atribuida a Fidias']
     }
   };

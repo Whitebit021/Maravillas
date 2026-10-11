@@ -73,7 +73,7 @@ Genéricos: `t` tiempo del video (s), `dt`, `wall` reloj (s, siempre avanza; en 
 | `pilgrims` | peregrinos y lámparas de aceite encendidas en la cella y frente al templo | construction |
 | `oil` | estanque de aceite delante de la estatua (`ZEUS.pool`): piso de piedra negra, borde de mármol, aceite dorado que refleja la estatua | interior |
 | `caligula` | leyenda: andamio fantasma de los romanos de Calígula que se derrumba + ondas de "risa" (anillos dorados) desde la estatua y etiqueta "LA ESTATUA SE RIÓ (Suetonio)" | misterio |
-| `measure` | cotas: 12 m de altura, 6,5 m de basa, techo a 13 m, "40 veces tamaño humano" | misterio |
+| `measure` | cotas: 12 m de altura, 6,5 m de basa, techo a 13 m, "de pie: ~17 m" | misterio |
 | `fire` | incendio de 475 d.C.: llamas y humo envolviendo la estatua; etiqueta "CONSTANTINOPLA · 475 d.C." | statue (llamas en la estatua) + misterio (etiqueta y línea hacia `SITE.constantinople`) |
 | `burn` | la estatua se consume: el oro se funde y gotea, el marfil se ennegrece, todo desaparece al llegar a 1 | statue |
 | `quake` | terremoto (siglo VI): polvo y sacudida | environment |

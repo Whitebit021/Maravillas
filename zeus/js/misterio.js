@@ -224,27 +224,35 @@
     g.lineTo(x + r, y + h); g.quadraticCurveTo(x, y + h, x, y + h - r);
     g.lineTo(x, y + r); g.quadraticCurveTo(x, y, x + r, y); g.closePath();
   }
-  // lh = altura de la letra (m) a escala 1; el ancho sale del texto
+  // lh = altura de la letra (m) a escala 1; el ancho sale del texto. Admite varias líneas separadas por \n
   function label(text, o) {
     const fam = 'Georgia, "Times New Roman", serif';
+    const lines = text.split('\n');
     const m = document.createElement('canvas').getContext('2d');
     m.font = 'bold 100px ' + fam;
-    const k = m.measureText(text).width / 100;               // ancho del texto en em
+    let k = 0;
+    lines.forEach(function (l) { k = Math.max(k, m.measureText(l).width / 100); });   // ancho máximo en em
     const px = Math.max(36, Math.min(150, Math.floor(1700 / k)));
     const pad = Math.round(px * 0.6);
     const W = Math.min(2048, Math.ceil(k * px + pad * 2));
-    const H = Math.ceil(px * 1.9);
+    const lineH = px * 1.3;
+    const H = Math.ceil(px * 0.9 + lineH * lines.length);
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     const g = cv.getContext('2d');
-    roundRect(g, 3, 3, W - 6, H - 6, Math.round(H * 0.28));
+    roundRect(g, 3, 3, W - 6, H - 6, Math.round(Math.min(H, px * 1.2) * 0.35));
     g.fillStyle = 'rgba(8,6,16,0.68)'; g.fill();
     g.font = 'bold ' + px + 'px ' + fam;
     g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillStyle = o.color; g.shadowColor = o.color; g.shadowBlur = Math.round(px * 0.22);
-    g.fillText(text, W / 2, H / 2); g.fillText(text, W / 2, H / 2);
+    lines.forEach(function (l, i) {
+      const y = H / 2 + (i - (lines.length - 1) / 2) * lineH;
+      g.fillText(l, W / 2, y); g.fillText(l, W / 2, y);
+    });
     g.shadowBlur = 0;
-    g.fillText(text, W / 2, H / 2);
+    lines.forEach(function (l, i) {
+      g.fillText(l, W / 2, H / 2 + (i - (lines.length - 1) / 2) * lineH);
+    });
     const tex = new THREE.CanvasTexture(cv);
     tex.encoding = THREE.sRGBEncoding;
     const mat = new THREE.SpriteMaterial({
@@ -264,7 +272,7 @@
     op = clamp01(op);
     if (op <= 0.001) { L.sprite.visible = false; return; }
     const d = camera.position.distanceTo(L.p);
-    const f = Math.max(0.4, Math.min(L.fmax, d / 28));
+    const f = Math.max(0.3, Math.min(L.fmax, d / 28));
     L.sprite.position.copy(L.p);
     L.sprite.scale.set(L.w * f, L.h * f, 1);
     L.mat.opacity = op;
@@ -306,7 +314,7 @@
     for (let i = 0; i < n; i++) for (let j = 0; j <= seg; j++) {
       const th = TAU * j / seg, r = prof[i][0];
       P.push(r * Math.cos(th), prof[i][1], r * Math.sin(th));
-      UV.push(j / seg, cum[i] / L);
+      UV.push(1 - j / seg, cum[i] / L);   // u invertida: el texto se lee de frente desde fuera
     }
     for (let i = 0; i < n - 1; i++) for (let j = 0; j < seg; j++) {
       const a = i * (seg + 1) + j, b = a + 1, c = a + seg + 1, d = c + 1;
@@ -334,7 +342,7 @@
     const pxH = CL.L / H;                  // metros por fila de textura
     const pxW = TAU * 0.95 / W;            // metros por columna (circunferencia media)
     const sx = pxH / pxW;                  // corrige la proporción: letras sin estirar
-    const P = Math.round(0.26 / pxH);      // altura de letra ~26 cm
+    const P = Math.round(0.34 / pxH);      // altura de letra ~34 cm
     const vA = CL.cum[8] / CL.L, vB = CL.cum[11] / CL.L;   // franja: cuerpo abombado
     const rTop = (1 - vB) * H, rBot = (1 - vA) * H, rMid = (rTop + rBot) / 2;   // flipY: v=1 arriba
     const cm = document.createElement('canvas'); cm.width = W; cm.height = H;
@@ -366,8 +374,8 @@
     [0.25, 0.75].forEach(function (u) {
       const cx = u * W;
       g.save(); g.translate(cx, rMid); g.scale(sx, 1);
-      g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillText(TXT, 2, 3);       // sombra del grabado
-      g.fillStyle = 'rgba(226,186,104,0.95)'; g.fillText(TXT, 0, 0);
+      g.fillStyle = 'rgba(0,0,0,0.8)'; g.fillText(TXT, 2, 3);       // sombra del grabado
+      g.fillStyle = 'rgba(244,206,120,1)'; g.fillText(TXT, 0, 0);
       g.restore();
       b.save(); b.translate(cx, rMid); b.scale(sx, 1);
       b.fillStyle = '#1c1c1c'; b.fillText(TXT, 0, 0);
@@ -477,9 +485,13 @@
       map: CT.map, bumpMap: CT.bump, bumpScale: 0.012,
       color: 0xffffff, roughness: 0.36, metalness: 0.1,
       envMap: env, envMapIntensity: 0.9,
-      emissive: 0x06313a, emissiveIntensity: 0.55,
+      emissive: 0x0b3a44, emissiveIntensity: 0.45,
       transparent: true, opacity: 0, side: THREE.DoubleSide
     });
+    // luz propia del holograma (el taller puede estar a oscuras): una PointLight fría por encima y delante
+    const cupLight = new THREE.PointLight(0xe8fbff, 0, 14, 2);
+    cupLight.position.set(CUP.x - 2.2, CUP_BASE_Y + 2.2, CUP.z - 1.6);
+    root.add(cupLight);
     const cupG = new THREE.Group();
     cupG.position.set(CUP.x, CUP_BASE_Y, CUP.z);
     root.add(cupG);
@@ -509,12 +521,12 @@
       color: CYAN, transparent: true, opacity: 0, blending: THREE.AdditiveBlending,
       depthWrite: false, side: THREE.DoubleSide, fog: false
     });
-    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.55, CUP_BASE_Y - CUP.y, 32, 1, true), beamMat);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.5, CUP_BASE_Y - CUP.y, 32, 1, true), beamMat);
     beam.position.set(CUP.x, CUP.y + (CUP_BASE_Y - CUP.y) / 2, CUP.z);
     root.add(beam);
     const tableGlow = glowSprite('127,227,240', 4.2, [CUP.x, CUP.y + 0.06, CUP.z]);
     root.add(tableGlow);
-    const cupLab = label('«Pertenezco a Fidias»', { lh: 0.75, color: '#9ff3ff', pos: [CUP.x, CUP_BASE_Y + 1.9, CUP.z] });
+    const cupLab = label('«Pertenezco a Fidias»', { lh: 0.9, color: '#9ff3ff', pos: [CUP.x - 1.5, 3.6, CUP.z - 2.1] });
     root.add(cupLab.sprite);
 
     // ================= 2. standup: Zeus de pie atravesando el techo del templo =================
@@ -551,8 +563,10 @@
     }
     [0.35, 0.5, 0.65].forEach(function (u) { suSeg(function (w) { return headFnWorld(0.1, 15.9, 0, 0.9, 1.1, 0.72, 1)(u, w); }, 24, SIL_C); });
     const suMat = ghostMat(CYAN, SILVER, 0.13, 0.85);
+    suMat.depthTest = false;      // fantasma: se ve entero aunque el tejado del templo lo cubra
     standG.add(new THREE.Mesh(fillGeo(SU), suMat));
     const suEdges = new THREE.LineSegments(segGeo(SUE), vlineMat(0));
+    suEdges.material.depthTest = false;
     standG.add(suEdges);
     const suHalo = glowSprite('127,227,240', 16, [0.1, 16.6, 0]);
     standG.add(suHalo);
@@ -564,7 +578,7 @@
     standG.add(boltLine);
     const boltGlow = glowSprite('255,240,190', 4.5, BOLT[BOLT.length - 1]);
     standG.add(boltGlow);
-    const suLab = label('Estrabón: «si se levantara, rompería el techo»', { lh: 0.72, color: '#9ff3ff', pos: [ZX - 9.5, ZY + 20.5, ZZ - 6.5] });
+    const suLab = label('Estrabón:\n«si se levantara, rompería el techo»', { lh: 0.95, color: '#9ff3ff', pos: [ZX - 3.5, ZY + 1.2, ZZ - 5.0] });
     root.add(suLab.sprite);
 
     // ================= 3. caligula: andamio fantasma que se derrumba, soldados y "carcajada" =================
@@ -587,7 +601,7 @@
     limb(SC, [CAL.x0, 3.0, CAL.z0], [CAL.x0, 10.2, CAL.z1], 0.1, 0.1, 6, 0);
     limb(SC, [CAL.x1, 6.6, CAL.z1], [CAL.x1, 13.6, CAL.z0], 0.1, 0.1, 6, 0);
     limb(SC, [CAL.x0, 6.6, CAL.z1], [xm, 13.6, CAL.z0], 0.1, 0.1, 6, 0);
-    const scafMat = ghostMat(0xff3b30, 0xff9a6a, 0.12, 0.9);
+    const scafMat = ghostMat(0xff3b30, 0xff9a6a, 0.08, 0.7);
     scafG.add(new THREE.Mesh(fillGeo(SC), scafMat));
     [[CAL.x0, yM, CAL.z0, 0.2, hH, 0.2], [CAL.x1, yM, CAL.z1, 0.2, hH, 0.2]].forEach(function (q) {
       boxEdges(SCE, [q[0], q[1], q[2]], q[3], q[4], q[5], RED_C);
@@ -637,7 +651,7 @@
     });
     const laughHalo = glowSprite('255,210,120', 5.5, CAL_HEAD);
     root.add(laughHalo);
-    const calLab = label('CUENTAN QUE LA ESTATUA SE RIÓ (Suetonio)', { lh: 0.75, color: '#ff8a7a', pos: [ZX - 6.5, ZY + 17.5, ZZ - 8.0] });
+    const calLab = label('CUENTAN QUE LA ESTATUA SE RIÓ\n(Suetonio)', { lh: 0.8, color: '#ff8a7a', pos: [ZX - 1.0, ZY + 1.6, ZZ + 5.0] });
     root.add(calLab.sprite);
 
     // ================= 4. measure: regla de 12 m, cota del techo, basa de 6,5 m y escala humana =================
@@ -660,6 +674,13 @@
     seg(MS, [BX - 0.5, BY, ZEUS.base.halfZ], [BX + 0.5, BY, ZEUS.base.halfZ], CYAN_C);
     const measG = new THREE.LineSegments(segGeo(MS), vlineMat(0));
     root.add(measG);
+    // regla: barra luminosa de 12 m con marcas de metro (más visible que las líneas de 1 px)
+    const RB = newB();
+    boxB(RB, [RX, YB + 6, RZ], 0.07, 6, 0.07);
+    for (let m = 0; m <= 12; m += (m % 3 === 0 ? 3 : 1)) boxB(RB, [RX + 0.35, YB + m, RZ], 0.45, 0.04, 0.05);
+    const rulerMat = new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0, depthWrite: false, fog: false });
+    const rulerMesh = new THREE.Mesh(fillGeo(RB), rulerMat);
+    root.add(rulerMesh);
     // silueta humana de 1,8 m para la escala
     const HUM = newB(), HUMT = newB();
     soldierB(HUMT, false);
@@ -667,10 +688,10 @@
     const humMat = ghostMat(CYAN, SILVER, 0.16, 0.8);
     const humMesh = new THREE.Mesh(fillGeo(HUM), humMat);
     root.add(humMesh);
-    const m12 = label('12 m', { lh: 1.5, color: '#ffd27a', pos: [RX + 1.6, YB + 9.0, RZ] });
-    const mCeil = label('13 m · techo de la cella', { lh: 1.2, color: '#9fe9ff', pos: [-12.0, YC + 1.1, RZ] });
-    const mBase = label('6,5 m de basa', { lh: 1.1, color: '#9fe9ff', pos: [BX + 2.8, BY + 1.6, 0] });
-    const mHum = label('×6,7 un humano (1,8 m)', { lh: 0.9, color: '#ffd27a', pos: [-4.0, FLOOR + 2.9, 6.0] });
+    const m12 = label('12 m', { lh: 0.7, color: '#ffd27a', pos: [RX - 1.2, YB + 11.0, RZ], fmax: 8 });
+    const mCeil = label('13 m · techo', { lh: 0.6, color: '#9fe9ff', pos: [-11.5, YC + 0.7, RZ], fmax: 8 });
+    const mBase = label('6,5 m de basa', { lh: 0.6, color: '#9fe9ff', pos: [BX + 1.0, BY + 0.7, 0.4], fmax: 8 });
+    const mHum = label('×6,7 un humano', { lh: 0.55, color: '#ffd27a', pos: [-2.0, FLOOR + 2.4, 7.4], fmax: 8 });
     [m12, mCeil, mBase, mHum].forEach(function (L) { root.add(L.sprite); });
 
     // ================= 5. fire: línea luminosa hacia Constantinopla =================
@@ -702,7 +723,7 @@
     const starSp = glowSprite('255,190,110', 90, END);
     const starCore = glowSprite('255,240,200', 26, END);
     root.add(starSp, starCore);
-    const fireLab = label('CONSTANTINOPLA · 475 d.C.', { lh: 2.0, color: '#ffb36a', pos: [FS[0] + CONST_DIR[0] * 60, 23, FS[2] + CONST_DIR[1] * 60], fmax: 24 });
+    const fireLab = label('CONSTANTINOPLA\n475 d.C.', { lh: 1.6, color: '#ffb36a', pos: [ZX + 1.5, ZY + 5.5, ZZ - 4.5], fmax: 24 });
     root.add(fireLab.sprite);
 
     // ---------- actualización (solo transformaciones, visibilidad, uniforms y opacidades) ----------
@@ -718,8 +739,9 @@
         cupG.rotation.y = wall * 0.22;
         cupMat.opacity = 0.92 * e;
         shellMat.uniforms.uOp.value = 0.8 * e;
-        beamMat.opacity = 0.07 * e;
-        tableGlow.material.opacity = 0.85 * e;
+        beamMat.opacity = 0.05 * e;
+        cupLight.intensity = 26 * e;
+        tableGlow.material.opacity = 0.6 * e;
         cupHalo.material.opacity = 0.35 * e;
         scanRings.forEach(function (r, k) {
           const yy = 0.1 + fract(wall * 0.16 + k * 0.5) * 1.2;
@@ -728,6 +750,8 @@
           r.scale.set(rr, rr, 1);
           r.material.opacity = 0.5 * e * (1 - fract(wall * 0.16 + k * 0.5));
         });
+      } else {
+        cupLight.intensity = 0;
       }
       setLab(cupLab, cam, ramp(pc, 0.6, 1) * (1 - ramp(tt, 81.5, 83)));
 
@@ -751,8 +775,8 @@
       scafG.visible = pg > 0.001;
       if (scafG.visible) {
         const e = ss(pg) * cal;
-        scafMat.uniforms.uOp.value = 0.8 * e;
-        scafEdges.material.opacity = 0.85 * e;
+        scafMat.uniforms.uOp.value = 0.5 * e;
+        scafEdges.material.opacity = 0.45 * e;
       }
       fallMesh.visible = pg > 0.001;
       solMesh.visible = pg > 0.001;
@@ -786,7 +810,7 @@
         if (r.visible) {
           r.scale.set(rad, rad, 1);
           r.lookAt(cam.position);
-          r.material.opacity = 0.75 * (1 - ph) * showRing;
+          r.material.opacity = 0.9 * (1 - ph) * showRing;
         }
       });
       laughHalo.material.opacity = 0.6 * showRing;
@@ -794,9 +818,10 @@
 
       // cotas: regla, techo, basa y escala humana
       const pm = num(s.measure);
-      measG.visible = humMesh.visible = pm > 0.001;
+      measG.visible = humMesh.visible = rulerMesh.visible = pm > 0.001;
       if (measG.visible) {
         measG.material.opacity = 0.95 * ramp(pm, 0.0, 0.5);
+        rulerMat.opacity = 0.85 * ramp(pm, 0.0, 0.5);
         humMat.uniforms.uOp.value = 0.8 * ss(pm);
       }
       const lm = ramp(pm, 0.5, 1);
