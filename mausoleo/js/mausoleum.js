@@ -147,30 +147,23 @@
       ]);
     }
 
-    // ---------- caballo de la cuadriga: proporciones reales (cuerpo ~2.4 m, patas de 1.4 m, cuello a 45°, cabeza estrecha) ----------
-    function horseGeo(raised) {
+    // ---------- caballo de la cuadriga (receta): cuerpo en cápsula, pecho, cuello a 40°, cabeza a 30°, patas de dos cilindros, cola ----------
+    // Mira a +X, pezuñas en y=0. Una sola BufferGeometry fusionada que se usa 4 veces (escalas uniformes salvo el cuerpo).
+    function horseGeo() {
       const L = [];
-      L.push({ g: new THREE.SphereGeometry(1, 28, 20), m: tm(0, 1.85, 0, 0, 1.2, 0.45, 0.46) });              // barril (2.4 m de largo, 0.9 m de alto)
-      L.push({ g: new THREE.CylinderGeometry(0.2, 0.28, 1.7, 14), m: tm(1.6, 2.8, 0, -Math.PI / 4) });        // cuello inclinado 45°
-      L.push({ g: boxG(0.1, 1.6, 0.14), m: tm(1.45, 2.95, 0, -Math.PI / 4) });                                   // crin
-      L.push({ g: new THREE.SphereGeometry(1, 16, 12), m: tm(2.55, 2.95, 0, -0.6, 0.32, 0.13, 0.14) });          // cabeza estrecha (0.6 m)
-      L.push({ g: new THREE.SphereGeometry(1, 10, 8), m: tm(2.85, 2.6, 0, -0.6, 0.12, 0.11, 0.12) });           // hocico
-      L.push({ g: new THREE.ConeGeometry(0.04, 0.18, 6), m: tm(2.3, 3.6, 0.07, -0.2) });                          // orejas
-      L.push({ g: new THREE.ConeGeometry(0.04, 0.18, 6), m: tm(2.3, 3.6, -0.07, -0.2) });
-      const leg = function (x, z, fwd) {
-        const c1 = new THREE.CylinderGeometry(0.075, 0.06, 0.7, 8), kn = new THREE.SphereGeometry(0.07, 10, 8);
-        const c2 = new THREE.CylinderGeometry(0.05, 0.045, 0.7, 8), hf = boxG(0.12, 0.1, 0.13);
-        if (!fwd) {
-          L.push({ g: c1, m: tm(x, 1.05, z) }, { g: kn, m: tm(x, 0.7, z) }, { g: c2, m: tm(x, 0.35, z) }, { g: hf, m: tm(x, 0.05, z) });
-        } else {                                   // pata delantera levantada: antebrazo hacia delante, casco en el aire
-          L.push({ g: c1, m: tm(x + 0.2, 1.15, z, -0.5) }, { g: kn, m: tm(x + 0.42, 0.92, z) },
-            { g: c2, m: tm(x + 0.55, 0.6, z, -0.9) }, { g: hf, m: tm(x + 0.74, 0.45, z) });
-        }
-      };
-      leg(0.9, 0.15, raised); leg(0.9, -0.15, raised);
-      leg(-0.9, 0.15, false); leg(-0.9, -0.15, false);
-      L.push({ g: new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(-1.15, 2.1, 0), new THREE.Vector3(-1.7, 1.6, 0),
-        new THREE.Vector3(-1.85, 1.0, 0), new THREE.Vector3(-1.9, 0.5, 0)]), 10, 0.07, 5, false), m: _id });   // cola
+      L.push({ g: new THREE.CapsuleGeometry(0.45, 1.5, 6, 14), m: tm(0, 1.85, 0, Math.PI / 2, 1, 1, 0.85) });   // cuerpo, eje de avance
+      L.push({ g: new THREE.SphereGeometry(0.5, 16, 12), m: tm(1.2, 1.85, 0, 0, 1, 1, 0.85) });                 // pecho
+      L.push({ g: new THREE.CylinderGeometry(0.22, 0.35, 1.1, 14), m: tm(1.6, 2.72, 0, -0.698) });              // cuello a 40°
+      L.push({ g: new THREE.CylinderGeometry(0.12, 0.22, 0.7, 12), m: tm(2.25, 2.96, 0, -2.094) });             // cabeza a 30° hacia abajo
+      L.push({ g: new THREE.ConeGeometry(0.05, 0.2, 6), m: tm(2.0, 3.35, 0.07, -0.25) });                       // orejas
+      L.push({ g: new THREE.ConeGeometry(0.05, 0.2, 6), m: tm(2.0, 3.35, -0.07, -0.25) });
+      [[0.85, 0.18], [0.85, -0.18], [-0.85, 0.18], [-0.85, -0.18]].forEach(function (p) {
+        const x = p[0], z = p[1];
+        L.push({ g: new THREE.CylinderGeometry(0.13, 0.13, 0.7, 10), m: tm(x, 1.05, z) });                      // muslo
+        L.push({ g: new THREE.CylinderGeometry(0.07, 0.07, 0.7, 10), m: tm(x, 0.35, z) });                      // caña
+        L.push({ g: boxG(0.14, 0.1, 0.16), m: tm(x + 0.02, 0.05, z) });                                        // casco
+      });
+      L.push({ g: new THREE.ConeGeometry(0.1, 0.9, 8), m: tm(-1.6, 1.5, 0, Math.PI + 0.25) });                 // cola colgando
       return mergeGeos(L);
     }
     // rueda de radios: aro, ocho radios y cubo (plano XY, eje Z)
@@ -575,10 +568,10 @@
     const quadMesh = new THREE.Mesh(mergeGeos(QA), marbleMat);
     quadMesh.castShadow = true; quadMesh.receiveShadow = true;
     quadG.add(quadMesh);
-    const HZ = [-1.35, -0.45, 0.45, 1.35];                 // caballos 0 y 2: normales; 1 y 3: patas delanteras levantadas
-    const horseA = new THREE.InstancedMesh(horseGeo(false), marbleMat, 2);
-    const horseB = new THREE.InstancedMesh(horseGeo(true), marbleMat, 2);
-    [horseA, horseB].forEach(function (h) { h.castShadow = true; h.frustumCulled = false; quadG.add(h); });
+    const HZ = [-1.35, -0.45, 0.45, 1.35];                 // cuatro caballos paralelos, separados 0.9 m
+    const horseInst = new THREE.InstancedMesh(horseGeo(), marbleMat, 4);
+    horseInst.castShadow = true; horseInst.frustumCulled = false;
+    quadG.add(horseInst);
     const figInst = new THREE.InstancedMesh(statueGeo(), statueMat, 2);
     figInst.castShadow = true; figInst.frustumCulled = false;
     quadG.add(figInst);
@@ -733,15 +726,12 @@
       pyrInst.instanceMatrix.needsUpdate = true;
     }
     function writeHorses(u3s) {
-      [[horseA, [0, 2]], [horseB, [1, 3]]].forEach(function (pair) {
-        const inst = pair[0], idx = pair[1];
-        for (let j = 0; j < 2; j++) {
-          const i = idx[j], u = clamp01(u3s - i * 0.05);
-          if (u <= 0) { hide(inst, j); continue; }
-          put(inst, j, 2.8, 2.4 + (1 - smooth(u)) * 6, HZ[i], null, 1, 1, 1);
-        }
-        inst.instanceMatrix.needsUpdate = true;
-      });
+      for (let i = 0; i < 4; i++) {          // cuatro caballos paralelos, separados 0.9 m, alineados
+        const u = clamp01(u3s - i * 0.05);
+        if (u <= 0) { hide(horseInst, i); continue; }
+        put(horseInst, i, 2.8, 2.4 + (1 - smooth(u)) * 6, HZ[i], null, 1, 1, 1);
+      }
+      horseInst.instanceMatrix.needsUpdate = true;
     }
     function writeFigures(u4) {
       const Z = [-0.45, 0.45];
