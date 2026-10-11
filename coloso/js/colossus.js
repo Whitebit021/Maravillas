@@ -212,6 +212,7 @@
     ];
     const moldMesh = new THREE.InstancedMesh(blockBox, marble, MOLD.length);
     moldMesh.castShadow = true; moldMesh.receiveShadow = false; moldMesh.frustumCulled = false;
+    for (let i = 0; i < MOLD.length; i++) moldMesh.setColorAt(i, new THREE.Color(1, 1, 1));
     pedRoot.add(moldMesh);
 
     const plaque = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 1.4),

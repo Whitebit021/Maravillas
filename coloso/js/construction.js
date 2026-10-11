@@ -274,7 +274,6 @@
     const sailIM = mkIM(gSailGeo, MAT.sail, FLEET_N, true);
     const oarIM = mkIM(new THREE.BoxGeometry(4.0, 0.08, 0.08), MAT.wood, FLEET_N * 14, false);
     const mastIM = mkIM(new THREE.CylinderGeometry(0.12, 0.12, 13, 5), MAT.wood, FLEET_N, false);
-    const hullMeshPlaceholder = null;
     fleetG.add(galleyIM, sailIM, oarIM, mastIM);
     const wakeIM = mkIM(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), MAT.wake, FLEET_N, false);
     fleetG.add(wakeIM);
@@ -386,7 +385,6 @@
       PILE_IMS.forEach(function (im) { if (im.instanceColor) im.instanceColor.needsUpdate = true; });
     })();
     // cada pieza es una instancia; catapultas (6) se orientan por índice
-    const pileMatBase = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.4, flatShading: true });
     catIM.material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: true });
     const _pe = new THREE.Euler();
     const _pc = new THREE.Color(), _pOr = new THREE.Color(0xff6a1a);
@@ -800,7 +798,7 @@
     root.add(workersG);
     const NWK = 210;
     const wTorso = mkIM(new THREE.BoxGeometry(0.42, 0.66, 0.24), MAT.cloth, NWK, true);
-    const wHead = mkIM(new THREE.SphereGeometry(0.14, 7, 5), MAT.skin, NWK, false);
+    const wHead = mkIM(new THREE.SphereGeometry(0.14, 6, 4), MAT.skin, NWK, false);
     const wLeg = mkIM(new THREE.BoxGeometry(0.19, 0.9, 0.2), MAT.cloth, NWK * 2, true);
     const wArm = mkIM(new THREE.BoxGeometry(0.13, 0.66, 0.13), MAT.skin, NWK * 2, false);
     const wTool = mkIM(new THREE.BoxGeometry(0.16, 0.12, 0.26), MAT.iron, NWK, false);
@@ -1106,7 +1104,8 @@
         const sc = A * (q > 0.001 && q < 0.999 ? 1 : 0);
         const step = Math.sin(s.wall * 3.2 + C.ph * TAU);
         // cuerpo y cabeza con el mismo rumbo
-        _cmM.compose(_cpos.clone().setY(0), _q4.setFromEuler(_e3.set(0, hd, 0, 'YXZ')), _s3.set(sc, sc, sc));
+        const cs = sc * 1.4;   // camellos a escala legible desde la cámara
+        _cmM.compose(_cpos.clone().setY(0), _q4.setFromEuler(_e3.set(0, hd, 0, 'YXZ')), _s3.set(cs, cs, cs));
         camelBodyIM.setMatrixAt(i, _cmM);
         for (let L = 0; L < 4; L++) {
           const lx = (L % 2 ? 0.35 : -0.35), lz = (L < 2 ? 0.8 : -0.8);
@@ -1143,17 +1142,6 @@
       updateCranes(s);
       updateWorkers(s);
       updateCamels(s);
-    }
-
-    return { update: update, group: root };
-  };
-})();
-
-    function update(s) {
-      const a = s.siege;
-      heleG.visible = a > 0.002;
-      fleetG.visible = a > 0.002;
-      if (a > 0.002) updateFleet(s);
     }
 
     return { update: update, group: root };
