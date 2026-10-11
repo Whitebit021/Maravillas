@@ -715,8 +715,8 @@
     const pilG = new THREE.Group(); root.add(pilG);
     // [x, z, giro, altura del suelo]: la cella está sobre el estilóbato (y=1.5); el frente del templo, en el suelo
     const PIL = [
-      [-6.6, 5.6, -Math.PI / 2, 1.5], [-2.4, 5.6, -Math.PI / 2, 1.5], [1.7, 5.6, -Math.PI / 2, 1.5], [5.9, 5.6, -Math.PI / 2, 1.5],
-      [-6.6, -5.6, -Math.PI / 2, 1.5], [-2.4, -5.6, -Math.PI / 2, 1.5], [1.7, -5.6, -Math.PI / 2, 1.5], [5.9, -5.6, -Math.PI / 2, 1.5],
+      [1.8, 3.6, -Math.PI / 2, 1.5], [1.8, -3.6, -Math.PI / 2, 1.5], [4.6, 2.0, -Math.PI / 2, 1.5], [4.6, -2.0, -Math.PI / 2, 1.5],
+      [-2.4, 5.6, -Math.PI / 2, 1.5], [-2.4, -5.6, -Math.PI / 2, 1.5], [5.9, 5.6, -Math.PI / 2, 1.5], [5.9, -5.6, -Math.PI / 2, 1.5],
       [46, -9, -Math.PI / 2, 0], [44, -5.5, -Math.PI / 2, 0], [47, -2, -Math.PI / 2, 0], [45, 2.5, -Math.PI / 2, 0], [44, 6, -Math.PI / 2, 0], [46, 9.5, -Math.PI / 2, 0]
     ];
     const NPIL = PIL.length;

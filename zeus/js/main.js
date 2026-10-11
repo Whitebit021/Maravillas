@@ -65,7 +65,7 @@
     cup:        [[70, 0], [72, 1], [78, 1], [80, 0]],                  // la taza "Pertenezco a Fidias"
     core:       [[82, 0], [100, 1]],                                    // núcleo de madera subiendo
     scaffold:   [[82, 0], [84, 1], [140, 1], [144, 0]],                // andamios dentro de la cella
-    xray:       [[100, 0], [104, 0.7], [112, 0.7], [116, 0], [188, 0], [192, 0.7], [200, 0.7], [204, 0]],
+    xray:       [[100, 0], [104, 0.7], [112, 0.7], [116, 0]],
     ivory:      [[104, 0], [120, 1]],                                   // placas de marfil (piel)
     gold:       [[108, 0], [124, 1]],                                   // láminas de oro (manto, sandalias, pelo)
     throne:     [[124, 0], [136, 1]],                                   // trono decorado (ébano, oro, gemas)
@@ -133,7 +133,7 @@
     // números
     [188, [25, 30, 35],        [-14, 8, 0]],
     [194, [2, 7, -3],          [-14, 8, 0]],
-    [200, [60, 40, 60],        [-14, 8, 0]],
+    [200, [6, 10, 2],          [-14, 9, 0]],
     [205, [-4, 13, -3],        [-14, 12, 0]],
     // final: fuego, terremoto, limo, hoy
     [210, [60, 25, 50],        [-14, 8, 0]],
