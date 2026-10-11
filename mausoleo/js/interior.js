@@ -239,7 +239,7 @@
     // ---------- materiales (opacidad se fija en update) ----------
     const M = {
       rock: new THREE.MeshStandardMaterial({ map: texRock, emissive: 0xffffff, emissiveMap: texRock, emissiveIntensity: 0.1, roughness: 0.93, side: THREE.DoubleSide }),
-      terrace: new THREE.MeshStandardMaterial({ map: texTerrace, emissive: 0xffffff, emissiveMap: texTerrace, emissiveIntensity: 0.1, roughness: 0.9, side: THREE.DoubleSide }),
+      terrace: new THREE.MeshStandardMaterial({ map: texTerrace, emissive: 0xffffff, emissiveMap: texTerrace, emissiveIntensity: 0.04, roughness: 0.9, side: THREE.DoubleSide }),
       earth: new THREE.MeshStandardMaterial({ map: texEarth, emissive: 0xffffff, emissiveMap: texEarth, emissiveIntensity: 0.1, roughness: 1, side: THREE.DoubleSide }),
       block: new THREE.MeshStandardMaterial({ map: texBlock, emissive: 0xffffff, emissiveMap: texBlock, emissiveIntensity: 0.1, roughness: 0.85, side: THREE.DoubleSide, transparent: true, opacity: 1, depthWrite: false }),
       wicker: new THREE.MeshStandardMaterial({ map: texWicker, emissive: 0xffffff, emissiveMap: texWicker, emissiveIntensity: 0.1, roughness: 0.9, side: THREE.DoubleSide }),

@@ -602,11 +602,11 @@
     const scG = new THREE.Group();
     root.add(scG);
     const SIDE_DEF = [
-      { key: 'N', name: SIDES.N || 'Briaxis', face: [0, 22, -CHZ - 0.6], at: [0, 27, -HZ - 10], cap: 'LADO NORTE' },
+      { key: 'N', name: SIDES.N || 'Briaxis', face: [0, 22, -CHZ - 0.6], at: [0, 24.6, -HZ - 10], cap: 'LADO NORTE' },
       // (los nombres van por encima del centro del lado: quedan lejos de los subtítulos inferiores)
-      { key: 'E', name: SIDES.E || 'Escopas', face: [CHX + 0.6, 22, 0], at: [HX + 10, 27, 0], cap: 'LADO ESTE' },
-      { key: 'S', name: SIDES.S || 'Timoteo', face: [0, 22, CHZ + 0.6], at: [0, 27, HZ + 10], cap: 'LADO SUR' },
-      { key: 'O', name: SIDES.O || 'Leócares', face: [-CHX - 0.6, 22, 0], at: [-HX - 10, 27, 0], cap: 'LADO OESTE' }
+      { key: 'E', name: SIDES.E || 'Escopas', face: [CHX + 0.6, 22, 0], at: [HX + 10, 24.6, 0], cap: 'LADO ESTE' },
+      { key: 'S', name: SIDES.S || 'Timoteo', face: [0, 22, CHZ + 0.6], at: [0, 24.6, HZ + 10], cap: 'LADO SUR' },
+      { key: 'O', name: SIDES.O || 'Leócares', face: [-CHX - 0.6, 22, 0], at: [-HX - 10, 24.6, 0], cap: 'LADO OESTE' }
     ];
     // cada escultor aparece en su plano (124 N, 129 E, 134 S, 139 O): ventana temporal propia
     // para que los nombres no se solapen desde cada cámara
