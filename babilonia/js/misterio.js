@@ -266,8 +266,14 @@
       _ndc.copy(A).applyMatrix4(_m);
       const sx = _ndc.x * 0.5 + 0.5, sy = 0.5 - _ndc.y * 0.5;
       // candidatos: sobre el ancla y, si choca, apiladas arriba o abajo
-      const cands = [[sx, sy]];
-      for (let k = 1; k <= 14; k++) { cands.push([sx, sy - k * (lh + 0.015)]); cands.push([sx, sy + k * (lh + 0.015)]); }
+      const cands = [];
+      const sv = lh + 0.015, sh = lw + 0.015;
+      for (let k = 0; k <= 12; k++) {
+        const dys = k === 0 ? [0] : [-k * sv, k * sv];
+        dys.forEach(function (dy) {
+          [0, sh, -sh, 2 * sh, -2 * sh].forEach(function (dx) { cands.push([sx + dx, sy + dy]); });
+        });
+      }
       let best = null;
       for (let i = 0; i < cands.length && !best; i++) {
         const c = cands[i];
@@ -405,14 +411,14 @@
     g.strokeStyle = 'rgba(150,90,40,0.6)'; g.lineWidth = 3; g.strokeRect(70, 70, W - 140, H - 140);
     g.textBaseline = 'middle';
     g.textAlign = 'center';
-    g.fillStyle = '#6b2a10'; g.font = 'bold 60px Georgia, "Times New Roman", serif';
-    g.fillText('ΗΡΟΔΟΤΟΥ ἱστορίη', W / 2, 165);
+    g.fillStyle = '#6b2a10'; g.font = 'bold 84px Georgia, "Times New Roman", serif';
+    g.fillText('ΗΡΟΔΟΤΟΥ ἱστορίη', W / 2, 170);
     // dos columnas de texto (la misma frase tres veces, como un pergamino copiado)
-    g.font = '40px Georgia, "Times New Roman", serif';
+    g.font = '74px Georgia, "Times New Roman", serif';
     g.fillStyle = 'rgba(42,24,10,0.95)';
     g.textAlign = 'left';
-    const lines = wrapText(g, [HERO_TXT, HERO_TXT, HERO_TXT].join('  ·  '), 780);
-    const cols = [150, 1110], lineH = 58, y0 = 262, yMax = H - 130;
+    const lines = wrapText(g, [HERO_TXT, HERO_TXT, HERO_TXT].join('  ·  '), 800);
+    const cols = [120, 1040], lineH = 104, y0 = 280, yMax = H - 110;
     let li = 0;
     cols.forEach(function (cx) {
       for (let y = y0; y <= yMax && li < lines.length; y += lineH, li++) g.fillText(lines[li], cx, y);

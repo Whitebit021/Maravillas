@@ -392,8 +392,8 @@
     [0.38,  '#3d7fc4', '#d9dcd8', '#fff0d6', 2.3, '#c9d8ea'],
     [0.50,  '#3d7fc4', '#cfd9df', '#fff2dc', 2.5, '#d0dde8'],
     [0.62,  '#3f7dc2', '#d6d6cc', '#ffe6b8', 2.3, '#c9d8ea'],
-    [0.72,  '#34509a', '#ffb070', '#ffb050', 1.6, '#f0b880'],
-    [0.765, '#3a3a7a', '#ff9a2a', '#ffa040', 0.9, '#c07a6a'],
+    [0.72,  '#4a70b8', '#ffc890', '#ffc070', 1.9, '#f4c090'],
+    [0.765, '#5a6aa8', '#ffb060', '#ffb060', 1.2, '#e0a080'],
     [0.80,  '#1c2050', '#c0583a', '#ff7a3a', 0.15, '#6a4a5a'],
     [0.86,  '#02040c', '#0b1426', '#6f8fe0', 0.0, '#1f2a55'],
     [1.00,  '#02040c', '#0b1426', '#6f8fe0', 0.0, '#1a2550']
@@ -401,7 +401,7 @@
 
   // ---------- palmera datilera: tronco anillado y copa de hojas arqueadas ----------
   function palmTrunkGeo(THREE) {
-    const g = new THREE.CylinderGeometry(0.2, 0.36, 12, 5, 6, true).translate(0, 6, 0);
+    const g = new THREE.CylinderGeometry(0.22, 0.4, 16, 5, 7, true).translate(0, 8, 0);
     const p = g.attributes.position;
     for (let i = 0; i < p.count; i++) {
       const f = 1 + 0.05 * Math.sin(p.getY(i) * 2.6);
@@ -413,9 +413,9 @@
   }
   function palmCrownGeo(THREE) {
     const mb = new MB(THREE);
-    const L = 7.5, S = 6;
-    for (let k = 0; k < 6; k++) {
-      const a = k * TAU / 6 + (rnd() - 0.5) * 0.3;
+    const L = 8.5, S = 5;
+    for (let k = 0; k < 5; k++) {
+      const a = k * TAU / 5 + (rnd() - 0.5) * 0.3;
       const ca = Math.cos(a), sa = Math.sin(a);
       const pr = [-sa, 0, ca];
       const P = function (t) { return [ca * L * t, 1.3 * t - 2.1 * t * t, sa * L * t]; };
@@ -579,6 +579,13 @@
         palms.push({ x: gx + Math.cos(ang) * rr, z: gz + Math.sin(ang) * rr, ry: rnd() * TAU, sc: 1.05 + rnd() * 0.45, rank: rnd() });
       }
     }
+    for (let j = 0; j < 70; j++) {
+      const side = rnd() < 0.5 ? -1 : 1;
+      const x = RIV_X + side * (100 + rnd() * 35), z = (rnd() * 2 - 1) * (WALL_IN - 60);
+      if (Math.abs(z) < 40 && x > -130) continue;
+      if (Math.hypot(x, z) > WALL_IN - 30) continue;
+      palms.push({ x: x, z: z, ry: rnd() * TAU, sc: 1.05 + rnd() * 0.4, rank: rnd() });
+    }
     const trunkMesh = new THREE.InstancedMesh(palmTrunkGeo(THREE),
       new THREE.MeshStandardMaterial({ color: 0x6b4f2e, roughness: 0.9 }), palms.length);
     const crownMesh = new THREE.InstancedMesh(palmCrownGeo(THREE),
@@ -597,7 +604,7 @@
         vPos.set(P.x, 0, P.z);
         m4.compose(vPos, quat, vSc);
         trunkMesh.setMatrixAt(i, m4);
-        vPos.set(P.x, 12 * s, P.z);
+        vPos.set(P.x, 16 * s, P.z);
         m4.compose(vPos, quat, vSc);
         crownMesh.setMatrixAt(i, m4);
       }
@@ -665,6 +672,15 @@
         bm.box(ZIG.x, yb + hk / 2, ZIG.z - (outer + inner) / 2, 9, hk, outer - inner);
       }
     }
+    // templo con fachada de nichos (pilastras y hornacinas), escalonado en la cima
+    const TX = 240, TZ = 215, TW = 44, TD = 30;
+    bm.box(TX, 9, TZ, TW, 18, TD);
+    bm.box(TX, 21, TZ, TW - 8, 6, TD - 8);
+    for (let x = TX - TW / 2 + 3; x < TX + TW / 2 - 2; x += 4.5) {
+      bm.box(x, 9, TZ - TD / 2 - 0.6, 2.2, 18, 1.2);
+      bm.box(x + 2.2, 13, TZ - TD / 2 - 0.4, 1.8, 4, 0.8);
+      bm.box(x + 2.2, 18, TZ - TD / 2 - 0.4, 1.8, 4, 0.8);
+    }
     const brickGeo = bm.build(2.4);
     const brickMesh = new THREE.Mesh(brickGeo, brickMat);
     brickMesh.castShadow = true; brickMesh.receiveShadow = true;
@@ -689,8 +705,9 @@
     roadMesh.receiveShadow = true;
     cityGroup.add(roadMesh);
 
-    // casas de adobe con azoteas en manzanas densas
-    const houses = [];
+    // manzanas de casas de adobe contiguas, con patio interior, azoteas con parapeto y toldos
+    const hb = new MB(THREE), awn = new MB(THREE);
+    const BLK = 56, ST = 8, SZ = BLK - ST;
     const excl = function (x, z) {
       if (Math.hypot(x, z) > WALL_IN - 20) return true;
       if (Math.abs(x) < 80 && Math.abs(z) < 80) return true;                       // jardines
@@ -698,37 +715,50 @@
       if (Math.abs(x - PAL.x) < PAL.halfX + 14 && Math.abs(z - PAL.z) < PAL.halfZ + 14) return true;
       if (Math.abs(x - ISH.x) < 30 && z < ISH.z + 30 && z > -720) return true;      // vía procesional
       if (Math.abs(x - ZIG.x) < ZIG.half + 25 && Math.abs(z - ZIG.z) < ZIG.half + 25) return true;
+      if (Math.abs(x - TX) < TW / 2 + 12 && Math.abs(z - TZ) < TD / 2 + 12) return true; // templo
       if (Math.hypot(x - SITE.brickyard.x, z - SITE.brickyard.z) < 60) return true;
       if (Math.hypot(x - SITE.bitumen.x, z - SITE.bitumen.z) < 35) return true;
       if (Math.hypot(x - SITE.excavation.x, z - SITE.excavation.z) < 35) return true;
       if (Math.abs(x - SITE.map.cx) < 90 && Math.abs(z - SITE.map.cz) < 90) return true;
       return false;
     };
-    for (let gx = -WALL_IN; gx < WALL_IN; gx += 26) {
-      for (let gz = -WALL_IN; gz < WALL_IN; gz += 26) {
-        if (rnd() > 0.62) continue;
-        const x = gx + 13 + (rnd() - 0.5) * 5, z = gz + 13 + (rnd() - 0.5) * 5;
-        if (excl(x, z)) continue;
-        const w = 9 + rnd() * 3, d = 9 + rnd() * 3;
-        const h = rnd() < 0.2 ? 7 + rnd() * 2 : 3.5 + rnd() * 2.5;
-        houses.push({ x: x, z: z, w: w, d: d, h: h });
+    let nBlocks = 0;
+    for (let bx = -WALL_IN + 30; bx < WALL_IN - 30; bx += BLK) {
+      for (let bz = -WALL_IN + 30; bz < WALL_IN - 30; bz += BLK) {
+        const cx = bx + SZ / 2, cz = bz + SZ / 2;
+        if (excl(cx - SZ / 2, cz - SZ / 2) || excl(cx + SZ / 2, cz + SZ / 2) ||
+            excl(cx - SZ / 2, cz + SZ / 2) || excl(cx + SZ / 2, cz - SZ / 2) || excl(cx, cz)) continue;
+        if (rnd() < 0.12) continue;                    // algún solar vacío
+        nBlocks++;
+        const h = rnd() < 0.3 ? 8 + rnd() * 2 : 4.5 + rnd() * 2;
+        const t = 6;
+        hb.box(cx, h / 2, cz - SZ / 2 + t / 2, SZ, h, t);                 // norte
+        hb.box(cx, h / 2, cz + SZ / 2 - t / 2, SZ, h, t);                 // sur
+        hb.box(cx - SZ / 2 + t / 2, h / 2, cz, t, h, SZ - 2 * t);         // oeste
+        hb.box(cx + SZ / 2 - t / 2, h / 2, cz, t, h, SZ - 2 * t);         // este
+        hb.box(cx, 0.05, cz, SZ - 2 * t, 0.1, SZ - 2 * t);                // patio enlosado
+        if (rnd() < 0.6) {                                                 // parapeto de azotea
+          hb.box(cx, h + 0.5, cz - SZ / 2 + t / 2, SZ, 1, 1.4);
+          hb.box(cx, h + 0.5, cz + SZ / 2 - t / 2, SZ, 1, 1.4);
+          hb.box(cx - SZ / 2 + t / 2, h + 0.5, cz, 1.4, 1, SZ - 2 * t);
+          hb.box(cx + SZ / 2 - t / 2, h + 0.5, cz, 1.4, 1, SZ - 2 * t);
+        }
+        if (rnd() < 0.5) {                                                 // sala alta en una esquina
+          const ox = rnd() < 0.5 ? -1 : 1, oz = rnd() < 0.5 ? -1 : 1;
+          hb.box(cx + ox * 12, h + 2.5, cz + oz * 12, 14, 5, 14);
+        }
+        if (rnd() < 0.3) {                                                 // toldo rojo sobre la calle
+          awn.box(cx, 3.4, cz + SZ / 2 + 2, 16, 0.3, 4);
+        }
       }
     }
-    const houseGeo = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
-    const houseMesh = new THREE.InstancedMesh(houseGeo, adobeMat, houses.length);
-    const houseCols = ['#d2b07f', '#c09a6c', '#b88f60', '#d8bd92'].map(function (c) { return new THREE.Color(c); });
-    for (let i = 0; i < houses.length; i++) {
-      const H = houses[i];
-      vSc.set(H.w, H.h, H.d); vPos.set(H.x, 0, H.z); quat.set(0, 0, 0, 1);
-      m4.compose(vPos, quat, vSc);
-      houseMesh.setMatrixAt(i, m4);
-      houseMesh.setColorAt(i, houseCols[Math.floor(rnd() * houseCols.length)]);
-    }
-    houseMesh.instanceMatrix.needsUpdate = true;
-    if (houseMesh.instanceColor) houseMesh.instanceColor.needsUpdate = true;
+    const houseMesh = new THREE.Mesh(hb.build(3), adobeMat);
     houseMesh.castShadow = true; houseMesh.receiveShadow = true;
-    houseMesh.frustumCulled = false;
     cityGroup.add(houseMesh);
+    const awnMat = new THREE.MeshStandardMaterial({ color: new THREE.Color('#b5462a'), roughness: 0.95, side: THREE.DoubleSide });
+    const awnMesh = new THREE.Mesh(awn.build(1), awnMat);
+    awnMesh.castShadow = true;
+    cityGroup.add(awnMesh);
 
     // ---------- hoy: montículos de ladrillo, ruinas de muralla, muro reconstruido ----------
     const MOUNDS = 40;
@@ -848,7 +878,7 @@
       hemi.color.copy(tHem);
       hemi.groundColor.copy(tHemG);
       hemi.intensity = 0.25 + 0.6 * dayF;
-      renderer.toneMappingExposure = 0.8 + 0.1 * dayF;
+      renderer.toneMappingExposure = 0.85 + 0.15 * dayF;
 
       const cityVis = today < 0.5 ? 1 : 0;
       lamps.forEach(function (l) { l.intensity = 1.6 * moonVis * cityVis; });

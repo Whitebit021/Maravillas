@@ -57,13 +57,14 @@
       g.strokeStyle = '#4a2a12'; g.lineWidth = 14; g.strokeRect(78, 78, W - 156, H - 156);
       g.lineWidth = 6; g.strokeRect(98, 98, W - 196, H - 196);
       g.fillStyle = '#2a160a';
+      // signos de 3 cuñas grandes: cuatro filas de tres signos en el campo central
       const angs = [0, Math.PI / 2, Math.PI / 4, -Math.PI / 5, Math.PI];
-      for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) {
-        const cx = 150 + c * 70, cy = 160 + r * 84, seed = r * 11 + c * 5 + 1;
-        const nw = 2 + Math.floor(hash(seed) * 3);
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) {
+        const cx = 170 + c * 80, cy = 170 + r * 70, seed = r * 11 + c * 5 + 1;
+        const nw = 2 + Math.floor(hash(seed) * 2);
         for (let k = 0; k < nw; k++) {
           const ang = angs[Math.floor(hash(seed + k * 3 + 7) * angs.length)];
-          wedge(g, cx - 22 + hash(seed + k + 20) * 16, cy - 26 + k * 17 + hash(seed + k + 40) * 4, ang, 36 + hash(seed + k + 50) * 8, 7.5);
+          wedge(g, cx - 26 + hash(seed + k + 20) * 14, cy - 26 + k * 22 + hash(seed + k + 40) * 4, ang, 52 + hash(seed + k + 50) * 8, 10);
         }
       }
     });
@@ -311,14 +312,14 @@
     yardG.add(brickIM);
 
     // ladrillo grande en primer plano con el sello cuneiforme del rey (solo la cara superior lleva el sello)
-    const sealGeo = new THREE.BoxGeometry(1.3, 0.28, 1.3);
+    const sealGeo = new THREE.BoxGeometry(1.8, 0.36, 1.8);
     {
       const uv = sealGeo.attributes.uv, nrm = sealGeo.attributes.normal;
       for (let i = 0; i < uv.count; i++) if (nrm.getY(i) < 0.5) uv.setXY(i, 0.03, 0.03);
       uv.needsUpdate = true;
     }
     const sealBrick = new THREE.Mesh(sealGeo, MAT.seal);
-    sealBrick.position.set(BX + 12, 0.14, BZ - 10); sealBrick.rotation.y = 0.2;
+    sealBrick.position.set(BX + 9, 0.18, BZ - 11); sealBrick.rotation.y = 0.2;
     sealBrick.castShadow = true; sealBrick.receiveShadow = true; sealBrick.frustumCulled = false;
     yardG.add(sealBrick);
 
@@ -553,6 +554,8 @@
     // 4. RAMPA EN ZIGZAG (cara este, esquina NE) con andamios y escaleras de mano
     // =====================================================================
     const rampG = new THREE.Group(); root.add(rampG);
+    const RAMP_TURN = Math.PI;                          // giro de 180 grados: esquina NE -> SW
+    rampG.rotation.y = RAMP_TURN;
     const clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
     MAT.ramp.clippingPlanes = [clipPlane];
     const RZ0 = -30, RUN = 12, RISE = 2.5, RW = 4.0;
@@ -618,6 +621,8 @@
       const u = clamp((d - rcum[k - 1]) / L, 0, 1);
       RP.x = a[0] + (b[0] - a[0]) * u; RP.y = a[1] + (b[1] - a[1]) * u; RP.z = a[2] + (b[2] - a[2]) * u;
       RP.dx = (b[0] - a[0]) / L; RP.dy = (b[1] - a[1]) / L; RP.dz = (b[2] - a[2]) / L;
+      // mismo giro que rampG: (x,z) -> (-x,-z)
+      RP.x = -RP.x; RP.z = -RP.z; RP.dx = -RP.dx; RP.dz = -RP.dz;
       return RP;
     }
     // ring de una terraza: punto en el perímetro del cuadrado de semilado h

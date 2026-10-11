@@ -93,13 +93,33 @@
         g.fillStyle = 'rgb(' + Math.round(38 + 40 * v) + ',' + Math.round(108 + 70 * v) + ',' + Math.round(38 + 22 * v) + ')';
         g.beginPath(); g.ellipse(x, y, 8 + r() * 8, 4 + r() * 4, r() * Math.PI, 0, Math.PI * 2); g.fill();
       }
+      const FL = ['#d6322f', '#f0c23a', '#f4f1e6', '#e0649a'];
+      for (let i = 0; i < 18; i++) {
+        g.fillStyle = FL[i % 4];
+        g.beginPath(); g.arc(6 + r() * (W - 12), 6 + r() * (Hc - 12), 2.5 + r() * 1.5, 0, Math.PI * 2); g.fill();
+      }
+      return c;
+    }
+
+    function glazeCanvas() {
+      const W = 256, Hc = 64, c = makeCanvas(W, Hc), g = c.getContext('2d');
+      g.fillStyle = '#1f4fa0'; g.fillRect(0, 0, W, Hc);
+      g.strokeStyle = '#e0b257'; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(0, 5); g.lineTo(W, 5); g.moveTo(0, Hc - 5); g.lineTo(W, Hc - 5); g.stroke();
+      const x = W / 2, y = Hc / 2;
+      for (let p = 0; p < 8; p++) {
+        const a = p / 8 * Math.PI * 2;
+        g.fillStyle = p % 2 ? '#f4f1e6' : '#e0b257';
+        g.beginPath(); g.ellipse(x + Math.cos(a) * 10, y + Math.sin(a) * 10, 6, 3.5, a, 0, Math.PI * 2); g.fill();
+      }
+      g.fillStyle = '#f4f1e6'; g.beginPath(); g.arc(x, y, 4.5, 0, Math.PI * 2); g.fill();
       return c;
     }
 
     // ---------- utilidades de geometría ----------
     // fusiona piezas {g, m, c}: posición, normal, color por vértice e índices
     function mergeGeos(list) {
-      const pos = [], nor = [], col = [], idx = [];
+      const pos = [], nor = [], col = [], idx = [], uvs = [];
       const v = new THREE.Vector3(), nv = new THREE.Vector3(), nm = new THREE.Matrix3();
       let off = 0;
       list.forEach(function (it) {
@@ -110,6 +130,7 @@
           v.fromBufferAttribute(P, i).applyMatrix4(m); pos.push(v.x, v.y, v.z);
           nv.fromBufferAttribute(N, i).applyMatrix3(nm).normalize(); nor.push(nv.x, nv.y, nv.z);
           col.push(c.r, c.g, c.b);
+          const uA = g.attributes.uv; if (uA) uvs.push(uA.getX(i), uA.getY(i)); else uvs.push(0, 0);
         }
         if (g.index) { for (let i = 0; i < g.index.count; i++) idx.push(g.index.getX(i) + off); }
         else { for (let i = 0; i < n; i++) idx.push(i + off); }
@@ -119,6 +140,7 @@
       out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
       out.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+      out.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
       out.setIndex(idx);
       return out;
     }
@@ -330,6 +352,51 @@
     }
 
     // ===== continúa en gp2 (plantas, enredaderas, agua, pabellón, fantasma) =====
+    // ---------- parapetos con almenas escalonadas y banda de ladrillo vidriado azul con rosetas ----------
+    const PAR_H = 1.2, PAR_T = 1.0, ONE = new THREE.Vector3(1, 1, 1);
+    const glazeMat = cutify(new THREE.MeshStandardMaterial({ map: tex(glazeCanvas(), true, 1), roughness: 0.35, side: THREE.DoubleSide }), 'glaze');
+    const parParts = [], glzParts = [];
+    T.forEach(function (t) {
+      FACES.forEach(function (f, fi) {
+        const nx = f[0], nz = f[1], tx = -nz, tz = nx, yaw = Math.atan2(nx, nz), q = yawQ(yaw);
+        const rd = t.hw - 0.6;                       // muro a 0.6 m del borde (cara exterior a 0.1 m)
+        const P3 = function (dist, u, y) { return new THREE.Vector3(nx * dist + tx * u, y, nz * dist + tz * u); };
+        const segs = (fi === 2 && t.i < NT - 1) ? [[-t.hw, -7.5], [7.5, t.hw]] : [[-t.hw, t.hw]];   // hueco de la escalinata
+        segs.forEach(function (sg) {
+          const a = sg[0], b = sg[1], len = b - a, cu = (a + b) / 2;
+          parParts.push({ g: uvBox(new THREE.BoxGeometry(len, PAR_H, PAR_T), 2.4),
+            m: new THREE.Matrix4().compose(P3(rd, cu, t.yt + PAR_H / 2), q, ONE), tier: t.i });
+          for (let u = a + 1.2; u <= b - 1.2; u += 2.4) {          // almenas escalonadas: dos gradas
+            parParts.push({ g: uvBox(new THREE.BoxGeometry(1.4, 0.5, PAR_T), 2.4),
+              m: new THREE.Matrix4().compose(P3(rd, u, t.yt + PAR_H + 0.25), q, ONE), tier: t.i });
+            parParts.push({ g: uvBox(new THREE.BoxGeometry(0.8, 0.5, PAR_T - 0.2), 2.4),
+              m: new THREE.Matrix4().compose(P3(rd, u, t.yt + PAR_H + 0.75), q, ONE), tier: t.i });
+          }
+          const gp = new THREE.PlaneGeometry(len, 0.6, 1, 1);
+          const uvA = gp.attributes.uv;
+          for (let k = 0; k < uvA.count; k++) uvA.setX(k, uvA.getX(k) * len / 2.4);
+          uvA.needsUpdate = true;
+          glzParts.push({ g: gp, m: new THREE.Matrix4().compose(P3(rd + 0.5, cu, t.yt + 0.5), q, ONE), tier: t.i });
+        });
+      });
+    });
+    const parGeo = mergeGeos(parParts), glzGeo = mergeGeos(glzParts);
+    const parCut = addVertCut(parGeo, HIDE), glzCut = addVertCut(glzGeo, HIDE);
+    const parMesh = new THREE.Mesh(parGeo, tierMat); parMesh.receiveShadow = true;
+    const glzMesh = new THREE.Mesh(glzGeo, glazeMat);
+    root.add(parMesh); root.add(glzMesh);
+    function tierRanges(list) {
+      const out = []; let off = 0;
+      list.forEach(function (it) { const n = it.g.attributes.position.count; out.push([off, off + n, it.tier]); off += n; });
+      return out;
+    }
+    const parRng = tierRanges(parParts), glzRng = tierRanges(glzParts);
+    function setRangeCut(attr, rng, cutOf) {
+      const a = attr.array;
+      rng.forEach(function (r) { for (let v = r[0]; v < r[1]; v++) a[v] = cutOf[r[2]]; });
+      attr.needsUpdate = true;
+    }
+
     // ---------- especies: geometría fusionada con color por vértice (un InstancedMesh por especie) ----------
     function colr(hex) { return new THREE.Color(hex); }
     function frondGeo(a, L, bend) {
@@ -408,7 +475,7 @@
     }
     function addItem(sp, x, y, z, tier, sc) {
       items.push({ sp: sp, idx: cnt[sp]++, x: x, y: y, z: z, yaw: rnd() * Math.PI * 2, sc: sc, sy: 0,
-        tier: tier, d: rnd() * 0.45, lean: (rnd() - 0.5) * 1.2, col: 0.86 + 0.28 * rnd() });
+        tier: tier, d: rnd() * 0.3, lean: (rnd() - 0.5) * 1.2, col: 0.86 + 0.28 * rnd() });
     }
     // [especie, n sobre terrazas, n en el suelo, escala min, escala max]
     const PLAN = [['palm', 56, 26, 0.9, 1.25], ['cyp', 50, 46, 0.8, 1.15], ['pom', 80, 12, 0.8, 1.15],
@@ -432,7 +499,16 @@
     archInfo.forEach(function (a) {
       const t = T[a.tier];
       items.push({ sp: 'vine', idx: cnt.vine++, x: a.x + a.nx * 1.25, y: t.yt - 0.02, z: a.z + a.nz * 1.25, yaw: a.yaw,
-        sc: 1, sy: t.yt - t.yb - 0.15, tier: a.tier, d: rnd() * 0.45, lean: 0, col: 1 });
+        sc: 1, sy: t.yt - t.yb - 0.15, tier: a.tier, d: rnd() * 0.3, lean: 0, col: 1 });
+    });
+
+    // segunda hilera de cortinas entre arcos: la fachada queda cubierta casi por completo
+    archInfo.forEach(function (a) {
+      const t = T[a.tier], u2 = a.u + ARCH_STEP / 2;
+      if (Math.abs(u2) > t.hw - 2) return;
+      const tx = -a.nz, tz = a.nx;
+      items.push({ sp: 'vine', idx: cnt.vine++, x: a.nx * (t.hw + 1.25) + tx * u2, y: t.yt - 0.02, z: a.nz * (t.hw + 1.25) + tz * u2,
+        yaw: a.yaw, sc: 1, sy: t.yt - t.yb - 0.15, tier: a.tier, d: rnd() * 0.3, lean: 0, col: 1 });
     });
 
     // mallas principales (una por especie) y fantasma (mismas posiciones, siempre crecidas)
@@ -528,24 +604,24 @@
     ghostRoot.visible = false;
 
     // ---------- escritura de plantas: crecimiento (g), ruina (dK) y terrazas construidas ----------
-    const DRY = { palm: colr('#b48a4c'), cyp: colr('#8a7a3a'), pom: colr('#b48a4c'), shr: colr('#a88a4c'), wil: colr('#b8a050') };
+    const DRY = { palm: colr('#8a6230'), cyp: colr('#6a5a2a'), pom: colr('#8a6230'), shr: colr('#7a5a2c'), wil: colr('#9a8a40'), vine: colr('#7a5a24') };
     const tmpC = new THREE.Color();
     function writeAll(meshes, g, dK, builtMask, colored) {
-      const dying = 1 - 0.3 * dK;
+      const dying = 1 - 0.45 * dK, dryK = clamp01(dK * 1.5);
       for (let k = 0; k < items.length; k++) {
         const it = items[k];
         const inst = meshes[it.sp];
         if (!inst) continue;
-        const gi = smooth(clamp01((g - it.d) / 0.55));
+        const gi = smooth(clamp01((g - it.d) / 0.7));
         const vis = (it.tier < 0 || builtMask[it.tier]) ? 1 : 0;
         const sc = it.sc * gi * vis * dying;
         const sy = it.sy > 0 ? it.sy * gi * vis * dying : sc;
-        _e.set(it.lean * dK * 0.9, it.yaw, 0, 'YXZ');
+        _e.set(it.lean * dK * 1.5, it.yaw, 0, 'YXZ');
         _q.setFromEuler(_e);
         put(inst, it.idx, it.x, it.y, it.z, _q, sc, sy, sc);
         if (colored && DRY[it.sp]) {
           const c = Math.min(1, it.col);
-          tmpC.setRGB(c, c, c).lerp(DRY[it.sp], dK);
+          tmpC.setRGB(c, c, c).lerp(DRY[it.sp], dryK);
           inst.setColorAt(it.idx, tmpC);
         }
       }
@@ -559,14 +635,14 @@
     writeAll(GM, 1, 0, ALL_BUILT, false);      // fantasma: jardín completo, siempre
 
     // ---------- estado por frame ----------
-    let lastPlantKey = '', lastRub = '';
+    let lastPlantKey = '', lastRub = '', lastPar = '';
     function update(s) {
       const terr = clamp01(s.terraces || 0) * H;            // altura construida (m)
       const dK = clamp01(s.decay || 0);
       const xr = clamp01(s.xray || 0);
       const gh = clamp01(s.ghost || 0);
       const vp = clamp01(s.vaults || 0), sl = clamp01(s.soil || 0);
-      const pl = clamp01(s.plants || 0), cs = clamp01(s.cascades || 0);
+      const pl = Math.sqrt(clamp01(s.plants || 0)), cs = clamp01(s.cascades || 0);
       uWallU.value = s.wall || 0;
 
       // rayos X: terrazas, tierra y arcos translúcidos (opacidad 0.2, sin escribir profundidad)
@@ -624,6 +700,11 @@
         });
         rubble.instanceMatrix.needsUpdate = true;
       }
+
+      // parapetos y banda vidriada: siguen el corte de su terraza; la ruina los derriba
+      const parCutOf = T.map(function (t, i) { return built[i] ? t.yt + PAR_H + 2.5 - 3.5 * dK : HIDE; });
+      const pk = parCutOf.map(function (v) { return v.toFixed(2); }).join(',');
+      if (pk !== lastPar) { lastPar = pk; setRangeCut(parCut, parRng, parCutOf); setRangeCut(glzCut, glzRng, parCutOf); }
 
       // plantas y enredaderas (solo cuando cambian crecimiento, ruina o terrazas)
       const pKey = pl.toFixed(3) + '|' + dK.toFixed(3) + '|' + built.join('');
