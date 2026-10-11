@@ -47,7 +47,7 @@
     H: 111,                                  // referencia de "build": cima del cuerpo cilíndrico
     height: 124,                             // con linterna y estatua
     podium:  { y0: 0,   y1: 6,   half: 25 },                           // basamento escalonado
-    tier1:   { y0: 6,   y1: 66,  halfBottom: 15, halfTop: 13.5 },     // cuerpo cuadrado, ventanas en 8 pisos
+    tier1:   { y0: 6,   y1: 66,  halfBottom: 15, halfTop: 12.6 },     // cuerpo cuadrado, ventanas en 8 pisos
     balcony1:{ y: 66, half: 15.5 },                                    // terraza con 4 tritones en las esquinas
     tier2:   { y0: 66,  y1: 96,  radius: 9 },                         // cuerpo octogonal (radio al vértice)
     balcony2:{ y: 96, radius: 9.6 },

@@ -180,8 +180,8 @@
     const stairM = new THREE.MeshStandardMaterial({ map: stoneTex, color: 0xf0e2bf, roughness: 0.92 });
     const fireWoodM = new THREE.MeshStandardMaterial({ map: woodTex, color: 0x8a5a33, roughness: 0.85, emissive: 0xff5a1a, emissiveIntensity: 0 });
     const hearthIronM = new THREE.MeshStandardMaterial({ color: 0x2c2a2a, metalness: 0.6, roughness: 0.6 });
-    const bronzeM = new THREE.MeshStandardMaterial({ color: 0xc98a4a, metalness: 1, roughness: 0.18, envMap: envTex, envMapIntensity: 1.3, side: THREE.DoubleSide });
-    const bronzeRimM = new THREE.MeshStandardMaterial({ color: 0xb07a40, metalness: 1, roughness: 0.25, envMap: envTex, envMapIntensity: 1.2 });
+    const bronzeM = new THREE.MeshStandardMaterial({ color: 0xa8662c, metalness: 1, roughness: 0.3, envMap: envTex, envMapIntensity: 1.1, side: THREE.DoubleSide });
+    const bronzeRimM = new THREE.MeshStandardMaterial({ color: 0x9a6230, metalness: 1, roughness: 0.3, envMap: envTex, envMapIntensity: 1.0 });
     const contourM = new THREE.LineBasicMaterial({ color: 0x7ff7ff, transparent: true, opacity: 0, blending: ADD, depthWrite: false });
     const labelLineBase = { transparent: true, opacity: 0, depthWrite: false, depthTest: false };
 
@@ -759,10 +759,10 @@
         flameMatO.uniforms.uTime.value = wall;
         flameMatI.uniforms.uTime.value = wall;
         flameMatO.uniforms.uI.value = fire * 0.8 * flick;
-        flameMatI.uniforms.uI.value = fire * 0.9 * flick;
+        flameMatI.uniforms.uI.value = fire * 0.7 * flick;
         fireWoodM.emissiveIntensity = fire * 0.55 * flick;
-        fireLight.intensity = fire * 140 * flick;
-        glowMat.opacity = fire * (0.45 + 0.08 * Math.sin(wall * 6.3));
+        fireLight.intensity = fire * 90 * flick;
+        glowMat.opacity = fire * (0.3 + 0.06 * Math.sin(wall * 6.3));
         updateParticles(wall, fire);
       } else {
         fireLight.intensity = 0;
