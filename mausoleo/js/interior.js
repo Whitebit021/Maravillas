@@ -200,7 +200,7 @@
       }
     });
     const texBlock = makeTex(256, 256, function (g, w, h, R) {  // sillería: hiladas con juntas
-      g.fillStyle = '#b9ad95'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#9c8f76'; g.fillRect(0, 0, w, h);
       const rows = 3, rh = h / rows;
       for (let r = 0; r < rows; r++) {
         let x = -R() * 120; const y = r * rh;
@@ -208,7 +208,7 @@
           const bw = 110 + R() * 70;
           g.fillStyle = R() < 0.5 ? 'rgba(255,255,250,0.10)' : 'rgba(120,100,70,0.08)';
           g.fillRect(x, y, bw, rh);
-          g.strokeStyle = '#4e4636'; g.lineWidth = 3; g.strokeRect(x, y, bw, rh);
+          g.strokeStyle = '#4a4234'; g.lineWidth = 3; g.strokeRect(x, y, bw, rh);
           x += bw;
         }
       }
@@ -238,10 +238,10 @@
 
     // ---------- materiales (opacidad se fija en update) ----------
     const M = {
-      rock: new THREE.MeshStandardMaterial({ map: texRock, emissive: 0xffffff, emissiveMap: texRock, emissiveIntensity: 0.1, roughness: 0.93, side: THREE.DoubleSide }),
+      rock: new THREE.MeshStandardMaterial({ map: texRock, roughness: 0.93, side: THREE.DoubleSide }),
       terrace: new THREE.MeshStandardMaterial({ map: texTerrace, emissive: 0xffffff, emissiveMap: texTerrace, emissiveIntensity: 0.04, roughness: 0.9, side: THREE.DoubleSide }),
       earth: new THREE.MeshStandardMaterial({ map: texEarth, emissive: 0xffffff, emissiveMap: texEarth, emissiveIntensity: 0.1, roughness: 1, side: THREE.DoubleSide }),
-      block: new THREE.MeshStandardMaterial({ map: texBlock, emissive: 0xffffff, emissiveMap: texBlock, emissiveIntensity: 0.02, roughness: 0.9, side: THREE.DoubleSide, transparent: false }),
+      block: new THREE.MeshStandardMaterial({ map: texBlock, roughness: 0.9, side: THREE.DoubleSide }),
       wicker: new THREE.MeshStandardMaterial({ map: texWicker, emissive: 0xffffff, emissiveMap: texWicker, emissiveIntensity: 0.1, roughness: 0.9, side: THREE.DoubleSide }),
       bone: new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.7, transparent: true, opacity: 0, depthWrite: false }),
       vessel: new THREE.MeshStandardMaterial({ color: 0xb5653a, roughness: 0.6, transparent: true, opacity: 0, depthWrite: false }),
