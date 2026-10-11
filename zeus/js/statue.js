@@ -678,18 +678,20 @@
 
     // ---------- Nike (de pie sobre la palma derecha) y cetro con aguila ----------
     const nkI = new Acc(), nkG = new Acc(), scG = new Acc();
-    // Nike: figura femenina de pie (tunica dorada, cuello, brazos de marfil), alas grandes en V detras
-    nkG.add(loft([[0.03, 0, 0.12, 0.2], [0.5, 0, 0.1, 0.16], [0.95, 0, 0.09, 0.15], [1.15, 0, 0.11, 0.17], [1.3, 0, 0.1, 0.14]],
-      0.03, 1.3, 22, 32, function (c, y, z) { return 0.02 * Math.sin(z * 38) * Math.abs(c); }, 2, 1), IDM);
-    TUBE(nkI, [[0, 1.27, 0], [0.0, 1.38, 0]], [0.05, 0.045], 6, 12, 1);                  // cuello
-    ell(nkI, [0.01, 1.47, 0], [0.09, 0.105, 0.09]);                                       // cabeza
-    ell(nkG, [-0.06, 1.52, 0], [0.09, 0.07, 0.09]);                                       // pelo recogido
-    TUBE(nkI, [[0, 1.24, 0.15], [0.1, 1.08, 0.22], [0.28, 1.2, 0.22]], [0.05, 0.045, 0.04], 12, 12, 1);   // brazo que ofrece la corona
-    TUBE(nkI, [[0, 1.24, -0.15], [0.03, 1.0, -0.2], [0.08, 0.88, -0.18]], [0.05, 0.045, 0.04], 12, 12, 1);
-    const wreathM = new THREE.Matrix4().compose(P.set(0.36, 1.22, 0.22), Q.setFromAxisAngle(UP, Math.PI / 2), S.set(1, 1, 1));
+    // Nike a escala 1.6 (en 'update'): de pie sobre la palma, mirando a +X; cuerpo de marfil, tunica dorada
+    // en campana, cabeza esferica con pelo, corona en la mano y dos alas en V detras (sin piezas hacia delante)
+    nkG.add(loft([[0.03, 0, 0.26, 0.3], [0.45, 0, 0.19, 0.24], [0.9, 0, 0.12, 0.16], [1.02, 0, 0.11, 0.15]],
+      0.03, 1.02, 22, 32, function (c, y, z) { return 0.025 * Math.sin(z * 30) * Math.abs(c); }, 2, 1), IDM);   // tunica en campana
+    nkI.add(loft([[1.0, 0, 0.1, 0.14], [1.2, 0, 0.1, 0.15], [1.34, 0, 0.09, 0.13]], 1.0, 1.34, 16, 28, null, 2, 1), IDM);   // torso
+    TUBE(nkI, [[0, 1.32, 0], [0.0, 1.42, 0]], [0.05, 0.045], 6, 12, 1);                   // cuello
+    ell(nkI, [0.01, 1.5, 0], [0.1, 0.11, 0.1]);                                            // cabeza esferica
+    ell(nkG, [-0.04, 1.56, 0], [0.11, 0.09, 0.11]);                                        // pelo recogido
+    TUBE(nkI, [[0, 1.28, 0.14], [0.06, 1.12, 0.24], [0.1, 1.12, 0.34]], [0.05, 0.045, 0.04], 12, 12, 1);   // brazo con la corona
+    TUBE(nkI, [[0, 1.28, -0.14], [0.03, 1.04, -0.2], [0.06, 0.92, -0.2]], [0.05, 0.045, 0.04], 12, 12, 1);
+    const wreathM = new THREE.Matrix4().compose(P.set(0.1, 1.12, 0.38), Q0, S.set(1, 1, 1));   // corona en la mano, de lado
     nkG.add(new THREE.TorusGeometry(0.1, 0.015, 6, 20), wreathM);
-    nkG.add(wingGeo([-0.06, 1.3, 0.12], [-0.3, 0.35, 0.9], 1.0, 0.6, [-0.5, 0.9, 0], 18, 12), IDM);
-    nkG.add(wingGeo([-0.06, 1.3, -0.12], [-0.3, 0.35, -0.9], 1.0, 0.6, [-0.5, 0.9, 0], 18, 12), IDM);
+    nkG.add(wingGeo([-0.06, 1.3, 0.12], [-0.3, 0.35, 0.9], 1.12, 0.6, [-0.5, 0.9, 0], 18, 12), IDM);   // ala +z: V arriba-atras
+    nkG.add(wingGeo([-0.06, 1.3, -0.12], [-0.3, 0.35, -0.9], 1.12, 0.6, [-0.5, 0.9, 0], 18, 12), IDM);  // ala -z
 
     // cetro (ZEUS.scepter): asta con nudos, capitel y aguila de alas abiertas
     const SC = Z.scepter;
@@ -863,7 +865,7 @@
 
       // Nike crece sobre la palma; el cetro sube desde el suelo
       const ne = Math.max(0.001, smooth(attr));
-      nikeG.scale.setScalar(ne);
+      nikeG.scale.setScalar(1.6 * ne);
       scepG.scale.set(1, ne, 1);
       nikeG.visible = attr > 0.001;
       scepG.visible = attr > 0.001;
