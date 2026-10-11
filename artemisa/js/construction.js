@@ -256,7 +256,7 @@
     //    de hierro en un bastidor de madera, tirado por dos yuntas de bueyes; boyero junto a cada equipo.
     //    Posición = f(fract(t/22 + i/6)) sobre SITE.route; el tambor gira según la distancia recorrida.
     // =====================================================================
-    const NT = 6, TEAM_PERIOD = 900, TEAM_PHASE = 0.445;
+    const NT = 6, TEAM_PERIOD = 900, TEAM_PHASE = 0.419;
     const ROUTE = polyline(SITE.route), RL = ROUTE.L;
     function comp(x, y, z, ax, ay, az, ang) {
       return new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(ax, ay, az), ang || 0), _ONE);
@@ -330,7 +330,7 @@
     const L_HUMP = ec(0.4, 1.9, 0);
     const L_TAIL = ec(-1.2, 1.5, 0, 0, 0.5);
     const L_HORN = [ec(1.5, 1.85, -0.2, -0.35, -0.6), ec(1.5, 1.85, 0.2, 0.35, -0.6)];
-    const OX_X = [3.2, 5.8], OX_Z = [-0.6, 0.6];
+    const OX_X = [3.6, 6.9], OX_Z = [-0.6, 0.6], OX_S = new THREE.Matrix4().makeScale(1.3, 1.3, 1.3);
     function put(im, idx, base, loc) { _tmp.multiplyMatrices(base, loc); im.setMatrixAt(idx, _tmp); }
 
     function updateOxen(s, t, W) {
@@ -348,14 +348,15 @@
         frameIM.setMatrixAt(i, _TM);
         _loc.makeTranslation(0, 0.9, 0); _rot.makeRotationZ(spin); _loc.multiply(_rot);
         put(drumIM, i, _TM, _loc);
-        put(ropeIM, i, _TM, _loc.makeTranslation(3.1, 1.0, 0));
+        put(ropeIM, i, _TM, _loc.makeTranslation(3.3, 1.0, 0).multiply(_rot.makeScale(1.33, 1, 1)));
         for (let y = 0; y < 2; y++) {
           const ox = OX_X[y];
-          put(yokeIM, i * 2 + y, _TM, _loc.makeTranslation(ox + 1.05, 1.5, 0));
-          for (let sd = 0; sd < 2; sd++) put(yokePostIM, (i * 2 + y) * 2 + sd, _TM, _loc.makeTranslation(ox + 1.05, 1.3, sd ? 0.9 : -0.9));
+          _base.multiplyMatrices(_TM, _tmp.makeTranslation(ox, 0, 0)); _base.multiply(OX_S);
+          put(yokeIM, i * 2 + y, _base, _loc.makeTranslation(1.05, 1.5, 0));
+          for (let sd = 0; sd < 2; sd++) put(yokePostIM, (i * 2 + y) * 2 + sd, _base, _loc.makeTranslation(1.05, 1.3, sd ? 0.9 : -0.9));
           for (let o = 0; o < 2; o++) {
             const k = (i * 2 + y) * 2 + o;          // índice del buey (0..NT*4-1)
-            _base.multiplyMatrices(_TM, _tmp.makeTranslation(ox, 0, OX_Z[o]));
+            _base.multiplyMatrices(_TM, _tmp.makeTranslation(ox, 0, OX_Z[o])); _base.multiply(OX_S);
             put(oxBodyIM, k, _base, L_BODY);
             put(oxHeadIM, k, _base, L_HEAD);
             put(oxMuzzleIM, k, _base, L_MUZ);

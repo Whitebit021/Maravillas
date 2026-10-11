@@ -833,6 +833,27 @@
       flush(drumInst);
     }
 
+    // piezas del tejado y de los frontones que caen al suelo al romperse (sustituyen al tejado en la ruina)
+    const RRN = 50, RRB = [];
+    for (let i = 0; i < RRN; i++) {
+      const a = rnd() * Math.PI * 2, r = 4 + 52 * rnd();
+      RRB.push({ x: Math.cos(a) * r, z: Math.sin(a) * r * 0.6, sx: 1.5 + 2.5 * rnd(), sy: 0.35 + 0.5 * rnd(), sz: 1.5 + 2.5 * rnd(),
+        q: yawQ(rnd() * Math.PI), thr: 0.4 + 0.45 * rnd(), thrD: 0.3 + 0.6 * rnd() });
+    }
+    const roofRubInst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), roofMat, RRN);
+    roofRubInst.castShadow = true; roofRubInst.receiveShadow = true; roofRubInst.frustumCulled = false;
+    for (let i = 0; i < RRN; i++) hide(roofRubInst, i);
+    root.add(roofRubInst);
+    function writeRoofRub(rr, dis) {
+      for (let i = 0; i < RRN; i++) {
+        const B0 = RRB[i];
+        const loc = clamp01((rr - B0.thr) / 0.3), kp = keepOf(dis, B0.thrD);
+        if (loc <= 0 || kp <= 0.001) { hide(roofRubInst, i); continue; }
+        put(roofRubInst, i, B0.x, B0.sy * 0.5 * kp + (1 - smooth(loc)) * 20, B0.z, B0.q, B0.sx * kp, B0.sy * kp, B0.sz * kp);
+      }
+      flush(roofRubInst);
+    }
+
     // ---------- estado por fotograma ----------
     let lastPf = -1, lastDis = -1, lastBu = -1;
     const SKY = { y0: EAVE, pv: 0 };
@@ -899,11 +920,11 @@
 
       // tejado: sube con grúas, se hunde con el incendio y cae con el saqueo
       const kr = keepOf(dis, 0.05);
-      const sr = smooth(clamp01((rr - 0.25) / 0.45));
-      rfPivot.position.set(0, EAVE + (1 - smooth(rf)) * 14 - 4 * bu, 0);
-      rfPivot.rotation.x = 0.75 * sr;
+      const sr = smooth(clamp01(rr / 0.45));
+      rfPivot.position.set(0, EAVE + (1 - smooth(rf)) * 2 - 2 * bu - sr * 16, 0);
+      rfPivot.rotation.x = 0.8 * sr;
       rfPivot.scale.setScalar(Math.max(0.001, kr));
-      rfPivot.visible = rf > 0.001 && kr > 0.001;
+      rfPivot.visible = rf > 0.001 && kr > 0.001 && rr < 0.45;
       roofMat.color.setScalar(1 - 0.5 * bu);
       cedarMat.color.setRGB(0.54 - 0.4 * bu, 0.35 - 0.25 * bu, 0.17 - 0.12 * bu);
       FR.reveal([0, 1, 2, 3].map(function (i) { return smooth(clamp01((rf - i * 0.18) / 0.4)); }));
@@ -923,6 +944,7 @@
 
       // ruina y desmontaje
       writeRubble(rr, dis);
+      writeRoofRub(rr, dis);
     }
 
     [baseInst, drumInst, caelInst, capInst, capPaintInst, beamInst, denInst, rafInst, flameInst, rubInst].forEach(function (m) { m.visible = true; });

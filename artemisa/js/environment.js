@@ -272,7 +272,7 @@
     // calima: banda temblorosa cerca del horizonte
     '  float hzBand = exp(-h * h * 400.0) * uDay;',
     '  float wob = 0.5 + 0.5 * sin(d.x * 240.0 + uTime * 1.4) * sin(d.z * 200.0 - uTime * 1.1);',
-    '  sky += vec3(0.012, 0.008, 0.0) * hzBand * wob;',
+    '  sky += vec3(0.004, 0.003, 0.0) * hzBand * wob;',
     // sol: disco + halo
     '  float sd = dot(d, uSunDir);',
     '  float sdc = max(sd, 0.0);',
@@ -686,7 +686,7 @@
 
     // colores por vértice: marisma, tierra seca, olivar, roca de laderas, río, orillas, camino, piedra
     const cMud = new THREE.Color('#56592f'), cGreen = new THREE.Color('#6b7f3a');
-    const cShore = new THREE.Color('#2b2618'), cDry = new THREE.Color('#a99c6c');
+    const cShore = new THREE.Color('#2b2618'), cDry = new THREE.Color('#9a8756');
     const cOlive = new THREE.Color('#7a7c40'), cRock = new THREE.Color('#8b7f6c');
     const cRiver = new THREE.Color('#40382b'), cRoad = new THREE.Color('#d6b984');
     const cStone = new THREE.Color('#d9cdb3'), cPale = new THREE.Color('#e9e1cf');
