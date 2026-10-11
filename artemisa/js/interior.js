@@ -473,6 +473,9 @@
     root.add(workerMesh);
 
     // ---------- 5) naiskos y estatua de culto (dentro de la cella) ----------
+    // colores base y de hollín (el daño se aplica tiñendo los materiales, sin geometría extra)
+    const COL_W = new THREE.Color(1, 1, 1), COL_GOLD = new THREE.Color(0xe0b257);
+    const SOOT_MARBLE = new THREE.Color(0x1c1a18), SOOT_WOOD = new THREE.Color(0x0e0c0a), SOOT_GOLD = new THREE.Color(0x2a2218);
     const shrine = new THREE.Group();
     shrine.position.set(NS.x, 3, NS.z);     // sobre el estilóbato (y = 3)
     root.add(shrine);
@@ -741,7 +744,14 @@
         }
 
         // naiskos y estatua: crecen desde el suelo de la cella
-        shrine.visible = st > 0.001;
+        // daño: ennegrecido por el incendio (burned); caído/oculto tras el saqueo godo (goths); nada con dismantle
+        const bu = clamp01(s.burned), gh = clamp01(s.goths), dm = clamp01(s.dismantle);
+        const soot = smooth(bu) * 0.9;
+        M.marble.color.copy(COL_W).lerp(SOOT_MARBLE, soot);
+        M.grain.color.copy(COL_W).lerp(SOOT_WOOD, soot);
+        M.skirt.color.copy(COL_W).lerp(SOOT_WOOD, soot);
+        M.gold.color.copy(COL_GOLD).lerp(SOOT_GOLD, soot);
+        shrine.visible = st > 0.001 && gh <= 0.3 && dm <= 0.001;
         shrine.scale.setScalar(Math.max(0.02, st));
       }
     };

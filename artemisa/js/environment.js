@@ -278,14 +278,14 @@
     '  float sdc = max(sd, 0.0);',
     '  float cr = cos(uSunAng);',
     '  float disc = smoothstep(cr - 0.00003, cr + 0.00001, sd);',
-    '  float halo = pow(sdc, 900.0) * 0.9 + pow(sdc, 60.0) * 0.35 + pow(sdc, 6.0) * 0.12;',
-    '  sky += uSunCol * (disc * 5.0 + halo) * uSunVis;',
+    '  float halo = pow(sdc, 900.0) * 0.25 + pow(sdc, 60.0) * 0.06 + pow(sdc, 6.0) * 0.02;',
+    '  sky += uSunCol * (disc * 3.0 + halo * (1.0 - 0.6 * uDusk)) * uSunVis;',
     // rayos crepusculares
     '  float ang = atan(dot(d, uSunT2), dot(d, uSunT1));',
     '  float rays = pow(0.5 + 0.5 * sin(ang * 23.0 + vnoise3(vec3(ang * 4.0, 0.5, 0.0)) * 7.0), 5.0);',
     '  rays *= 0.6 + 0.4 * vnoise3(vec3(ang * 11.0, 3.0, 1.0));',
     '  float fall = exp(-(1.0 - sdc) * 9.0);',
-    '  sky += uSunCol * rays * fall * uDusk * 0.45 * smoothstep(-0.1, 0.25, h);',
+    '  sky += uSunCol * rays * fall * uDusk * 0.18 * smoothstep(-0.1, 0.25, h);',
     // luna creciente
     '  float md = dot(d, uMoonDir);',
     '  float mdisc = smoothstep(0.99978, 0.99990, md) * (1.0 - smoothstep(0.99978, 0.99990, dot(d, uMoonCut)));',
@@ -1184,9 +1184,9 @@
       skyU.uTime.value = wall;
 
       // niebla: muy suave, teñida del horizonte
-      tFog.copy(tHor).lerp(FOG_DAY, 0.25 * dayF);
+      tFog.copy(tHor).lerp(FOG_DAY, 0.25 * dayF * (1.0 - 0.5 * dusk));
       scene.fog.color.copy(tFog);
-      scene.fog.density = 0.00002 * (1 + 0.5 * moonVis);
+      scene.fog.density = 0.00002 * (1 + 0.5 * moonVis) * (1 - 0.5 * dusk);
       skyU.uBelow.value.copy(tFog);
 
       // agua: reflejos, temblor (s.quakeDemo, fase s.t) e inundación de hoy
