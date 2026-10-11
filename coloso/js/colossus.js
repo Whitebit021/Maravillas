@@ -30,7 +30,7 @@
     const IDM = new THREE.Matrix4();
     const Q0 = new THREE.Quaternion();
     const UP = new THREE.Vector3(0, 1, 0);
-    const DARK = [0.16, 0.12, 0.09];
+    const DARK = [0.35, 0.28, 0.2];
 
     if (renderer) renderer.localClippingEnabled = true;
 
@@ -79,17 +79,17 @@
     const plateBump = canvasTex(512, 512, function (g, w, h) {
       const r = rng(9);
       g.fillStyle = '#7c7c7c'; g.fillRect(0, 0, w, h);
-      const rows = 4, cols = 4, ph = h / rows, pw = w / cols;
+      const rows = 8, cols = 8, ph = h / rows, pw = w / cols;
       for (let j = 0; j < rows; j++) {
         const off = (j % 2) * pw * 0.5;
         for (let i = -1; i <= cols; i++) {
           const x = i * pw + off, y = j * ph;
-          g.strokeStyle = '#2a2a2a'; g.lineWidth = 2;
+          g.strokeStyle = '#6e6e6e'; g.lineWidth = 1;
           g.strokeRect(x, y, pw, ph);
           const px = [x + 14, x + pw - 14], py = [y + 14, y + ph - 14];
           for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) {
-            g.beginPath(); g.arc(px[a], py[b], 2.4, 0, Math.PI * 2);
-            g.fillStyle = '#e8e8e8'; g.fill();
+            g.beginPath(); g.arc(px[a], py[b], 1.6, 0, Math.PI * 2);
+            g.fillStyle = '#9a9a9a'; g.fill();
           }
         }
       }
@@ -146,7 +146,7 @@
     const cutU = { value: -1e5 }, hotU = { value: 0 };
     const bronze = new THREE.MeshStandardMaterial({
       color: 0x9a6430, vertexColors: true, metalness: 0.9, roughness: 0.36,
-      map: patinaMap, bumpMap: plateBump, bumpScale: 0.25,
+      map: patinaMap, bumpMap: plateBump, bumpScale: 0.12,
       envMap: envTex, envMapIntensity: 1.1,
       emissive: new THREE.Color(0xffb24a), emissiveIntensity: 0,
       side: THREE.DoubleSide, transparent: true, depthWrite: true,
@@ -353,12 +353,12 @@
       const front = Math.max(0, -uz);
       const ax = Math.abs(x);
       let d = 0;
-      d -= 0.6 * gss((y - 24.2) / 1.6) * gss((ax - 2.0) / 1.5) * Math.pow(front, 0.7);       // pectorales
+      d -= 0.78 * gss((y - 24.2) / 1.6) * gss((ax - 2.0) / 1.5) * Math.pow(front, 0.7);       // pectorales
       d += 0.24 * gss(ax / 0.3) * gss((y - 23.8) / 3.0) * front;                              // surco esternal
       d -= 0.22 * gss((ax - 2.9) / 0.7) * gss((y - 20.0) / 2.4) * Math.pow(front, 0.6);       // oblicuos/serrato
       let ab = 0; const YC = [18.0, 19.8, 21.6];
       for (let k = 0; k < 3; k++) ab += gss((y - YC[k]) / 0.75);
-      d -= 0.3 * Math.min(1, ab) * gss((ax - 0.62) / 0.5) * gss((y - 19.8) / 3.6) * Math.pow(front, 0.5);   // abdominales
+      d -= 0.42 * Math.min(1, ab) * gss((ax - 0.62) / 0.5) * gss((y - 19.8) / 3.6) * Math.pow(front, 0.5);   // abdominales
       d += 0.12 * gss(ax / 0.16) * gss((y - 19.8) / 3.6) * front;                             // linea alba
       d -= 0.16 * gss((ax - 2.6) / 1.0) * gss((y - 27.0) / 0.9) * front;                      // clavicula
       if (uz > 0) {                                                                           // espalda
@@ -464,12 +464,12 @@
         const v = i / (R - 1);
         for (let j = 0; j < C; j++) {
           const u = j / (C - 1);
-          const W = 2.8 * (0.7 + 0.6 * v);
+          const W = 3.6 * (0.7 + 0.6 * v);
           let x = lerp(TOP[0], BOT[0], v) - 0.7 * Math.sin(Math.PI * v);
           let y = lerp(TOP[1], BOT[1], v);
           const z = lerp(TOP[2], BOT[2], v) + (u - 0.5) * W;
           // pliegues: ondas verticales que se separan hacia el suelo
-          const amp = 0.25 + 0.55 * v;
+          const amp = 0.4 + 0.9 * v;
           x -= amp * (0.6 * Math.sin((u * 4.0 + 0.4 * Math.sin(v * 3.0)) * Math.PI * 2.0) +
                       0.25 * Math.sin((u * 7.0 - v * 1.5) * Math.PI * 2.0));
           // remate ondulado en el borde inferior
@@ -496,7 +496,7 @@
     [-1, 1].forEach(function (s) {
       TUBE(aPel, [[s * 2.25, 16.6, 0.0], [s * 2.25, 14.0, -0.1], [s * 2.15, 11.4, -0.3], [s * 2.0, 9.0, -0.2]],
         [2.1, 2.2, 2.05, 1.5], 24, 24, 1.2);                                    // muslo
-      ell(aPel, [s * 2.2, 16.0, 0.0], [2.3, 2.3, 2.3], undefined, SPHB);       // cadera
+      ell(aPel, [s * 2.2, 16.0, 0.0], [2.05, 2.05, 2.05], undefined, SPHB);       // cadera
     });
     aPel.add(loft(14.6, 19.5, 24, 48), IDM);
 
@@ -511,22 +511,29 @@
     const aHead = new Acc();
     aHead.add(sphereGrid(48, 60, skullPt, skullColor), IDM);
     aHead.add(sphereGrid(44, 56, hairPt), IDM);
+    [-1, 1].forEach(function (sg) {
+      ell(aHead, [sg * 0.72, 30.98, -2.12], [0.36, 0.2, 0.2], DARK);      // ojos hundidos
+      ell(aHead, [sg * 0.74, 31.4, -2.1], [0.55, 0.14, 0.22]);            // cejas
+    });
+    TUBE(aHead, [[0, 31.1, -2.2], [0, 30.5, -2.5], [0, 30.25, -2.35]], [0.2, 0.3, 0.24], 10, 10, 1);   // nariz
+    ell(aHead, [0, 29.55, -2.1], [0.45, 0.05, 0.07], DARK);              // boca
     TUBE(aHead, [[0, 27.3, 0], [0, 28.9, -0.1], [0, 30.2, -0.2]], [1.55, 1.25, 1.3], 12, 16, 1);   // cuello
 
     // rizos: esferas pequenas instanciadas sobre el craneo (en el rig de la cabeza)
-    const CURLS = 170;
+    const CURLS = 260;
     const curlGeo = new THREE.SphereGeometry(1, 10, 8);
+    curlGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(curlGeo.attributes.position.count * 3).fill(1), 3));
     const curlMesh = new THREE.InstancedMesh(curlGeo, bronze, CURLS);
     curlMesh.castShadow = true; curlMesh.receiveShadow = true; curlMesh.frustumCulled = false;
     {
       let n = 0;
-      for (let i = 0; i < 600 && n < CURLS; i++) {
-        const y = 1 - 2 * (i + 0.5) / 600, r = Math.sqrt(Math.max(0, 1 - y * y)), ph = i * 2.39996;
+      for (let i = 0; i < 1200 && n < CURLS; i++) {
+        const y = 1 - 2 * (i + 0.5) / 1200, r = Math.sqrt(Math.max(0, 1 - y * y)), ph = i * 2.39996;
         const ux = r * Math.cos(ph), uy = y, uz = r * Math.sin(ph);
-        if (hairVis(uy, uz) < 0.7) continue;
-        const rad = 0.2 + rnd() * 0.12;
-        const sx = ux * (HR + 0.1 + rad * 0.5), sy = uy * (HR + 0.1 + rad * 0.5) * 1.08, sz = uz * (HR + 0.1 + rad * 0.5) * 1.04;
-        M.compose(P.set(sx + HX, sy + HY, sz + HZ), Q0, S.set(rad, rad * 1.1, rad));
+        if (hairVis(uy, uz) < 0.8 || uy < 0.35) continue;
+        const rad = 0.1 + rnd() * 0.06;
+        const rr = 2.22 + rad * 0.4, sx = ux * rr, sy = uy * rr * 1.08, sz = uz * rr * 1.04;
+        M.compose(P.set(sx + HX, sy + HY - 27.5, sz + HZ), Q0, S.set(rad, rad * 1.1, rad));
         curlMesh.setMatrixAt(n, M);
         curlMesh.setColorAt(n, new THREE.Color(1, 1, 1));
         n++;
@@ -538,7 +545,7 @@
 
     // ---- brazo izquierdo caido (pivote: hombro izquierdo) ----
     const aArmL = new Acc();
-    ell(aArmL, [-4.5, 26.8, 0], [2.15, 2.15, 2.1], undefined, SPHB);     // hombro redondeado
+    ell(aArmL, [-4.5, 26.8, 0], [1.95, 1.95, 1.9], undefined, SPHB);     // hombro redondeado
     TUBE(aArmL, [[-4.5, 26.9, 0], [-5.6, 24.3, 0.05], [-6.0, 21.5, 0.4], [-6.2, 19.0, 0.1], [-6.4, 16.6, -0.4]],
       [1.5, 1.62, 1.2, 1.3, 0.85], 28, 24, 1.2);                          // brazo: bicep, codo, antebrazo
     TUBE(aArmL, [[-6.4, 16.5, -0.4], [-6.5, 15.4, -0.45], [-6.5, 14.7, -0.4]], [0.85, 0.92, 0.8], 6, 16, 1);   // palma
@@ -551,7 +558,7 @@
 
     // ---- brazo derecho en visera (pivote: hombro derecho) ----
     const aArmR = new Acc();
-    ell(aArmR, [4.5, 26.8, 0], [2.15, 2.15, 2.1], undefined, SPHB);      // hombro redondeado
+    ell(aArmR, [4.5, 26.8, 0], [1.95, 1.95, 1.9], undefined, SPHB);      // hombro redondeado
     TUBE(aArmR, [[4.5, 26.9, 0], [5.7, 28.2, -0.6], [7.0, 29.6, -1.4], [4.8, 30.6, -2.0], [2.6, 31.3, -2.4]],
       [1.5, 1.6, 1.2, 1.3, 0.85], 28, 24, 1.2);
     TUBE(aArmR, [[2.6, 31.3, -2.4], [2.0, 31.5, -2.5], [1.4, 31.6, -2.55]], [0.8, 0.85, 0.8], 6, 16, 1);       // palma en visera

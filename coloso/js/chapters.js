@@ -39,7 +39,7 @@
     weapons: { x: 95, z: 75, radius: 22 },               // montón de armas y máquinas abandonadas
     furnaces: [[-42, 34], [44, 36], [-48, -28], [46, -30]], // hornos de fundición alrededor del pedestal
     fallDir: { x: 1, z: 0 },             // la estatua cae hacia el este (+X)
-    caravan: [[30, 10], [120, 250], [260, 480], [420, 760]], // ruta de los 900 camellos (654 d.C.)
+    caravan: [[30, 12], [150, 30], [300, 45], [480, 80]],   // ruta de los 900 camellos (654 d.C.), por la franja costera
     deerColumns: [[-80, -262], [80, -262]] // hoy: columnas con ciervo de bronce en la bocana
   };
 
