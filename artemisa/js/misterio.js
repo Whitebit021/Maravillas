@@ -431,7 +431,7 @@
     dreamG.add(dreamEdges);
     const dreamHalo = glowSprite('150,230,255', 30, [0, 12.2, 0]);
     dreamG.add(dreamHalo);
-    const dreamLab = label('LA LEYENDA: Artemisa lo colocó en sueños', { lh: 1.0, color: '#bff4ff', pos: toW(DREAM, DREAM.yaw, 0, 16.5, 9.5), fmax: 20 });
+    const dreamLab = label('LA LEYENDA: Artemisa lo colocó en sueños', { lh: 0.75, color: '#bff4ff', pos: toW(DREAM, DREAM.yaw, 5, 17.5, 0), fmax: 20 });
     root.add(dreamLab.sprite, dreamLab.plate);
 
     // ================= 2. herostratus: Eróstrato con la antorcha, junto a la fachada oeste =================
@@ -559,9 +559,9 @@
     seg(MS, [HX - 1.5, ST_Y, zC], [xC - 1, ST_Y, zC], CYAN_C);
     const measG = new THREE.LineSegments(segGeo(MS), vlineMat(0));
     root.add(measG);
-    const m115 = label('115 m', { lh: 1.6, color: '#ffd27a', pos: [0, GD + 1.8, zS + 3.5], fmax: 12 });
+    const m115 = label('115 m', { lh: 1.6, color: '#ffd27a', pos: [0, GD + 1.8, HZ + 3], fmax: 12 });
     const m55 = label('55 m', { lh: 1.6, color: '#ffd27a', pos: [xW - 6, GD + 1.8, 0], fmax: 12 });
-    const m18 = label('18 m', { lh: 1.4, color: '#9fe9ff', pos: [xC + 4, 12, zC], fmax: 12 });
+    const m18 = label('18 m', { lh: 1.4, color: '#9fe9ff', pos: [xC + 9, 12, zC + 4], fmax: 12 });
     const m127 = label('127 COLUMNAS', { lh: 1.4, color: '#ffe9a8', pos: [0, 44, 0], fmax: 14 });
     [m115, m55, m18, m127].forEach(function (L) { root.add(L.sprite, L.plate); });
 
