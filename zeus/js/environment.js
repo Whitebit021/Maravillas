@@ -73,8 +73,8 @@
   const WATER_Y = -0.6;
   const HX = TP.halfX, HZ = TP.halfZ, SY = TP.stylobateY, EAVE = TP.entabY1, ENT0 = TP.entabY0, RIDGE = TP.ridgeY;
   const CX0 = TP.cella.x0, CX1 = TP.cella.x1, CHZ = TP.cella.halfZ;
-  const WALLTOP = SY + TP.cella.wallH;      // 15.1: coronación de los muros laterales de la cella
-  const CEIL_Y = TP.ceilingY;               // 15.4: techo de la cella
+  const CEIL_Y = TP.ceilingY;               // 15.4: cara inferior del techo de la cella (sin vigas bajas)
+  const WALLTOP = CEIL_Y;                   // coronación de los muros laterales = arranque del techo
   const CXI = 29.8, CZI = 11.6;             // ejes de las columnas del peristilo
   const KSL = (RIDGE - EAVE) / HZ;          // pendiente del tejado
   function roofY(z) { return EAVE + (HZ - Math.abs(z)) * KSL; }
@@ -406,8 +406,8 @@
     const KEYS = [
       // t,    cenit,      horizonte,  color sol,  intensidad, hemisferio
       [0.00,  '#02040c', '#0b1426', '#6f8fe0', 0.0, '#1a2550'],
-      [0.18,  '#02040c', '#0b1426', '#6f8fe0', 0.0, '#1d2a58'],
-      [0.235, '#2b3c7a', '#b0787c', '#f0a080', 1.1, '#7a6a9a'],
+      [0.18,  '#02040c', '#14183a', '#6f8fe0', 0.0, '#1d2a58'],
+      [0.235, '#3a4f8a', '#e0a25a', '#ffc070', 1.1, '#9a7a6a'],
       [0.30,  '#3f80d0', '#f6d6aa', '#ffd2a0', 1.9, '#b8c4d8'],
       [0.38,  '#2d74cc', '#dfe6e0', '#fff0d6', 2.4, '#c9d8ea'],
       [0.50,  '#2a6fd0', '#cfe2ea', '#fff4e0', 2.6, '#d0dde8'],
@@ -1182,8 +1182,8 @@
     const roofMesh = new THREE.Mesh(mergeGeos(THREE, roofParts), roofMat);
     roofMesh.castShadow = false; roofMesh.receiveShadow = true; roofMesh.frustumCulled = false;   // el tejado no proyecta sombras
     rfG.add(roofMesh);
-    const ceilMesh = new THREE.Mesh(new THREE.BoxGeometry(CX1 - CX0, CEIL_Y - WALLTOP, 2 * CHZ), ceilMat);
-    ceilMesh.position.set((CX0 + CX1) / 2, (WALLTOP + CEIL_Y) / 2, 0);
+    const ceilMesh = new THREE.Mesh(new THREE.BoxGeometry(CX1 - CX0, 0.3, 2 * CHZ), ceilMat);
+    ceilMesh.position.set((CX0 + CX1) / 2, CEIL_Y + 0.15, 0);
     ceilMesh.castShadow = false; ceilMesh.receiveShadow = true; ceilMesh.frustumCulled = false;
     rfG.add(ceilMesh);
     // hastiales de la cella (W y E): cierran el triángulo bajo el tejado

@@ -526,7 +526,7 @@
     root.add(beam);
     const tableGlow = glowSprite('127,227,240', 4.2, [CUP.x, CUP.y + 0.06, CUP.z]);
     root.add(tableGlow);
-    const cupLab = label('«Pertenezco a Fidias»', { lh: 0.9, color: '#9ff3ff', pos: [CUP.x - 1.5, 3.6, CUP.z - 2.1] });
+    const cupLab = label('«Pertenezco a Fidias»', { lh: 0.9, color: '#9ff3ff', pos: [CUP.x - 2.4, 2.0, CUP.z - 2.4] });
     root.add(cupLab.sprite);
 
     // ================= 2. standup: Zeus de pie atravesando el techo del templo =================
@@ -552,7 +552,7 @@
     boxB(SU, [0.3, 0.2, -0.9], 0.6, 0.2, 0.25);
     for (let i = 0; i < 14; i++) {                                                   // corona de olivo sobre la cabeza
       const a = TAU * i / 14;
-      ball(SU, [0.1 + 0.85 * Math.cos(a), 17.5 + 0.12 * Math.sin(2 * a), 0.85 * Math.sin(a) * 0.9], 0.22, 8);
+      ball(SU, [0.1 + 0.85 * Math.cos(a), 18.1 + 0.12 * Math.sin(2 * a), 0.85 * Math.sin(a) * 0.9], 0.22, 8);
     }
     // contornos: anillos del cuerpo y meridianos (líneas cian)
     const suSeg = function (fn, n, col) { for (let j = 0; j < n; j++) seg(SUE, fn(j / n), fn((j + 1) / n), col); };
@@ -568,7 +568,7 @@
     const suEdges = new THREE.LineSegments(segGeo(SUE), vlineMat(0));
     suEdges.material.depthTest = false;
     standG.add(suEdges);
-    const suHalo = glowSprite('127,227,240', 16, [0.1, 16.6, 0]);
+    const suHalo = glowSprite('127,227,240', 22, [0.1, 17.0, 0]);
     standG.add(suHalo);
     // rayo en la mano derecha: sube por encima de la cumbrera del templo (20,3 m)
     const BOLT = [[0.2, 18.9, 2.6], [0.7, 19.6, 2.6], [0.1, 20.3, 2.6], [0.9, 21.0, 2.6], [0.35, 21.7, 2.6]];
@@ -580,6 +580,8 @@
     standG.add(boltGlow);
     const suLab = label('Estrabón:\n«si se levantara, rompería el techo»', { lh: 0.95, color: '#9ff3ff', pos: [ZX - 3.5, ZY + 1.2, ZZ - 5.0] });
     root.add(suLab.sprite);
+    const suLabStand = label('de pie: ~17 m', { lh: 0.8, color: '#9ff3ff', pos: [ZX - 4.5, ZY + 17.0, ZZ + 3.0] });
+    root.add(suLabStand.sprite);
 
     // ================= 3. caligula: andamio fantasma que se derrumba, soldados y "carcajada" =================
     const scafG = new THREE.Group();
@@ -691,7 +693,7 @@
     const m12 = label('12 m', { lh: 0.7, color: '#ffd27a', pos: [RX - 1.2, YB + 11.0, RZ], fmax: 8 });
     const mCeil = label('13 m · techo', { lh: 0.6, color: '#9fe9ff', pos: [-11.5, YC + 0.7, RZ], fmax: 8 });
     const mBase = label('6,5 m de basa', { lh: 0.6, color: '#9fe9ff', pos: [BX + 1.0, BY + 0.7, 0.4], fmax: 8 });
-    const mHum = label('×6,7 un humano', { lh: 0.55, color: '#ffd27a', pos: [-2.0, FLOOR + 2.4, 7.4], fmax: 8 });
+    const mHum = label('×6,7 (sentado)', { lh: 0.55, color: '#ffd27a', pos: [-2.0, FLOOR + 2.4, 7.4], fmax: 8 });
     [m12, mCeil, mBase, mHum].forEach(function (L) { root.add(L.sprite); });
 
     // ================= 5. fire: línea luminosa hacia Constantinopla =================
@@ -753,7 +755,7 @@
       } else {
         cupLight.intensity = 0;
       }
-      setLab(cupLab, cam, ramp(pc, 0.6, 1) * (1 - ramp(tt, 81.5, 83)));
+      setLab(cupLab, cam, ramp(pc, 0.6, 1) * (1 - ramp(tt, 78.5, 80)));
 
       // Zeus de pie fantasma: se levanta desde la basa y atraviesa el techo
       const pu = num(s.standup);
@@ -761,13 +763,14 @@
       if (standG.visible) {
         const e = ss(pu);
         standG.position.y = ZY - 6 * (1 - e);
-        suMat.uniforms.uOp.value = 0.85 * e;
-        suEdges.material.opacity = 0.9 * e;
-        suHalo.material.opacity = 0.4 * e;
+        suMat.uniforms.uOp.value = 0.45 * e;
+        suEdges.material.opacity = 1.0 * e;
+        suHalo.material.opacity = 0.6 * e;
         boltLine.material.opacity = 0.95 * e * (0.8 + 0.2 * Math.sin(wall * 17.0));
         boltGlow.material.opacity = 0.8 * e;
       }
       setLab(suLab, cam, ramp(pu, 0.7, 1) * (1 - ramp(tt, 161.5, 163)));
+      setLab(suLabStand, cam, ramp(pu, 0.7, 1) * (1 - ramp(tt, 161.5, 163)));
 
       // andamio fantasma, piezas que caen y soldados
       const pg = num(s.caligula);
