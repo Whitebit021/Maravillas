@@ -367,7 +367,7 @@
     const plateIM = mkIM(new THREE.BoxGeometry(0.7, 0.04, 0.5), MAT.bronze, 70, true);
     const PILE_IMS = [catIM, spearIM, shieldIM, helmIM, plateIM];
     const PILE_N = [6, 150, 70, 40, 70];
-    const PILE_SC = [2.4, 1.4, 1.8, 1.5, 1.5];
+    const PILE_SC = [3.1, 1.8, 2.3, 1.9, 1.9];
     weaponsG.add(catIM, spearIM, shieldIM, helmIM, plateIM);
     const PILE = [];   // {im, idx, x, y, z, rx, ry, rz, sc, c, seed}
     (function buildPile() {
@@ -961,7 +961,7 @@
       const yl = clamp(yp - COL.baseY, 0.5, COL.height - 0.5);
       const hw = COL.halfWidthAt(yl);
       const Rc = innerR(yt) + 2.4;                   // crisoles sobre el borde del hueco
-      MAT.glow.opacity = 0.35 + 0.5 * p * (0.9 + 0.1 * Math.sin(W * 6));
+      MAT.glow.opacity = 0.2 + 0.3 * p * (0.9 + 0.1 * Math.sin(W * 6));
       for (let k = 0; k < NCR; k++) {
         const a = POUR_ANG[k];
         const cx = Math.cos(a) * Rc, cz = Math.sin(a) * Rc;
@@ -1061,8 +1061,8 @@
     const CR = [
       { kind: 'ped', a: 0.9, r: 17, yaw: 0.9 + Math.PI * 0.5 },
       { kind: 'ped', a: 3.9, r: 17, yaw: 3.9 + Math.PI * 0.5 },
-      { kind: 'top', a: 2.0, r: 0, yaw: 0 },
-      { kind: 'top', a: 5.0, r: 0, yaw: 0 }
+      { kind: 'top', a: 2.4, r: 0, yaw: 0 },
+      { kind: 'top', a: 3.9, r: 0, yaw: 0 }
     ];
     const _cr = new THREE.Matrix4(), _crq = new THREE.Quaternion();
     function updateCranes(s) {

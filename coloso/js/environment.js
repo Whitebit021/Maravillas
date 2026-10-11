@@ -927,10 +927,10 @@
     for (const d of SITE.deerColumns) {
       const x = d[0], z = d[1], y0 = 10.0 + 0.3;                    // sobre la torrecilla
       addBox(TB, C_MARBLE, x, y0 + 0.4, z, 2.6, 0.8, 2.6, 0);      // base de la columna
-      addCyl(TB, C_MARBLE, x, y0 + 0.8, z, 0.75, 12);               // fuste
-      addBox(TB, C_MARBLE, x, y0 + 13.2, z, 2.0, 0.8, 2.0, 0);     // capitel
+      addCyl(TB, C_MARBLE, x, y0 + 0.8, z, 1.0, 20);               // fuste
+      addBox(TB, C_MARBLE, x, y0 + 21.2, z, 2.6, 0.8, 2.6, 0);     // capitel
       // ciervo estilizado de pie sobre el capitel (mirando al norte); medidas a escala K
-      const yC = y0 + 13.6, K = 1.7;
+      const yC = y0 + 21.6, K = 2.6;
       const dBox = function (ox, oy, oz, sx, sy, sz) {
         addBox(DB, BRONZE, x + ox * K, yC + oy * K, z + oz * K, sx * K, sy * K, sz * K, 0);
       };

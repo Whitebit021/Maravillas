@@ -146,7 +146,7 @@
     const cutU = { value: -1e5 }, hotU = { value: 0 };
     const bronze = new THREE.MeshStandardMaterial({
       color: 0x9a6430, vertexColors: true, metalness: 0.9, roughness: 0.36,
-      map: patinaMap, bumpMap: plateBump, bumpScale: 0.5,
+      map: patinaMap, bumpMap: plateBump, bumpScale: 0.25,
       envMap: envTex, envMapIntensity: 1.1,
       emissive: new THREE.Color(0xffb24a), emissiveIntensity: 0,
       side: THREE.DoubleSide, transparent: true, depthWrite: true,
@@ -487,7 +487,7 @@
         [1.5, 1.72, 1.76, 1.3, 1.0], 24, 24, 1.2);                              // gemelo y espinilla
       TUBE(aLow, [[s * 1.9, 1.5, 0.0], [s * 1.9, 0.95, -1.0], [s * 1.9, 0.75, -2.4], [s * 1.9, 0.62, -3.2]],
         [1.0, 0.98, 0.86, 0.6], 12, 20, 1.0);                                    // pie
-      for (let k = 0; k < 4; k++) ell(aLow, [s * (1.9 + (k - 1.5) * 0.42), 0.55, -3.45 + (k === 0 ? 0.05 : 0)], [0.2, 0.2, 0.22] ? [0.22, 0.2, 0.22] : null);  // dedos
+      for (let k = 0; k < 4; k++) ell(aLow, [s * (1.9 + (k - 1.5) * 0.42), 0.55, -3.45], [0.22, 0.2, 0.22]);  // dedos
       ell(aLow, [s * 2.0, 9.0, -0.95], [1.25, 1.3, 0.75], undefined, SPHB);    // rotula
     });
 
