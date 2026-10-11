@@ -238,11 +238,11 @@
 
     // ---------- materiales (opacidad se fija en update) ----------
     const M = {
-      rock: new THREE.MeshStandardMaterial({ map: texRock, roughness: 0.93, side: THREE.DoubleSide }),
-      terrace: new THREE.MeshStandardMaterial({ map: texTerrace, roughness: 0.9, side: THREE.DoubleSide }),
-      earth: new THREE.MeshStandardMaterial({ map: texEarth, roughness: 1, side: THREE.DoubleSide }),
-      block: new THREE.MeshStandardMaterial({ map: texBlock, roughness: 0.85, side: THREE.DoubleSide, transparent: true, opacity: 1, depthWrite: false }),
-      wicker: new THREE.MeshStandardMaterial({ map: texWicker, roughness: 0.9, side: THREE.DoubleSide }),
+      rock: new THREE.MeshStandardMaterial({ map: texRock, emissive: 0xffffff, emissiveMap: texRock, emissiveIntensity: 0.1, roughness: 0.93, side: THREE.DoubleSide }),
+      terrace: new THREE.MeshStandardMaterial({ map: texTerrace, emissive: 0xffffff, emissiveMap: texTerrace, emissiveIntensity: 0.1, roughness: 0.9, side: THREE.DoubleSide }),
+      earth: new THREE.MeshStandardMaterial({ map: texEarth, emissive: 0xffffff, emissiveMap: texEarth, emissiveIntensity: 0.1, roughness: 1, side: THREE.DoubleSide }),
+      block: new THREE.MeshStandardMaterial({ map: texBlock, emissive: 0xffffff, emissiveMap: texBlock, emissiveIntensity: 0.1, roughness: 0.85, side: THREE.DoubleSide, transparent: true, opacity: 1, depthWrite: false }),
+      wicker: new THREE.MeshStandardMaterial({ map: texWicker, emissive: 0xffffff, emissiveMap: texWicker, emissiveIntensity: 0.1, roughness: 0.9, side: THREE.DoubleSide }),
       bone: new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.7, transparent: true, opacity: 0, depthWrite: false }),
       vessel: new THREE.MeshStandardMaterial({ color: 0xb5653a, roughness: 0.6, transparent: true, opacity: 0, depthWrite: false }),
       egg: new THREE.MeshStandardMaterial({ color: 0xf1e6cc, roughness: 0.5, transparent: true, opacity: 0, depthWrite: false }),

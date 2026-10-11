@@ -541,14 +541,14 @@
     surveyG.add(ropes);
 
     // etiquetas de la terraza
-    const labPlan = label('PLANTA DEL MAUSOLEO', { lh: 2.6, color: '#ffe9a8', pos: [0, 2.5, -64] });
-    const lab38 = label('38 m', { lh: 2.2, color: '#ffe9a8', pos: [0, 2.2, DZ - 2.4] });
-    const lab32 = label('32 m', { lh: 2.2, color: '#ffe9a8', pos: [DX - 3.4, 2.2, 0] });
+    // cotas de la planta (más cerca de la cámara, quedan por debajo del rótulo del capítulo)
+    const lab38 = label('38 m', { lh: 2.2, color: '#ffe9a8', pos: [0, 2.2, -36] });
+    const lab32 = label('32 m', { lh: 2.2, color: '#ffe9a8', pos: [-30, 2.2, -22] });
     const labNivel = [
-      label('NIVEL ±0', { lh: 2.4, color: '#9fe9ff', pos: [-38, 3.4, CANALS[0]] }),
-      label('NIVEL ±0', { lh: 2.4, color: '#9fe9ff', pos: [-38, 3.4, CANALS[1]] })
+      label('NIVEL ±0', { lh: 2.4, color: '#9fe9ff', pos: [12, 3.4, CANALS[0]] }),
+      label('NIVEL ±0', { lh: 2.4, color: '#9fe9ff', pos: [12, 3.4, CANALS[1]] })
     ];
-    const surveyLabs = [labPlan, lab38, lab32, labNivel[0], labNivel[1]];
+    const surveyLabs = [lab38, lab32, labNivel[0], labNivel[1]];
     surveyLabs.forEach(function (L) { surveyG.add(L.sprite); });
 
     // ================= 2. ashes: Artemisia II, la reina que bebía cenizas =================
@@ -602,10 +602,11 @@
     const scG = new THREE.Group();
     root.add(scG);
     const SIDE_DEF = [
-      { key: 'N', name: SIDES.N || 'Briaxis', face: [0, 22, -CHZ - 0.6], at: [0, 22, -HZ - 10], cap: 'LADO NORTE' },
-      { key: 'E', name: SIDES.E || 'Escopas', face: [CHX + 0.6, 22, 0], at: [HX + 10, 22, 0], cap: 'LADO ESTE' },
-      { key: 'S', name: SIDES.S || 'Timoteo', face: [0, 22, CHZ + 0.6], at: [0, 22, HZ + 10], cap: 'LADO SUR' },
-      { key: 'O', name: SIDES.O || 'Leócares', face: [-CHX - 0.6, 22, 0], at: [-HX - 10, 22, 0], cap: 'LADO OESTE' }
+      { key: 'N', name: SIDES.N || 'Briaxis', face: [0, 22, -CHZ - 0.6], at: [0, 27, -HZ - 10], cap: 'LADO NORTE' },
+      // (los nombres van por encima del centro del lado: quedan lejos de los subtítulos inferiores)
+      { key: 'E', name: SIDES.E || 'Escopas', face: [CHX + 0.6, 22, 0], at: [HX + 10, 27, 0], cap: 'LADO ESTE' },
+      { key: 'S', name: SIDES.S || 'Timoteo', face: [0, 22, CHZ + 0.6], at: [0, 27, HZ + 10], cap: 'LADO SUR' },
+      { key: 'O', name: SIDES.O || 'Leócares', face: [-CHX - 0.6, 22, 0], at: [-HX - 10, 27, 0], cap: 'LADO OESTE' }
     ];
     // cada escultor aparece en su plano (124 N, 129 E, 134 S, 139 O): ventana temporal propia
     // para que los nombres no se solapen desde cada cámara
@@ -614,7 +615,7 @@
       const nm = label(d.name.toUpperCase(), { lh: 2.2, color: '#ffd27a', pos: [0, 0, 0], depthTest: false, plate: true });
       const cp = label(d.cap, { lh: 0.9, color: '#9fe9ff', pos: [0, 0, 0], depthTest: false, plate: true });
       placeLab(nm, d.at[0], d.at[1], d.at[2], 1);
-      placeLab(cp, d.at[0], d.at[1] - 1.9, d.at[2], 1);
+      placeLab(cp, d.at[0], d.at[1] - 1.8, d.at[2], 1);
       addLab(scG, nm); addLab(scG, cp);
       // línea que señala el lado: desde la fachada hasta la etiqueta
       const sl = { P: [], C: [] };
@@ -657,10 +658,11 @@
     // cotas por nivel (a la derecha de la regla) y recuentos
     const MEAS = [
       { txt: '0 m', lh: 1.3, y: 0.6, c: '#9fe9ff' },
-      { txt: '19 m · PODIO', lh: 1.5, y: 19, c: '#ffd27a' },
+      // (las cotas se separan de la banda del rótulo del capítulo, que tapa ~24-32 m desde la cámara de 186)
+      { txt: '19 m · PODIO', lh: 1.5, y: 18.0, c: '#ffd27a' },
       { txt: '12 m · COLUMNATA', lh: 1.5, y: 25, c: '#ffd27a' },
-      { txt: '36 COLUMNAS', lh: 1.3, y: 29, c: '#9fe9ff' },
-      { txt: '7 m · PIRÁMIDE', lh: 1.5, y: 35.2, c: '#ffd27a' },
+      { txt: '36 COLUMNAS', lh: 1.3, y: 20.6, c: '#9fe9ff' },
+      { txt: '7 m · PIRÁMIDE', lh: 1.5, y: 36.0, c: '#ffd27a' },
       { txt: '24 ESCALONES', lh: 1.3, y: 38.6, c: '#9fe9ff' },
       { txt: '5 m · CUADRIGA', lh: 1.5, y: 43.5, c: '#ffd27a' },
       { txt: '46 m', lh: 1.6, y: 46, c: '#9fe9ff' }

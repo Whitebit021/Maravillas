@@ -91,10 +91,14 @@
     const Pm = 1 - sstep(0.85, 1.0, pq);
     const pel = 5.5 + 1.5 * (1 - pq) + 0.6 * (fbm(x / 60, z / 60, 2, 41) - 0.5);
     h += (pel - h) * Pm;
-    const cq = Math.hypot((x - CAS.x) / 70, (z - CAS.z) / 70);
-    const Im = 1 - sstep(0.8, 1.0, cq);
-    const isl = 6.5 + 2.2 * (fbm(x / 22, z / 22, 2, 53) - 0.5) - 3.0 * sstep(0.55, 1, cq);
+    // islote SE del castillo: meseta firme y plana (y≈1) de radio ~85 m, unida a la costa por un istmo
+    const cq = Math.hypot((x - CAS.x) / 85, (z - CAS.z) / 85);
+    const Im = 1 - sstep(0.85, 1.0, cq);
+    const isl = 1.0 + 0.25 * (fbm(x / 22, z / 22, 2, 53) - 0.5);
     h += (isl - h) * Im;
+    const band = sstep(236, 244, z) * (1 - sstep(292, 300, z));
+    const Ist = (1 - sstep(8, 14, Math.abs(x - CAS.x))) * band;
+    h += (1.0 - h) * Ist;
     // teatro: cavidad semicircular en la ladera norte con gradas escalonadas
     const tdx = x - THEA.x, tdz = z - THEA.z;
     if (tdz < 4) {
@@ -764,7 +768,7 @@
     }
     const rockItems = [];
     for (let k = 0; k < 46; k++) {
-      const ang = rnd() * TAU, rr = (0.8 + 0.22 * rnd()) * 70;
+      const ang = rnd() * TAU, rr = (0.8 + 0.22 * rnd()) * 85;
       const x = CAS.x + Math.cos(ang) * rr, z = CAS.z + Math.sin(ang) * rr;
       const r = 2 + rnd() * 4.5;
       rockItems.push({ x: x, y: H(x, z) + r * 0.1, z: z, w: r, h: r * 0.8, d: r, ry: rnd() * TAU, col: col(rnd() < 0.5 ? '#7b6d5b' : '#8f7a5e') });

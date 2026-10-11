@@ -18,7 +18,7 @@
     const WALL_H = CAST.wallH || 14;
     const CS = 54, WT = 3.6;                       // semilado del castillo y grosor de muro
     const CX = SITE.castle.x, CZ = SITE.castle.z;
-    const PY = { x: 0, z: -40 };                   // pira en la terraza
+    const PY = { x: -22, z: 28 };                   // pira detrás de la figura de Artemisia (origen)
     const QUAY = { x: 60, z: 249 };                // pivote de la grúa (extremo del pantalán)
     const DOCK = { x: 60, z: 262 }, DOCK_HD = Math.PI / 2;   // proa hacia el norte
     const UNLOAD_DT = 24;
@@ -689,7 +689,7 @@
         for (let k = 0; k < NPOST; k++) postIM.setMatrixAt(k, ZERO);
         for (let k = 0; k < NBRD; k++) boardIM.setMatrixAt(k, ZERO);
       } else {
-        const y0 = Math.max(0, yT - 8), y1 = yT, bh = y1 - y0;
+        const y0 = Math.max(0, yT - 6), y1 = yT, bh = y1 - y0;
         let hx = 0, hz = 0;
         [y0, (y0 + y1) / 2, y1].forEach(function (yy) { const o = outline(yy); hx = Math.max(hx, o.hx); hz = Math.max(hz, o.hz); });
         hx += 1.4; hz += 1.4;
@@ -697,12 +697,13 @@
         const pts = [];
         for (let e = 0; e < 4; e++) {
           const A = C[e], B = C[(e + 1) % 4];
-          const len = Math.hypot(B[0] - A[0], B[1] - A[1]), n = Math.max(1, Math.round(len / 3));
+          const len = Math.hypot(B[0] - A[0], B[1] - A[1]), n = Math.max(1, Math.round(len / 9));
           for (let k = 0; k < n; k++) { const f = k / n; pts.push([A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f]); }
         }
         const np = Math.min(NPOST, pts.length);
         for (let k = 0; k < np; k++) {
           _P.set(pts[k][0], y0 + bh / 2, pts[k][1]); _Q.identity(); _S.set(1, bh / 8, 1);
+          // (postes cada ~9 m; un solo travesaño superior: no tapa la obra)
           postIM.setMatrixAt(k, _m.compose(_P, _Q, _S));
         }
         for (let k = np; k < NPOST; k++) postIM.setMatrixAt(k, ZERO);
@@ -712,8 +713,8 @@
           const dx = B[0] - A[0], dz = B[1] - A[1], L = Math.hypot(dx, dz);
           if (L < 0.01) continue;
           const mx = (A[0] + B[0]) / 2, mz = (A[1] + B[1]) / 2, hd = headingOf(dx, dz);
-          for (let lv = 0; lv < 2 && nb < NBRD; lv++) {
-            _P.set(mx, y0 + bh * (lv ? 0.8 : 0.3), mz); _Q.setFromAxisAngle(_yAxis, hd); _S.set(L, 1, 1);
+          for (let lv = 0; lv < 1 && nb < NBRD; lv++) {
+            _P.set(mx, y0 + bh * 0.85, mz); _Q.setFromAxisAngle(_yAxis, hd); _S.set(L, 1, 1);
             boardIM.setMatrixAt(nb++, _m.compose(_P, _Q, _S));
           }
         }
@@ -758,7 +759,7 @@
     pyreG.add(bodyMesh);
     // llamas: planos con textura de llama, color por instancia (brillo que parpadea)
     const NFL = 22;
-    const flameIM = mkIM(new THREE.PlaneGeometry(1.6, 3.4).translate(0, 1.7, 0), MAT.flame, NFL, false);
+    const flameIM = mkIM(new THREE.PlaneGeometry(2.4, 4.6).translate(0, 2.3, 0), MAT.flame, NFL, false);
     pyreG.add(flameIM);
     const glowMesh = new THREE.Mesh(new THREE.CircleGeometry(7, 24).rotateX(-Math.PI / 2), MAT.glow);
     glowMesh.position.y = 0.08; glowMesh.frustumCulled = false;
@@ -784,11 +785,11 @@
       for (let k = 0; k < NFL; k++) {
         const h1 = hash(k + 900), h2 = hash(k + 950);
         const ph = W * (7 + 3 * h1) + k;
-        const r = 0.5 + h2 * 1.9, a = h1 * TAU;
-        const hh = (0.8 + 0.5 * Math.sin(ph)) * p;
-        _P.set(Math.cos(a) * r, 1.25, Math.sin(a) * r);
+        const r = 0.4 + h2 * 1.8, a = h1 * TAU;
+        const hh = (0.85 + 0.45 * Math.sin(ph)) * p;
+        _P.set(Math.cos(a) * r, 1.2, Math.sin(a) * r);
         _Q.setFromAxisAngle(_yAxis, h1 * TAU + W * 0.5);
-        _S.set(0.7 + 0.5 * h2, Math.max(0.001, hh * 1.1), 1);
+        _S.set(0.8 + 0.4 * h2, Math.max(0.001, hh * 1.0), 1);
         flameIM.setMatrixAt(k, _m.compose(_P, _Q, _S));
         const br = 0.65 + 0.35 * Math.sin(ph * 1.7 + 0.5);
         flameIM.setColorAt(k, _c.setRGB(br, br * 0.85, br * 0.5));
@@ -799,7 +800,7 @@
       for (let i = 0; i < NSM; i++) {
         const age = frac(W * 0.09 + hash(i + 1000));
         smokePos[i * 3] = (hash(i + 1100) - 0.5) * 2 + age * 4.5;
-        smokePos[i * 3 + 1] = 4 + age * 20;
+        smokePos[i * 3 + 1] = 4 + age * 8;
         smokePos[i * 3 + 2] = (hash(i + 1200) - 0.5) * 2 + age * 1.5;
       }
       smokeGeo.attributes.position.needsUpdate = true;
